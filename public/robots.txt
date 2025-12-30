@@ -1,0 +1,11 @@
+User-agent: *
+Allow:		/
+Allow:		/works/
+Allow:		/works
+Allow:		/works/sphinx
+Allow:		/search/results
+Allow:		/search/sphinx
+Disallow:	/api/
+Disallow:	/_next/
+Disallow:	/results
+Sitemap: https://ethnos.app/sitemap.xml

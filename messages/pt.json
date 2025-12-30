@@ -1,0 +1,343 @@
+{
+  "layout": {
+    "skipLink": "Pular para o conteúdo principal",
+    "brand": "ETHNOS_APP",
+    "nav": {
+      "home": "Início",
+      "search": "Busca Avançada",
+      "journals": "Periódicos",
+      "lists": "Lista",
+      "listCounterLabel": "Itens na lista pessoal",
+      "ariaLabel": "Navegação principal"
+    },
+    "footer": {
+      "project": "Ethnos_APP",
+      "openSource": "Projeto Open Source",
+      "privacy": "Privacidade e Cookies",
+      "license": "Licença MIT",
+      "frontendVersion": "Frontend v2.0.0",
+      "apiDocs": "Documentação da API",
+      "apiSource": "Código da API",
+      "frontendSource": "Código do Frontend",
+      "doi": "DOI",
+      "tagline": "Expectantes Misericordiae"
+    },
+    "footerLabel": "Rodapé"
+  },
+  "common": {
+    "actions": {
+      "search": "Buscar",
+      "runSearch": "Executar busca",
+      "clear": "Limpar",
+      "browseWorks": "Explorar obras",
+      "seeJournals": "Ver todos os periódicos",
+      "previous": "Anterior",
+      "next": "Próximo",
+      "goHome": "Ir para a página inicial",
+      "addToList": "Adicionar à lista",
+      "openDoi": "Abrir DOI",
+      "openSciHub": "Sci-Hub",
+      "openBestOa": "Open Access",
+      "openLibgen": "Anna's Archive",
+      "exportJson": "Exportar JSON",
+      "exportRis": "Exportar RIS",
+      "exportBib": "Exportar BibTeX",
+      "exportAbnt": "Exportar ABNT (.docx)",
+      "exportApa": "Exportar texto (APA)",
+      "clearList": "Limpar lista"
+    },
+    "labels": {
+      "searchInput": "Termo de busca",
+      "term": "Termo",
+      "scope": "Escopo",
+      "itemsPerPage": "Itens por página",
+      "query": "Consulta",
+      "parameters": "Parâmetros",
+      "type": "Tipo",
+      "author": "Autor",
+      "venue": "Periódico",
+      "subject": "Assunto",
+      "year": "Ano",
+      "language": "Idioma",
+      "list": "Lista",
+      "items": "Itens",
+      "pagination": "Paginação"
+    },
+    "placeholders": {
+      "homeSearch": "Busque obras por título, autor ou palavra-chave...",
+      "quickTerm": "Título, autor, periódico...",
+      "advancedTerm": "Título, palavras-chave...",
+      "person": "Nome ou ID da pessoa",
+      "venue": "Nome ou ID do periódico",
+      "subject": "Tema ou palavra-chave",
+      "year": "Ex: 2001",
+      "language": "en, pt, es..."
+    },
+    "options": {
+      "any": "Qualquer",
+      "works": "Obras",
+      "venues": "Periódicos",
+      "persons": "Pessoas"
+    },
+    "states": {
+      "loadingWorks": "Carregando obras...",
+      "loadingJournals": "Carregando periódicos...",
+      "unableToLoadJournals": "Não foi possível carregar os periódicos.",
+      "noJournals": "Nenhum periódico disponível.",
+      "noPersonWorks": "Nenhuma obra encontrada para esta pessoa.",
+      "noVenueWorks": "Nenhuma publicação encontrada para este periódico.",
+      "emptyList": "Sua lista pessoal está vazia.",
+      "addFromDetails": "",
+      "exportUnavailable": "As opções de exportação requerem itens na lista."
+    },
+    "messages": {
+      "itemExists": "O item já consta na sua lista",
+      "added": "Adicionado à sua lista",
+      "jsonExported": "JSON exportado",
+      "itemRemoved": "Item removido da lista",
+      "listCleared": "Lista limpa",
+      "risExported": "RIS exportado",
+      "bibExported": "BibTeX exportado",
+      "abntExported": "ABNT exportado",
+      "apaExported": "Texto APA exportado",
+      "confirmClear": "Confirmar limpeza da lista? Esta ação é irreversível."
+    },
+    "entities": {
+    "authorUnknown": "Autor desconhecido",
+    "publisherUnknown": "Editora não informada",
+    "titleUnavailable": "Título indisponível",
+    "yearUnavailable": "Ano indisponível",
+    "nameUnavailable": "Nome indisponível",
+      "journalNotFound": "Periódico não encontrado",
+      "personNotFound": "Pessoa não encontrada",
+      "work": "Obra"
+    },
+    "table": {
+      "title": "Título",
+      "authors": "Autores",
+      "year": "Ano",
+      "journal": "Periódico",
+      "coverage": "Cobertura",
+      "publisher": "Editora"
+    },
+    "meta": {
+      "peerReviewed": "Peer Reviewed",
+      "openAccess": "Open Access",
+      "worksCount": "{count} obras",
+      "termEmpty": "(vazio)",
+      "ariaSearchForm": "Formulário de busca",
+      "ariaAdvancedSearchForm": "Formulário de busca avançada",
+      "ariaPersonalList": "Lista de leitura pessoal",
+      "openWork": "Abrir detalhes de {title}"
+    },
+    "aria": {
+      "searchButton": "Executar busca",
+      "searchInput": "Termo de busca"
+    },
+    "values": {
+      "yes": "Sim",
+      "no": "Não"
+    }
+  },
+  "home": {
+    "title": "Início",
+    "searchSection": "Busca",
+    "updatesSection": "Atualizações",
+    "venuesSection": "Periódicos",
+    "searchButton": "Buscar",
+    "updatesCaption": "Obras mais recentes adicionadas ao acervo",
+    "venuesCaption": "Periódicos com maior volume de obras indexadas"
+  },
+  "search": {
+    "title": "Busca",
+    "quick": "Busca Rápida",
+    "advanced": "Busca Avançada",
+    "queryLegend": "Consulta",
+    "parametersLegend": "Parâmetros"
+  },
+  "results": {
+    "title": "Resultados da Busca",
+    "itemsHeading": "Itens"
+  },
+  "venues": {
+    "title": "Periódicos",
+    "listHeading": "Lista",
+    "detail": {
+      "data": "Dados do Periódico",
+      "type": "Tipo",
+      "publisher": "Editora",
+      "issn": "ISSN",
+      "eissn": "E-ISSN",
+      "total": "Total de publicações",
+      "coverage": "Período de cobertura",
+      "country": "País",
+      "sjr": "SJR",
+      "snip": "SNIP",
+      "citescore": "CiteScore",
+      "cited": "Obras citadas",
+      "hIndexLabel": "Índice h",
+      "impact": "Impacto",
+      "openAccess": "Open Access",
+      "indexedScopus": "Indexado na Scopus",
+      "doaj": "Indexado no DOAJ",
+      "description": "Resumo",
+      "subjects": "Assuntos",
+      "publications": "Publicações neste periódico"
+    }
+  },
+  "works": {
+    "detail": {
+      "titleFallback": "Detalhes da Obra",
+      "sections": {
+        "bibliographic": "Dados Bibliográficos",
+        "abstract": "Resumo",
+        "references": "Referências",
+        "citedBy": "Citado por",
+        "tools": "Ferramentas"
+      },
+      "labels": {
+        "id": "ID",
+        "authors": "Autores",
+        "year": "Ano",
+        "venue": "Periódico",
+        "editors": "Editores",
+        "volume": "Volume",
+        "issue": "Fascículo",
+        "pages": "Páginas",
+        "publicationDate": "Data de publicação",
+        "peerReviewed": "Peer Reviewed",
+        "openAccess": "Open Access",
+        "type": "Tipo",
+        "publisher": "Editora",
+        "language": "Idioma",
+        "citations": "Citações recebidas",
+        "references": "Referências citadas",
+        "downloads": "Downloads",
+        "views": "Visualizações",
+        "addedAt": "Adicionado em",
+        "md5": "MD5",
+        "openLibraryId": "Open Library",
+        "isbn": "ISBN",
+        "openAlex": "OpenAlex"
+      }
+    },
+    "sphinx": {
+      "title": "Busca — Sphinx"
+    }
+  },
+  "persons": {
+    "detailTitle": "Detalhes da Pessoa",
+    "dataSection": "Dados Biográficos",
+    "fields": {
+      "id": "ID",
+      "name": "Nome",
+      "given": "Prenomes",
+      "family": "Sobrenome",
+      "signature": "Assinatura",
+      "affiliations": "Afiliações",
+      "orcid": "ORCID",
+      "lattes": "ID Lattes",
+      "scopus": "ID Scopus",
+      "wikidata": "Wikidata",
+      "openalex": "OpenAlex",
+      "mag": "ID MAG",
+      "url": "URL",
+      "verified": "Verificado",
+      "totalWorks": "Total de obras",
+      "totalCitations": "Total de citações",
+      "authorCount": "Total como autor",
+      "editorCount": "Total como editor",
+      "openAccess": "Obras em Open Access",
+      "firstYear": "Primeiro ano de publicação",
+      "latestYear": "Ano mais recente de publicação",
+      "hIndex": "Índice h"
+    },
+    "worksHeading": "Obras desta pessoa",
+    "roleFallback": "Autor"
+  },
+  "lists": {
+    "title": "Minha Lista",
+    "savedItems": "Itens salvos",
+    "export": "Exportar",
+    "itemsInListOne": "{count} item na lista",
+    "itemsInListOther": "{count} itens na lista",
+    "itemsChronological": "",
+    "emptyStateTitle": "Sua lista pessoal está vazia.",
+    "emptyStateDescription": "",
+    "exportUnavailable": "Opções de exportação disponíveis após a adição de itens."
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "info": "Informações",
+    "description": "A página solicitada não existe.",
+    "goHome": "Voltar para o início"
+  },
+  "sphinx": {
+    "title": "Busca — Sphinx",
+    "query": "Consulta",
+    "itemsHeading": "Itens",
+    "term": "Termo"
+  },
+  "metadata": {
+    "home": {
+      "title": "Início — Ethnos_APP",
+      "description": "Página inicial da Ethnos Bibliography com atualizações, periódicos em destaque e acesso rápido a dados de antropologia e sociologia.",
+      "keywords": "bibliografia, antropologia, sociologia, periódicos acadêmicos, catálogo aberto, Ethnos"
+    },
+    "search": {
+      "title": "Busca — Ethnos_APP",
+      "description": "Formulário de busca avançada para filtrar obras por título, autor, periódico, assunto, ano, tipo e idioma.",
+      "keywords": "busca avançada, antropologia, sociologia, consulta acadêmica, Ethnos"
+    },
+    "results": {
+      "title": "Resultados — Ethnos_APP",
+      "description": "Redirecionamento legado para acesso a links de resultados anteriores na Ethnos.",
+      "keywords": "resultados, redirecionamento, busca bibliográfica, Ethnos"
+    },
+    "venues": {
+      "title": "Periódicos — Ethnos_APP",
+      "description": "Diretório de periódicos acadêmicos com dados de cobertura, indicadores e contexto editorial para antropologia e sociologia.",
+      "keywords": "periódicos, antropologia, sociologia, Scopus, Open Access, Ethnos"
+    },
+    "venuesDetail": {
+      "title": "Detalhes do Periódico — Ethnos_APP",
+      "description": "Perfil detalhado de periódico com métricas (SJR, SNIP, CiteScore), identificadores e descrição editorial.",
+      "keywords": "métricas de periódicos, SJR, SNIP, CiteScore, antropologia, sociologia"
+    },
+    "works": {
+      "title": "Obras — Ethnos_APP",
+      "description": "Catálogo de obras indexadas e curadoria bibliográfica na Ethnos Bibliography.",
+      "keywords": "obras, antropologia, sociologia, catálogo bibliográfico, Ethnos"
+    },
+    "workDetail": {
+      "title": "Detalhes da Obra — Ethnos_APP",
+      "description": "Registro bibliográfico completo com DOI, autores, referências, citações e ferramentas de exportação.",
+      "keywords": "metadados, DOI, antropologia, sociologia, citações, Open Access"
+    },
+    "searchResults": {
+      "title": "Resultados da Busca — Ethnos_APP",
+      "description": "Lista de resultados de busca com metadados, filtros aplicados e paginação.",
+      "keywords": "resultados de busca, antropologia, sociologia, pesquisa bibliográfica"
+    },
+    "searchSphinx": {
+      "title": "Busca — Sphinx — Ethnos_APP",
+      "description": "Mecanismo de busca Sphinx focado em relevância, texto integral e facetas exploratórias.",
+      "keywords": "Sphinx, busca por relevância, texto integral, busca facetada"
+    },
+    "lists": {
+      "title": "Minha Lista — Ethnos_APP",
+      "description": "Gerenciamento da lista pessoal para salvar obras e exportar referências em formatos BibTeX e RIS.",
+      "keywords": "lista de leitura, exportação bibliográfica, BibTeX, RIS, referências"
+    },
+    "persons": {
+      "title": "Detalhes da Pessoa — Ethnos_APP",
+      "description": "Registro de autoridade de pesquisador com identificadores ORCID, Lattes, afiliações e produção acadêmica.",
+      "keywords": "perfil acadêmico, autor, antropologia, sociologia, ORCID, Lattes"
+    },
+    "privacy": {
+      "title": "Privacidade e Cookies — Ethnos_APP",
+      "description": "Política de privacidade e cookies sobre tratamento de localidade, armazenamento local e fluxo de dados via API Proxy.",
+      "keywords": "privacidade, cookies, local storage, API proxy, Ethnos Bibliography"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=Ethnos Next Frontend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/bruno/app
+EnvironmentFile=/etc/next-frontend.env
+Environment=NODE_ENV=production
+Environment=PORT=1212
+ExecStart=/home/bruno/app/node_modules/.bin/next start -p $PORT
+Restart=on-failure
+RestartSec=3
+User=bruno
+Group=bruno
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

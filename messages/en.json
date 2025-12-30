@@ -1,0 +1,343 @@
+{
+  "layout": {
+    "skipLink": "Skip to main content",
+    "brand": "ETHNOS_APP",
+    "nav": {
+      "home": "Home",
+      "search": "Search",
+      "journals": "Journals",
+      "lists": "List",
+      "listCounterLabel": "Items in personal list",
+      "ariaLabel": "Main navigation"
+    },
+    "footer": {
+      "project": "Ethnos_APP",
+      "openSource": "Open Source Project",
+      "privacy": "Privacy and Cookies",
+      "license": "MIT License",
+      "frontendVersion": "Frontend v2.0.0",
+      "apiDocs": "API Documentation",
+      "apiSource": "API Source Code",
+      "frontendSource": "Frontend Source Code",
+      "doi": "DOI",
+      "tagline": "Expectantes Misericordiae"
+    },
+    "footerLabel": "Footer"
+  },
+  "common": {
+    "actions": {
+      "search": "Search",
+      "runSearch": "Run search",
+      "clear": "Clear",
+      "browseWorks": "Browse works",
+      "seeJournals": "See all journals",
+      "previous": "Previous",
+      "next": "Next",
+      "goHome": "Go to homepage",
+      "addToList": "Add to list",
+      "openDoi": "Open DOI",
+      "openSciHub": "Sci-Hub",
+      "openBestOa": "Open Access",
+      "openLibgen": "Anna's Archive",
+      "exportJson": "Export JSON",
+      "exportRis": "Export RIS",
+      "exportBib": "Export BibTeX",
+      "exportAbnt": "Export ABNT (.docx)",
+      "exportApa": "Export text (APA)",
+      "clearList": "Clear list"
+    },
+    "labels": {
+      "searchInput": "Search term",
+      "term": "Term",
+      "scope": "Scope",
+      "itemsPerPage": "Items per page",
+      "query": "Query",
+      "parameters": "Parameters",
+      "type": "Type",
+      "author": "Author",
+      "venue": "Journal",
+      "subject": "Subject",
+      "year": "Year",
+      "language": "Language",
+      "list": "List",
+      "items": "Items",
+      "pagination": "Pagination"
+    },
+    "placeholders": {
+      "homeSearch": "Search works by title, author, or keyword...",
+      "quickTerm": "Title, author, journal...",
+      "advancedTerm": "Title, keywords...",
+      "person": "Person name or ID",
+      "venue": "Journal name or ID",
+      "subject": "Topic or keyword",
+      "year": "Ex: 2001",
+      "language": "en, pt, es..."
+    },
+    "options": {
+      "any": "Any",
+      "works": "Works",
+      "venues": "Journals",
+      "persons": "Persons"
+    },
+    "states": {
+      "loadingWorks": "Loading works...",
+      "loadingJournals": "Loading journals...",
+      "unableToLoadJournals": "Unable to load journals.",
+      "noJournals": "No journals available.",
+      "noPersonWorks": "No works found for this person.",
+      "noVenueWorks": "No publications found for this journal.",
+      "emptyList": "Your personal list is empty.",
+      "addFromDetails": "",
+      "exportUnavailable": "Export options require items in the list."
+    },
+    "messages": {
+      "itemExists": "Item already in your list",
+      "added": "Added to your list",
+      "jsonExported": "JSON exported",
+      "itemRemoved": "Item removed from list",
+      "listCleared": "List cleared",
+      "risExported": "RIS exported",
+      "bibExported": "BibTeX exported",
+      "abntExported": "ABNT exported",
+      "apaExported": "APA text exported",
+      "confirmClear": "Confirm clearing list? This action is irreversible."
+    },
+    "entities": {
+    "authorUnknown": "Unknown author",
+    "publisherUnknown": "Unknown publisher",
+    "titleUnavailable": "Title unavailable",
+    "yearUnavailable": "Year unavailable",
+    "nameUnavailable": "Name unavailable",
+      "journalNotFound": "Journal not found",
+      "personNotFound": "Person not found",
+      "work": "Work"
+    },
+    "table": {
+      "title": "Title",
+      "authors": "Authors",
+      "year": "Year",
+      "journal": "Journal",
+      "coverage": "Coverage",
+      "publisher": "Publisher"
+    },
+    "meta": {
+      "peerReviewed": "Peer Reviewed",
+      "openAccess": "Open Access",
+      "worksCount": "{count} works",
+      "termEmpty": "(empty)",
+      "ariaSearchForm": "Search form",
+      "ariaAdvancedSearchForm": "Advanced search form",
+      "ariaPersonalList": "Personal reading list",
+      "openWork": "Open details for {title}"
+    },
+    "aria": {
+      "searchButton": "Run search",
+      "searchInput": "Search term"
+    },
+    "values": {
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "home": {
+    "title": "Home",
+    "searchSection": "Search",
+    "updatesSection": "Updates",
+    "venuesSection": "Journals",
+    "searchButton": "Search",
+    "updatesCaption": "Most recent works added to the collection",
+    "venuesCaption": "Journals with the highest number of indexed works"
+  },
+  "search": {
+    "title": "Search",
+    "quick": "Quick Search",
+    "advanced": "Advanced Search",
+    "queryLegend": "Query",
+    "parametersLegend": "Parameters"
+  },
+  "results": {
+    "title": "Search Results",
+    "itemsHeading": "Items"
+  },
+  "venues": {
+    "title": "Journals",
+    "listHeading": "List",
+    "detail": {
+      "data": "Journal Data",
+      "type": "Type",
+      "publisher": "Publisher",
+      "issn": "ISSN",
+      "eissn": "E-ISSN",
+      "total": "Total publications",
+      "coverage": "Coverage period",
+      "country": "Country",
+      "sjr": "SJR",
+      "snip": "SNIP",
+      "citescore": "CiteScore",
+      "cited": "Cited works",
+      "hIndexLabel": "h-index",
+      "impact": "Impact",
+      "openAccess": "Open Access",
+      "indexedScopus": "Scopus indexed",
+      "doaj": "DOAJ indexed",
+      "description": "Summary",
+      "subjects": "Subjects",
+      "publications": "Publications in this journal"
+    }
+  },
+  "works": {
+    "detail": {
+      "titleFallback": "Work Details",
+      "sections": {
+        "bibliographic": "Bibliographic Data",
+        "abstract": "Abstract",
+        "references": "References",
+        "citedBy": "Cited by",
+        "tools": "Tools"
+      },
+      "labels": {
+        "id": "ID",
+        "authors": "Authors",
+        "year": "Year",
+        "venue": "Journal",
+        "editors": "Editors",
+        "volume": "Volume",
+        "issue": "Issue",
+        "pages": "Pages",
+        "publicationDate": "Publication date",
+        "peerReviewed": "Peer Reviewed",
+        "openAccess": "Open Access",
+        "type": "Type",
+        "publisher": "Publisher",
+        "language": "Language",
+        "citations": "Citations received",
+        "references": "References cited",
+        "downloads": "Downloads",
+        "views": "Views",
+        "addedAt": "Added on",
+        "md5": "MD5",
+        "openLibraryId": "Open Library",
+        "isbn": "ISBN",
+        "openAlex": "OpenAlex"
+      }
+    },
+    "sphinx": {
+      "title": "Search — Sphinx"
+    }
+  },
+  "persons": {
+    "detailTitle": "Person Details",
+    "dataSection": "Biographic Data",
+    "fields": {
+      "id": "ID",
+      "name": "Name",
+      "given": "Given names",
+      "family": "Family name",
+      "signature": "Signature",
+      "affiliations": "Affiliations",
+      "orcid": "ORCID",
+      "lattes": "Lattes ID",
+      "scopus": "Scopus ID",
+      "wikidata": "Wikidata",
+      "openalex": "OpenAlex",
+      "mag": "MAG ID",
+      "url": "URL",
+      "verified": "Verified",
+      "totalWorks": "Total works",
+      "totalCitations": "Total citations",
+      "authorCount": "Author count",
+      "editorCount": "Editor count",
+      "openAccess": "Open Access works",
+      "firstYear": "First publication year",
+      "latestYear": "Latest publication year",
+      "hIndex": "h-index"
+    },
+    "worksHeading": "Works by this person",
+    "roleFallback": "Author"
+  },
+  "lists": {
+    "title": "My List",
+    "savedItems": "Saved items",
+    "export": "Export",
+    "itemsInListOne": "{count} item in list",
+    "itemsInListOther": "{count} items in list",
+    "itemsChronological": "",
+    "emptyStateTitle": "Your personal list is empty.",
+    "emptyStateDescription": "",
+    "exportUnavailable": "Export options available after adding items."
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "info": "Information",
+    "description": "The requested page does not exist.",
+    "goHome": "Back to home"
+  },
+  "sphinx": {
+    "title": "Search — Sphinx",
+    "query": "Query",
+    "itemsHeading": "Items",
+    "term": "Term"
+  },
+  "metadata": {
+    "home": {
+      "title": "Home — Ethnos_APP",
+      "description": "Ethnos Bibliography homepage featuring updates, featured journals, and quick access to anthropology and sociology data.",
+      "keywords": "bibliography, anthropology, sociology, academic journals, open catalog, Ethnos"
+    },
+    "search": {
+      "title": "Search — Ethnos_APP",
+      "description": "Advanced search form to filter works by title, author, journal, subject, year, type, and language.",
+      "keywords": "advanced search, anthropology, sociology, scholarly query, Ethnos"
+    },
+    "results": {
+      "title": "Results — Ethnos_APP",
+      "description": "Legacy search redirect to maintain access to previous result links within Ethnos.",
+      "keywords": "legacy results, search redirect, bibliography routing, Ethnos"
+    },
+    "venues": {
+      "title": "Journals — Ethnos_APP",
+      "description": "Directory of academic journals with coverage data, metrics, and publisher context for anthropology and sociology.",
+      "keywords": "journals, anthropology, sociology, Scopus metrics, Open Access, Ethnos"
+    },
+    "venuesDetail": {
+      "title": "Journal Details — Ethnos_APP",
+      "description": "Detailed journal profile featuring SJR, SNIP, and CiteScore metrics, identifiers, and editorial description.",
+      "keywords": "journal metrics, SJR, SNIP, CiteScore, anthropology, sociology"
+    },
+    "works": {
+      "title": "Works — Ethnos_APP",
+      "description": "Catalog of indexed works and bibliographic curation within Ethnos Bibliography.",
+      "keywords": "works, anthropology, sociology, bibliographic catalog, Ethnos"
+    },
+    "workDetail": {
+      "title": "Work Details — Ethnos_APP",
+      "description": "Full bibliographic record featuring DOI, authors, references, citations, and export tools.",
+      "keywords": "metadata, DOI, anthropology, sociology, citations, Open Access"
+    },
+    "searchResults": {
+      "title": "Search Results — Ethnos_APP",
+      "description": "Search result list displaying metadata, applied filters, and pagination.",
+      "keywords": "search results, anthropology, sociology, bibliographic research"
+    },
+    "searchSphinx": {
+      "title": "Search — Sphinx — Ethnos_APP",
+      "description": "Sphinx-powered search engine focused on relevance, full-text queries, and faceted exploration.",
+      "keywords": "Sphinx, relevance ranking, full-text search, faceted search"
+    },
+    "lists": {
+      "title": "My List — Ethnos_APP",
+      "description": "Personal list interface to save works and export references in BibTeX and RIS formats.",
+      "keywords": "reading list, bibliography export, BibTeX, RIS, references"
+    },
+    "persons": {
+      "title": "Person Details — Ethnos_APP",
+      "description": "Researcher authority record including ORCID, Lattes identifiers, affiliations, and academic production.",
+      "keywords": "academic profile, author, anthropology, sociology, ORCID, Lattes"
+    },
+    "privacy": {
+      "title": "Privacy and Cookies — Ethnos_APP",
+      "description": "Privacy and cookies policy covering locale handling, local storage, and API proxy data flow for Ethnos Bibliography.",
+      "keywords": "privacy, cookies, local storage, API proxy, Ethnos Bibliography"
+    }
+  }
+}

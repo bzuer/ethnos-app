@@ -1,0 +1,29 @@
+{
+  "name": "ethnos-next",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "bash scripts/manage.sh dev",
+    "build": "bash scripts/manage.sh build",
+    "start": "bash scripts/manage.sh start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "next": "^16.0.7",
+    "next-intl": "^4.5.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.9.2",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "eslint": "9.39.0",
+    "eslint-config-next": "16.0.1",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=18.18 <26"
+  }
+}
