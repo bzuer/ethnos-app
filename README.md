@@ -1,5 +1,8 @@
 # Ethnos Next Frontend
 
+[![DOI](https://zenodo.org/badge/1050037172.svg)](https://doi.org/10.5281/zenodo.17050053)
+
+
 Next.js (App Router) frontend for ethnos_app. This project ports Flask/Jinja screens to Next.js while preserving visual design, semantics, and interactions with a clean, minimal implementation.
 
 ## Project Snapshot
