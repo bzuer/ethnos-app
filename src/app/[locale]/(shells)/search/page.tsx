@@ -2,12 +2,13 @@ import { getTranslations } from 'next-intl/server';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
+import SearchNotice from './SearchNotice';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.search');
+  return buildPageMetadata(props.params, 'metadata.search', '/search');
 }
 
 export default async function SearchPage(props: { params: Promise<{ locale: string }> }) {
@@ -17,6 +18,7 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('search.title')}</h1>
+      <SearchNotice />
       <section aria-labelledby="search-form-section">
         <h2 className="title-section" id="search-form-section">{t('search.quick')}</h2>
         <form action={searchAction} method="get" role="search" aria-label={t('common.meta.ariaSearchForm')}>

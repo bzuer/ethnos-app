@@ -1,6 +1,7 @@
 {
-  "name": "ethnos-next",
+  "name": "ethnos-app",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "scripts": {
     "dev": "bash scripts/manage.sh dev",

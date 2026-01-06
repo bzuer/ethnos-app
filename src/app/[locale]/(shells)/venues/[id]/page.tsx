@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { redirect } from '@/i18n/routing';
 import LocaleLink from '@/components/common/LocaleLink';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
@@ -63,13 +64,15 @@ const getVenueSubjectsText = (venue?: Venue | null) => {
   ]);
 };
 
-export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.venuesDetail');
+export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+  const { id, locale } = await props.params;
+  return buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`);
 }
 
 export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams?: Promise<{ page?: string }> }) {
   const { id, locale } = await props.params;
   let venue = await getVenue(id);
+  if (!venue) redirect({ href: '/venues?notice=venue-not-found', locale });
   const sp = (await props.searchParams) || {};
   const page = Number(sp.page || '1') || 1;
   let worksPage: any = null;

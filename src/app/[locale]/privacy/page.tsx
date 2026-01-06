@@ -13,7 +13,7 @@ type Block =
   | { kind: 'list'; items: ListItem[] };
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.privacy');
+  return buildPageMetadata(props.params, 'metadata.privacy', '/privacy');
 }
 
 function parseMarkdown(source: string): Block[] {

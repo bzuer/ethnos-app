@@ -5,7 +5,7 @@ export const dynamic = 'force-static';
 export const revalidate = false;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.results');
+  return buildPageMetadata(props.params, 'metadata.results', '/license');
 }
 
 export default async function LicensePage(props: { params: Promise<{ locale: string }> }) {

@@ -42,7 +42,7 @@
       "exportJson": "Exportar JSON",
       "exportRis": "Exportar RIS",
       "exportBib": "Exportar BibTeX",
-      "exportAbnt": "Exportar ABNT (.docx)",
+      "exportAbnt": "Exportar texto (APA)",
       "exportApa": "Exportar texto (APA)",
       "clearList": "Limpiar lista"
     },
@@ -100,7 +100,13 @@
       "bibExported": "BibTeX exportado",
       "abntExported": "ABNT exportado",
       "apaExported": "Texto APA exportado",
-      "confirmClear": "¿Confirmar limpieza de la lista? Esta acción es irreversible."
+      "confirmClear": "¿Confirmar limpieza de la lista? Esta acción es irreversible.",
+      "personNotFoundRedirect": "Página de persona no encontrada. Mostrando la búsqueda.",
+      "personNotFoundRedirectShort": "Persona no encontrada. Mostrando la búsqueda.",
+      "workNotFoundRedirect": "Página de obra no encontrada. Mostrando la búsqueda.",
+      "workNotFoundRedirectShort": "Obra no encontrada. Mostrando la búsqueda.",
+      "venueNotFoundRedirect": "Página de revista no encontrada. Mostrando las revistas.",
+      "venueNotFoundRedirectShort": "Revista no encontrada. Mostrando las revistas."
     },
     "entities": {
     "authorUnknown": "Autor desconocido",

@@ -8,12 +8,13 @@ function normalizeLimit(limit: number, max: number, min = 1) {
 
 export async function getHomeRecentWorks(limit = 20) {
   const safeLimit = normalizeLimit(limit, 20);
+  const init = { cache: 'force-cache' as RequestCache };
   try {
-    const r: any = await fetchJson(`/works/vitrine?limit=${encodeURIComponent(String(safeLimit))}`);
+    const r: any = await fetchJson(`/works/vitrine?limit=${encodeURIComponent(String(safeLimit))}`, init);
     return r?.data || r?.results || r || [];
   } catch {
     try {
-      const r: any = await fetchJson(`/search/works?q=${encodeURIComponent('*')}&limit=${encodeURIComponent(String(safeLimit))}&sort=recent`);
+      const r: any = await fetchJson(`/search/works?q=${encodeURIComponent('*')}&limit=${encodeURIComponent(String(safeLimit))}&sort=recent`, init);
       return r?.data || r?.results || r || [];
     } catch {
       return [];
@@ -29,8 +30,9 @@ export async function getVitrinePage(page = 1, limit = 25) {
 export async function getHomeTopVenues(limit = 25, page = 1) {
   const safeLimit = normalizeLimit(limit, 100);
   const safePage = Math.max(1, Number(page) || 1);
+  const init = { cache: 'force-cache' as RequestCache };
   try {
-    const r: any = await fetchJson(`/venues?limit=${encodeURIComponent(String(safeLimit))}&page=${encodeURIComponent(String(safePage))}`);
+    const r: any = await fetchJson(`/venues?limit=${encodeURIComponent(String(safeLimit))}&page=${encodeURIComponent(String(safePage))}`, init);
     const data = r?.data || r?.results || r?.items || [];
     return Array.isArray(data) ? data : [];
   } catch {
@@ -79,7 +81,10 @@ export async function searchWorks(params: Record<string, string | number | boole
 }
 
 export async function getVenuesPage(page = 1, limit = 50) {
-  const r: any = await fetchJson(`/venues?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
+  const r: any = await fetchJson(
+    `/venues?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`,
+    { cache: 'force-cache' as RequestCache }
+  );
   return r;
 }
 

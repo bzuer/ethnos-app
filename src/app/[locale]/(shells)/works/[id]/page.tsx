@@ -1,14 +1,15 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
-import { notFound } from 'next/navigation';
 import { fetchJson } from '@/lib/api';
 import ClientActions from './work-actions';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
+import { redirect } from '@/i18n/routing';
 
-export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.workDetail');
+export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+  const { id, locale } = await props.params;
+  return buildPageMetadata(Promise.resolve({ locale }), 'metadata.workDetail', `/works/${id}`);
 }
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
     );
   } catch {}
   try { work = envelope?.data || envelope?.work || envelope || null; } catch {}
-  if (!work || !work.id) notFound();
+  if (!work || !work.id) redirect({ href: '/works?notice=work-not-found', locale });
   const t = await getTranslations({ locale });
   const authorsArr = Array.isArray(work?.authors) ? work.authors : [];
   const onlyAuthors = authorsArr.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role);
@@ -46,6 +47,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const publisherType = work?.publisher?.type;
   const publisherCountry = work?.publisher?.country;
   const workType = work?.formatted_type || work?.work_type || work?.type;
+  const isBookType = String(workType || '').toUpperCase().includes('BOOK');
   const language = work?.language;
   const metrics = work?.metrics || {};
   const identifiers = work?.identifiers && typeof work.identifiers === 'object' ? work.identifiers : {};
@@ -223,7 +225,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                 <td className="field-value">{String(publicationDate).slice(0, 10)}</td>
               </tr>
             ) : null}
-            {peerReviewed === null ? null : (
+            {peerReviewed === null || isBookType ? null : (
               <tr>
                 <th scope="row">{t('works.detail.labels.peerReviewed')}</th>
                 <td className="field-value">{peerReviewed ? t('common.values.yes') : t('common.values.no')}</td>

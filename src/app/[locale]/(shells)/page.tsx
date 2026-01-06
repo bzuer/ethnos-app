@@ -9,7 +9,7 @@ export const dynamic = 'force-static';
 export const revalidate = false;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.home');
+  return buildPageMetadata(props.params, 'metadata.home', '/');
 }
 
 export default async function HomePage(props: { params: Promise<{ locale: string }> }) {
@@ -60,7 +60,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
             </tbody>
           </table>
           <div className="action-links">
-            <LocaleLink href="/search/results" className="action-btn btn-positive">{t('common.actions.browseWorks')}</LocaleLink>
+            <LocaleLink href="/search/results?q=*" className="action-btn btn-positive">{t('common.actions.browseWorks')}</LocaleLink>
           </div>
         </div>
       </section>

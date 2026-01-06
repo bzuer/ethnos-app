@@ -175,14 +175,55 @@ function getAuthorTokens(work: any) {
   return [];
 }
 
+function getFilesList(work: any) {
+  const files = work?.files;
+  if (Array.isArray(files)) return files;
+  if (files && typeof files === 'object') {
+    if (Array.isArray(files.data)) return files.data;
+    if (Array.isArray(files.items)) return files.items;
+    if (Array.isArray(files.results)) return files.results;
+  }
+  return [];
+}
+
+function getMd5(work: any) {
+  if (!work) return '';
+  const direct = work?.md5;
+  if (direct) return String(direct);
+  const files = getFilesList(work);
+  const fromFiles = files.map((file: any) => file?.md5 || file?.md5_hash || file?.md5sum || file?.md5Hash || file?.checksum).find(Boolean);
+  return fromFiles ? String(fromFiles) : '';
+}
+
+function normalizeValue(value: any) {
+  return value ? String(value).replace(/\s+/g, ' ').trim() : '';
+}
+
+function getIsbn(work: any) {
+  const direct = work?.isbn;
+  if (Array.isArray(direct)) return direct.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
+  if (direct) return normalizeValue(direct);
+  const identifiers = work?.identifiers;
+  if (Array.isArray(identifiers?.isbn)) return identifiers.isbn.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
+  if (identifiers?.isbn) return normalizeValue(identifiers.isbn);
+  return '';
+}
+
 function toBibTeX(work: any) {
-  const id = work?.id ? String(work.id) : 'entry';
+  const idValue = work?.id ? String(work.id) : '';
+  const id = idValue || 'entry';
   const typeRaw = (work?.work_type || work?.type || '').toString().toLowerCase();
   const type = typeRaw === 'book' ? 'book' : typeRaw === 'chapter' ? 'incollection' : typeRaw === 'conference' ? 'inproceedings' : 'article';
   const title = work?.title || '';
   const year = work?.publication?.year || work?.publication_year || work?.year || '';
   const venue = work?.venue?.name || work?.venue_name || '';
   const doi = work?.doi || work?.publication?.doi || '';
+  const md5 = getMd5(work);
+  const isbn = getIsbn(work);
+  const language = normalizeValue(work?.language);
+  const publisher = normalizeValue(work?.publisher?.name || work?.publisher_name);
+  const series = normalizeValue(work?.series?.name || work?.series);
+  const accessLink = idValue ? `https://ethnos.app/works/${encodeURIComponent(idValue)}` : '';
   const authors = getAuthorTokens(work).map((item: any) => {
     if (typeof item === 'string') return item;
     const family = item?.family_name || '';
@@ -191,12 +232,25 @@ function toBibTeX(work: any) {
     if (family || given) return [family, given].filter(Boolean).join(', ');
     return name;
   }).filter(Boolean).join(' and ');
+  const annoteParts = [];
+  if (accessLink) annoteParts.push(`Access: ${accessLink}`);
+  if (md5) {
+    const abstract = normalizeValue(work?.abstract);
+    const fileInfo = `File: pdf \\textbar MD5: ${md5}`;
+    annoteParts.push(abstract ? `${fileInfo} \\textbar Abstract: ${abstract}` : fileInfo);
+  }
+  const annote = annoteParts.join(' \\textbar ');
   const fields = [
-    ['title', title],
     ['author', authors],
+    ['annote', annote],
+    ['publisher', publisher],
+    ['language', language],
+    ['isbn', isbn],
     ['year', year ? String(year) : ''],
-    ['journal', venue],
-    ['doi', doi]
+    ['doi', doi],
+    ['title', title],
+    ['series', series],
+    ['journal', type === 'article' ? venue : '']
   ].filter(([, value]) => value);
   const lines = fields.map(([key, value]) => `  ${key} = {${String(value)}}`);
   return `@${type}{${id},\n${lines.join(',\n')}\n}`;
@@ -221,12 +275,15 @@ function toApaText(work: any) {
   const title = work?.title || '';
   const venue = work?.venue?.name || work?.venue_name || '';
   const doi = work?.doi || work?.publication?.doi || '';
+  const idValue = work?.id ? String(work.id) : '';
+  const accessLink = idValue ? `https://ethnos.app/works/${encodeURIComponent(idValue)}` : '';
   const parts = [
     authorText || '',
     year ? `(${year}).` : '',
     title ? `${title}.` : '',
     venue ? `${venue}.` : '',
-    doi ? `https://doi.org/${doi}` : ''
+    doi ? `https://doi.org/${doi}` : '',
+    accessLink
   ].filter(Boolean);
   return parts.join(' ').trim();
 }

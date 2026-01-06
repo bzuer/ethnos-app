@@ -2,7 +2,7 @@ import { buildPageMetadata } from '@/i18n/metadata';
 import SearchSphinxClient from './SearchSphinxClient';
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.searchSphinx');
+  return buildPageMetadata(props.params, 'metadata.searchSphinx', '/search/sphinx');
 }
 
 export const dynamic = 'force-static';

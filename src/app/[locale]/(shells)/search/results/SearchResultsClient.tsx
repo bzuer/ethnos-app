@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
-import { usePathname, useRouter } from '@/i18n/routing';
+import { usePathname } from '@/i18n/routing';
 import { isWorkOpenAccess } from '@/lib/works';
 
 type Props = { locale: string };
@@ -21,7 +21,6 @@ type SearchState = {
 export default function SearchResultsClient({ locale }: Props) {
   const t = useTranslations();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const [state, setState] = useState<SearchState>({
     items: [],
@@ -47,11 +46,6 @@ export default function SearchResultsClient({ locale }: Props) {
   const limit = params.limit || '20';
 
   useEffect(() => {
-    if (!query) router.replace('/search', { locale });
-  }, [query, router, locale]);
-
-  useEffect(() => {
-    if (!query) return;
     let cancelled = false;
     const controller = new AbortController();
     const load = async () => {
@@ -154,6 +148,14 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
   const base = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
   const qv = base.get('q') || '';
+  if (!qv || qv === '*') {
+    const vitrineParams = new URLSearchParams();
+    vitrineParams.set('page', page);
+    vitrineParams.set('limit', limit);
+    const res = await fetch(`/api/works/vitrine?${vitrineParams.toString()}`, { signal, headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
   const tryPaths: string[] = [];
   const sphinx = new URLSearchParams(base as any);
   const offset = base.has('offset') ? Number(base.get('offset') || '0') : Math.max(0, (Number(page) - 1) * Number(limit));

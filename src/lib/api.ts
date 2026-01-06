@@ -21,12 +21,13 @@ export async function fetchJson<T>(path: string, init?: RequestInit & { timeoutM
       const headers = new Headers({ Accept: 'application/json', ...(init?.headers || {}) });
       const key = process.env.ETHNOS_API_KEY;
       if (key) headers.set('x-access-key', key);
+      const { next, ...rest } = init || {};
       const res = await fetch(url, {
-        cache: init?.cache ?? 'no-store',
-        ...init,
+        cache: rest?.cache ?? 'no-store',
+        ...rest,
         headers,
         signal: controller.signal,
-        next: init?.next ?? { revalidate: 0 }
+        ...(next ? { next } : {})
       });
       if (!res.ok) {
         const statusError: any = new Error(`HTTP ${res.status}`);

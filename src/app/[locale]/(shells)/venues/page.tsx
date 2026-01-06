@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import VenuesList from './VenuesList';
 import { getVenuesPage } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
+import VenuesNotice from './VenuesNotice';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
@@ -9,7 +10,7 @@ export const revalidate = false;
 const DEFAULT_LIMIT = 25;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.venues');
+  return buildPageMetadata(props.params, 'metadata.venues', '/venues');
 }
 
 export default async function VenuesPage(props: { params: Promise<{ locale: string }> }) {
@@ -22,6 +23,7 @@ export default async function VenuesPage(props: { params: Promise<{ locale: stri
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('venues.title')}</h1>
+      <VenuesNotice />
       <section aria-labelledby="journals-list">
         <h2 className="title-section" id="journals-list">{t('venues.listHeading')}</h2>
         <VenuesList initialData={initialData} initialPage={1} initialLimit={DEFAULT_LIMIT} />

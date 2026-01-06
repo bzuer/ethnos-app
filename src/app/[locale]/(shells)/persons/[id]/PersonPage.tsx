@@ -1,11 +1,13 @@
 import { getTranslations } from 'next-intl/server';
+import { redirect } from '@/i18n/routing';
 import LocaleLink from '@/components/common/LocaleLink';
 import { getPersonsWorks } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 
-export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.persons');
+export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+  const { id, locale } = await props.params;
+  return buildPageMetadata(Promise.resolve({ locale }), 'metadata.persons', `/persons/${id}`);
 }
 
 export default async function PersonPage(props: { params: Promise<{ locale: string; id: string }>, searchParams?: Promise<{ page?: string }> }) {
@@ -18,6 +20,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const worksPage = data?.works || null;
   const items: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
   const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
+  if (!person) redirect({ href: '/search?notice=person-not-found', locale });
   const t = await getTranslations({ locale });
 
   const personName = person?.preferred_name || person?.name || [person?.given_names, person?.family_name].filter(Boolean).join(' ') || t('common.entities.personNotFound');

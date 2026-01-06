@@ -1,6 +1,6 @@
 # Privacidad y Cookies
 
-Ethnos Bibliography está diseñado para respetar tu privacidad. Esta página explica, en lenguaje claro, qué información usa la aplicación, por qué la usa y qué opciones tienes según las normas comunes de la UE y Brasil (RGPD y LGPD).
+Ethnos Bibliography está diseñado para respetar tu privacidad. Esta página explica qué información usa la aplicación, por qué la usa y qué opciones tienes según las normas comunes de la UE y Brasil (RGPD y LGPD).
 
 ## Lo Que Usamos
 

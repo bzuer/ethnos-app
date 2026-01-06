@@ -100,7 +100,13 @@
       "bibExported": "BibTeX exportado",
       "abntExported": "ABNT exportado",
       "apaExported": "Texto APA exportado",
-      "confirmClear": "Confirmar limpeza da lista? Esta ação é irreversível."
+      "confirmClear": "Confirmar limpeza da lista? Esta ação é irreversível.",
+      "personNotFoundRedirect": "Página de pessoa não encontrada. Exibindo a busca.",
+      "personNotFoundRedirectShort": "Pessoa não encontrada. Exibindo a busca.",
+      "workNotFoundRedirect": "Página de obra não encontrada. Exibindo a busca.",
+      "workNotFoundRedirectShort": "Obra não encontrada. Exibindo a busca.",
+      "venueNotFoundRedirect": "Página de periódico não encontrada. Exibindo os periódicos.",
+      "venueNotFoundRedirectShort": "Periódico não encontrado. Exibindo os periódicos."
     },
     "entities": {
     "authorUnknown": "Autor desconhecido",

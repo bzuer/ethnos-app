@@ -52,9 +52,6 @@ export const metadata: Metadata = {
     index: true,
     follow: true
   },
-  alternates: {
-    canonical: '/'
-  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -121,7 +118,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
           navLinks={navLinks}
           listCounterLabel={t('nav.listCounterLabel')}
         />
-        <main id="main-content" tabIndex={-1}>
+        <main id="main-content" tabIndex={-1} lang={locale}>
           {children}
         </main>
         <Footer label={t('footerLabel')} strings={footerStrings} />
@@ -153,7 +150,7 @@ function Footer({ label, strings }: { label: string; strings: FooterStrings }) {
   return (
     <footer className="footer" aria-label={label}>
       <div className="footer-sources">
-        <a href="https://ethnos.app" target="_blank" rel="noopener noreferrer">{strings.project}</a> • {strings.openSource} • <LocaleLink href="/license">{strings.license}</LocaleLink> • {strings.frontendVersion} • <LocaleLink href="/privacy">{strings.privacy}</LocaleLink> • {strings.apiDocs}: <a href="https://api.ethnos.app/docs" target="_blank" rel="noopener noreferrer">api.ethnos.app/docs</a> • {strings.apiSource}: <a href="https://github.com/bzuer/ethnos_app_api" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17049435 • {strings.frontendSource}: <a href="https://github.com/bzuer/ethnos_app_frontend" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17050053 • <a href="https://www.cruz.rio.br" target="_blank" rel="noopener noreferrer">cruz.rio.br</a> • {strings.tagline} •
+        <a href="https://ethnos.app" target="_blank" rel="noopener noreferrer">{strings.project}</a> • {strings.openSource} • <LocaleLink href="/license">{strings.license}</LocaleLink> • {strings.frontendVersion} • <LocaleLink href="/privacy">{strings.privacy}</LocaleLink> • {strings.apiDocs}: <a href="https://api.ethnos.app/docs" target="_blank" rel="noopener noreferrer">api.ethnos.app/docs</a> • {strings.apiSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17049435 • {strings.frontendSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17050053 • <a href="https://www.cruz.rio.br" target="_blank" rel="noopener noreferrer">cruz.rio.br</a> • {strings.tagline} •
       </div>
     </footer>
   );

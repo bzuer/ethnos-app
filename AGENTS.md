@@ -1,7 +1,8 @@
 # Repository Guidelines
 
 ## Language and Clean Code
-- Keep the entire project in English: pages, metadata, documentation (including `docs/**`), UI text, and CSS/SSOT descriptions.
+- Keep the entire project in technical English: pages, metadata, documentation, UI text, and CSS/SSOT descriptions.
+- Localized content is allowed only in locale-scoped assets: `messages/{locale}.json` for UI strings and `docs/**` files explicitly labeled for that language in the filename and content.
 - Source code and scripts must be clean: do not add comments or annotations. When modifying files, remove any comments in the edited sections.
 - Keep SSOT CSS tokens and classes without renaming. No inline CSS or JS.
 - Use consistent English naming for components, props, variables, tests, commits, and PRs.
@@ -9,7 +10,7 @@
 ## Scope and Goals
 - Port Flask/Jinja screens to Next.js while preserving visual design, semantics, and interactions.
 - Prioritize simplicity, clean structure, visual parity, and lightweight implementation.
-- Home, Search, and Venues must be pre-rendered at build time (`dynamic = 'force-static'`, no `revalidate`) and never rely on per-request data.
+- Home, Search, and Venues must be pre-rendered at build time per locale (`dynamic = 'force-static'`, no `revalidate`) and never rely on per-request data.
 - Pagination and filters for those pages are client-side via the `/api/**` proxy, keeping the App Router shell fully static.
 
 ## Project Layout
@@ -28,6 +29,7 @@
 - Person detail: `/persons/[id]`
 - Person alias: `/persons/[id]/works` (same page)
 - Redirects: `/results` -> `/search`, `/works` -> `/search`, `/works/sphinx` -> `/search/sphinx`, `/journals` and `/journals/all` -> `/venues`
+ - Search results uses vitrine when `q=*` or when search is empty.
 
 ## Commands and Ports
 - Dev (1210): `./bin/dev` loads `/etc/next-frontend.env` and serves `http://localhost:1210`.
@@ -77,6 +79,7 @@
 - Env source: `/etc/next-frontend.env` with `NODE_ENV=production`, `ETHNOS_UPSTREAM_API`, `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`, `NEXT_PUBLIC_DEV_API`.
 - Server-side requests add `x-access-key` from `ETHNOS_API_KEY`; never expose secrets to the client.
 - Never commit secrets. Sanitize data before inserting into the DOM.
+- API proxy rate limit returns 429 for suspicious traffic; optional env overrides: `ETHNOS_RATE_LIMIT_WINDOW_MS`, `ETHNOS_RATE_LIMIT_MAX`, `ETHNOS_RATE_LIMIT_SUSPICIOUS_MAX`.
 
 ## Data and Endpoints
 - API base: server prefers `ETHNOS_UPSTREAM_API`; client uses `/api/...` proxy.
@@ -113,7 +116,7 @@
 - `/sitemap.xml` lists static shells plus curated works, venues, and persons from `docs/top-list`.
 - `src/app/sitemap.ts` provides localized URLs with `alternates.languages` for `en`, `pt`, `es`.
 - `public/site.webmanifest` stays in English and declares shortcuts for each locale.
-- Robots: allow indexing but disallow `/api/`, `/_next/`, `/results`, `/works`, `/works/sphinx`, `/search/results`, `/search/sphinx`.
+- Robots: allow indexing but disallow `/api/`, `/_next/`, `/works/sphinx`.
 - Always expose `Sitemap: https://ethnos.app/sitemap.xml`.
 - Sitemap static shells: include `/, /search, /venues, /lists`; do not list legacy redirect aliases.
 - Manifest assets live under `public/` and referenced files must exist.
@@ -122,7 +125,9 @@
 - Default locale is English; `pt` and `es` must mirror structure and meaning for every UI label, heading, and metadata entry.
 - Use `next-intl` with `src/i18n/{config,metadata,request,routing}.ts`, keep the locale-aware middleware at `middleware.ts`, and store messages in `/messages/{locale}.json`.
 - App Router pages live in `src/app/[locale]/**` so `/` is English and `/pt`, `/es` are localized variants.
+- Static rendering is required per locale, and locale-specific shells must be generated at build time. Locale targeting does not make a page dynamic.
 - Home, Search, and Venues stay fully static with `dynamic = 'force-static'` and no `revalidate`.
+- Avoid request-bound APIs in static shells and layouts. Locale resolution must be handled by middleware and static params, not by `headers()` or `cookies()` in server components for these routes.
 - Navigation helpers must come from `@/i18n/routing`.
 - Every localized page calls `buildPageMetadata` with the matching message key.
 - Middleware resolves the active locale from the `NEXT_LOCALE` cookie or the `Accept-Language` header before rewriting to the locale-prefixed path.

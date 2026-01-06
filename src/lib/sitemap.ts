@@ -5,7 +5,7 @@ import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 
 const baseUrl = 'https://ethnos.app';
-const topListDir = path.join(process.cwd(), 'docs', 'top-list');
+const topListDir = path.join(process.cwd(), 'public', 'xml-list');
 
 type Frequency = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
 type BuildOptions = { includeAlternates?: boolean };

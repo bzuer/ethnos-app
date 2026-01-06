@@ -2,7 +2,8 @@ import type { MetadataRoute } from 'next';
 
 const disallow = [
   '/api/',
-  '/_next/'
+  '/_next/',
+  '/works/sphinx'
 ];
 
 export default function robots(): MetadataRoute.Robots {

@@ -104,12 +104,40 @@ function normAuthor(a: any) {
   return { family_name: a.family_name || null, given_names: a.given_names || null, preferred_name: a.preferred_name || a.full_name || a.name || null, identifiers: a.identifiers || (a.orcid ? { orcid: a.orcid } : {}), affiliation: aff || null };
 }
 
+function getFilesList(raw: any) {
+  const files = raw?.files;
+  if (Array.isArray(files)) return files;
+  if (files && typeof files === 'object') {
+    if (Array.isArray(files.data)) return files.data;
+    if (Array.isArray(files.items)) return files.items;
+    if (Array.isArray(files.results)) return files.results;
+  }
+  return [];
+}
+
+function normalizeValue(value: any) {
+  return value ? String(value).replace(/\s+/g, ' ').trim() : '';
+}
+
+function getIsbn(raw: any) {
+  const direct = raw?.isbn;
+  if (Array.isArray(direct)) return direct.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
+  if (direct) return normalizeValue(direct);
+  const identifiers = raw?.identifiers;
+  if (Array.isArray(identifiers?.isbn)) return identifiers.isbn.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
+  if (identifiers?.isbn) return normalizeValue(identifiers.isbn);
+  return '';
+}
+
 function normWork(raw: any) {
   if (!raw) return null;
   const authors = Array.isArray(raw.authors) ? raw.authors.map(normAuthor).filter(Boolean) : [];
   const publication = raw.publication || {};
   const venue = raw.venue || {};
   const publisher = raw.publisher || {};
+  const files = getFilesList(raw);
+  const md5 = raw.md5 || files.map((file: any) => file?.md5 || file?.md5_hash || file?.md5sum || file?.md5Hash || file?.checksum).find(Boolean) || null;
+  const isbn = getIsbn(raw);
   return {
     id: raw.id,
     work_type: raw.work_type || raw.type || null,
@@ -118,6 +146,9 @@ function normWork(raw: any) {
     abstract: raw.abstract || null,
     language: raw.language || null,
     doi: raw.doi || null,
+    md5,
+    isbn,
+    series: raw.series || raw.series_name || raw.series_title || raw.series_title_name || raw.series_title_value || raw.series_title_text || null,
     publication: {
       year: publication.year || raw.publication_year || raw.year || null,
       volume: publication.volume || raw.volume || null,
@@ -169,6 +200,15 @@ function toBibTeX(nw: any): string {
   const key = `${String(keyAuthor).toLowerCase().replace(/[^a-z0-9]/g, '')}${nw.publication?.year || ''}` || 'ref';
   const lines: string[] = [];
   lines.push(`@${bt}{${key},`);
+  const accessLink = nw.id ? `https://ethnos.app/works/${encodeURIComponent(String(nw.id))}` : '';
+  const annoteParts = [];
+  if (accessLink) annoteParts.push(`Access: ${accessLink}`);
+  if (nw.md5) {
+    const abstract = normalizeValue(nw.abstract);
+    const fileInfo = `File: pdf \\textbar MD5: ${nw.md5}`;
+    annoteParts.push(abstract ? `${fileInfo} \\textbar Abstract: ${abstract}` : fileInfo);
+  }
+  const annote = annoteParts.join(' \\textbar ');
   if (Array.isArray(nw.authors)) {
     const s = nw.authors.map((a: any) => {
       const fam = a.family_name || '';
@@ -180,14 +220,16 @@ function toBibTeX(nw: any): string {
   }
   if (nw.title) lines.push(`  title = {${nw.title}},`);
   if (nw.publication?.year) lines.push(`  year = {${nw.publication.year}},`);
-  if (nw.venue?.name) lines.push(`  journal = {${nw.venue.name}},`);
+  if (annote) lines.push(`  annote = {${annote}},`);
   if (nw.publisher?.name) lines.push(`  publisher = {${nw.publisher.name}},`);
+  if (nw.language) lines.push(`  language = {${nw.language}},`);
+  if (nw.isbn) lines.push(`  isbn = {${nw.isbn}},`);
+  if (nw.series) lines.push(`  series = {${nw.series}},`);
+  if (nw.venue?.name && bt === 'article') lines.push(`  journal = {${nw.venue.name}},`);
   if (nw.publication?.volume) lines.push(`  volume = {${nw.publication.volume}},`);
   if (nw.publication?.issue) lines.push(`  number = {${nw.publication.issue}},`);
   if (nw.publication?.pages) lines.push(`  pages = {${nw.publication.pages}},`);
   if (nw.doi) lines.push(`  doi = {${nw.doi}},`);
-  const eid = formatEid(nw.id);
-  if (eid) lines.push(`  notes = {${eid}},`);
   lines.push('}');
   return lines.join('\n');
 }
@@ -226,9 +268,43 @@ function toABNTLine(nw: any, fallbackAuthor: string, fallbackTitle: string): str
   if (parts.length) ref += ` ${parts.join(', ')}.`;
   ref += ` ${year}.`;
   if (doi) ref += ` DOI: ${doi}.`;
-  const eid = formatEid(nw.id);
-  if (eid) ref += ` ${eid}.`;
+  const accessLink = nw.id ? `https://ethnos.app/works/${encodeURIComponent(String(nw.id))}` : '';
+  if (accessLink) ref += ` ${accessLink}.`;
   return ref;
+}
+
+function toApaText(work: any, fallbackAuthor: string): string {
+  const authors = Array.isArray(work?.authors) ? work.authors.map((item: any) => {
+    if (!item) return '';
+    if (typeof item === 'string') return item;
+    const family = item?.family_name || item?.name || '';
+    const given = item?.given_names || '';
+    const initials = given
+      ? given.split(/\s+/).filter(Boolean).map((part: string) => part.charAt(0).toUpperCase() + '.').join(' ')
+      : '';
+    const name = family ? `${family}${initials ? `, ${initials}` : ''}` : (item?.preferred_name || '');
+    return name;
+  }).filter(Boolean) : [];
+  let authorText = '';
+  if (authors.length === 1) authorText = authors[0];
+  else if (authors.length === 2) authorText = `${authors[0]} & ${authors[1]}`;
+  else if (authors.length > 2) authorText = `${authors.slice(0, -1).join(', ')}, & ${authors[authors.length - 1]}`;
+  if (!authorText) authorText = fallbackAuthor;
+  const year = work?.publication?.year || work?.publication_year || work?.year || '';
+  const title = work?.title || '';
+  const venue = work?.venue?.name || work?.venue_name || '';
+  const doi = work?.doi || work?.publication?.doi || '';
+  const idValue = work?.id ? String(work.id) : '';
+  const accessLink = idValue ? `https://ethnos.app/works/${encodeURIComponent(idValue)}` : '';
+  const parts = [
+    authorText || '',
+    year ? `(${year}).` : '',
+    title ? `${title}.` : '',
+    venue ? `${venue}.` : '',
+    doi ? `https://doi.org/${doi}` : '',
+    accessLink
+  ].filter(Boolean);
+  return parts.join(' ').trim();
 }
 
 function normalizeList(value: any): SavedItem[] {
@@ -238,10 +314,15 @@ function normalizeList(value: any): SavedItem[] {
 
 export default function ListPageClient() {
   const t = useTranslations();
-  const [items, setItems] = useState<SavedItem[]>(() => readList());
+  const [items, setItems] = useState<SavedItem[]>([]);
+  const [mounted, setMounted] = useState(false);
   const hasItems = items.length > 0;
   const listCountLabel = hasItems ? t(items.length === 1 ? 'lists.itemsInListOne' : 'lists.itemsInListOther', { count: items.length }) : '';
   const listOrderLabel = t('lists.itemsChronological');
+  useEffect(() => {
+    setItems(readList());
+    setMounted(true);
+  }, []);
   useEffect(() => { updateHeaderCounter(); }, [items.length]);
 
   const onRemove = (id: number | string) => {
@@ -296,9 +377,9 @@ export default function ListPageClient() {
     const ids = items.map((i) => i.id);
     const fetched = (await Promise.all(ids.map((id) => fetchWork(id)))).filter(Boolean) as any[];
     const works = (fetched.length ? fetched : items).map(normWork).filter(Boolean);
-    const lines = works.map((item) => toABNTLine(item, t('common.entities.authorUnknown'), t('common.entities.titleUnavailable'))).join('\n\n');
-    downloadFile(`references-abnt-${new Date().toISOString().split('T')[0]}.docx`, lines || ' ', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    showNotification(t('common.messages.abntExported'), 'success');
+    const lines = works.map((item) => toApaText(item, t('common.entities.authorUnknown'))).join('\n\n');
+    downloadFile(`references-apa-${new Date().toISOString().split('T')[0]}.txt`, lines || ' ', 'text/plain;charset=utf-8');
+    showNotification(t('common.messages.apaExported'), 'success');
   };
 
   return (
@@ -307,7 +388,7 @@ export default function ListPageClient() {
       <section aria-labelledby="saved-items-title">
         <h2 className="title-section" id="saved-items-title">{t('lists.savedItems')}</h2>
         <div id="personal-list-container" aria-live="polite">
-          {hasItems ? (
+          {mounted && hasItems ? (
             <>
               <div className="list-header">
                 <p className="list-stats">

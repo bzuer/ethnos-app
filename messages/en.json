@@ -100,7 +100,13 @@
       "bibExported": "BibTeX exported",
       "abntExported": "ABNT exported",
       "apaExported": "APA text exported",
-      "confirmClear": "Confirm clearing list? This action is irreversible."
+      "confirmClear": "Confirm clearing list? This action is irreversible.",
+      "personNotFoundRedirect": "Person page not found. Showing search instead.",
+      "personNotFoundRedirectShort": "Person not found. Showing search.",
+      "workNotFoundRedirect": "Work page not found. Showing search instead.",
+      "workNotFoundRedirectShort": "Work not found. Showing search.",
+      "venueNotFoundRedirect": "Journal page not found. Showing journals instead.",
+      "venueNotFoundRedirectShort": "Journal not found. Showing journals."
     },
     "entities": {
     "authorUnknown": "Unknown author",
