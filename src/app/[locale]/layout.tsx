@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
+import ScrollTools from '@/components/common/ScrollTools';
 import { locales, type Locale } from '@/i18n/config';
 
 type NavLinks = {
@@ -122,6 +123,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
           {children}
         </main>
         <Footer label={t('footerLabel')} strings={footerStrings} />
+        <ScrollTools />
       </div>
     </NextIntlClientProvider>
   );

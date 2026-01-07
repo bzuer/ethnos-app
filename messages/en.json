@@ -43,6 +43,8 @@
       "exportRis": "Export RIS",
       "exportBib": "Export BibTeX",
       "exportApa": "Export APA (.docx)",
+      "scrollTop": "Back to top",
+      "scrollBottom": "Go to end",
       "clearList": "Clear list"
     },
     "labels": {

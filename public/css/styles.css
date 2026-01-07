@@ -1304,7 +1304,50 @@ a.action-btn {
 }
 .temporary-message-info,
 .notification-info {
-    background: var(--primary-yellow);
+  background: var(--primary-yellow);
+}
+
+.scroll-tools {
+  position: fixed;
+  right: var(--spacing-lg);
+  bottom: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  z-index: 900;
+}
+
+.scroll-tool {
+  width: 32px;
+  height: 32px;
+  border: var(--border-thin) solid var(--border-gray);
+  background: var(--bg-light);
+  color: var(--label-gray);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.scroll-tool:hover {
+  background-color: var(--document-white);
+  color: var(--data-gray);
+}
+
+@media (max-width: 640px) {
+  .scroll-tools {
+    right: var(--spacing-md);
+    bottom: var(--spacing-md);
+  }
+
+  .scroll-tool {
+    width: 30px;
+    height: 30px;
+  }
 }
 .fade-out {
     opacity: 0;
