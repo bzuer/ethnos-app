@@ -1318,8 +1318,8 @@ a.action-btn {
 }
 
 .scroll-tool {
-  width: 32px;
-  height: 32px;
+  width: var(--grid-unit);
+  height: var(--grid-height);
   border: var(--border-thin) solid var(--border-gray);
   background: var(--bg-light);
   color: var(--label-gray);
@@ -1345,8 +1345,8 @@ a.action-btn {
   }
 
   .scroll-tool {
-    width: 30px;
-    height: 30px;
+    width: var(--grid-unit);
+    height: var(--grid-height);
   }
 }
 .fade-out {
