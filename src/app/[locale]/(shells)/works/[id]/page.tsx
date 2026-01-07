@@ -82,9 +82,9 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   addValues('WOS ID', work?.wos_id);
   addValues('Handle', work?.handle, (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`);
   addValues('Wikidata', work?.wikidata_id);
-  addValues(t('works.detail.labels.openAlex'), work?.openalex_id);
+  addValues(t('works.detail.labels.openAlex'), work?.openalex_id, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
   addValues('MAG', work?.mag_id);
-  addValues(t('works.detail.labels.openLibraryId'), work?.openlibrary_id);
+  addValues(t('works.detail.labels.openLibraryId'), work?.openlibrary_id, (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`);
   addValues(t('works.detail.labels.isbn'), work?.isbn);
   const idLabelMap: Record<string, string> = {
     openlibrary: t('works.detail.labels.openLibraryId'),
@@ -105,7 +105,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         ? (value) => `https://arxiv.org/abs/${encodeURIComponent(String(value))}`
         : normalized === 'handle'
           ? (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`
-          : undefined);
+          : normalized === 'openalex' || normalized === 'openalexid'
+            ? (value) => `https://openalex.org/${encodeURIComponent(String(value))}`
+            : normalized === 'openlibrary' || normalized === 'openlibraryid'
+              ? (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`
+              : undefined);
   });
   const abstractText = work?.abstract || '';
   const refs: any[] = Array.isArray(work?.citations?.references) ? work.citations.references : [];

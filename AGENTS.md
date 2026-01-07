@@ -74,6 +74,7 @@
 ## Commits and PRs
 - Commits: Conventional Commits (`feat:`, `fix:`, `chore:`), short and imperative.
 - PRs: English description, linked issues, screenshots for visual changes, tests and docs updated.
+- Always commit at the end of a session or after major changes.
 
 ## Configuration and Security
 - Env source: `/etc/next-frontend.env` with `NODE_ENV=production`, `ETHNOS_UPSTREAM_API`, `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`, `NEXT_PUBLIC_DEV_API`.
@@ -86,7 +87,7 @@
 - When no overrides exist, server fetch helpers and `/api/...` proxy default to `http://127.0.0.1:3000`.
 - Search: prefer `GET /search/sphinx`, fallback to `GET /search/works`.
 - Work detail: include `metrics,references,files,venue,authors`.
-- Personal list: localStorage key `ethnos_app_personal_list` (CSR only); exports JSON, RIS, BibTeX, ABNT.
+- Personal list: localStorage key `ethnos_app_personal_list` (CSR only); exports JSON, RIS, BibTeX, APA.
 
 ## Work Detail Page
 - Section order: Bibliographic Data -> Abstract -> References -> Cited By -> Tools.

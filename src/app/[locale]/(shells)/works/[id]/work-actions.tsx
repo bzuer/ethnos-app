@@ -2,6 +2,7 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { showNotification } from '@/lib/notify';
+import { AlignmentType, Document, Packer, Paragraph, TextRun } from 'docx';
 
 type Props = { work: any };
 
@@ -49,7 +50,9 @@ function normWork(raw: any) {
     subtitle: raw.subtitle || null,
     abstract: raw.abstract || null,
     language: raw.language || null,
-    doi: raw.doi || null,
+    doi: raw.doi || publication.doi || null,
+    isbn: getIsbn(raw),
+    series: raw.series || raw.series_name || raw.series_title || raw.series_title_name || raw.series_title_value || raw.series_title_text || null,
     publication: {
       year: publication.year || raw.publication_year || raw.year || null,
       volume: publication.volume || raw.volume || null,
@@ -77,6 +80,12 @@ function attachEid<T extends Record<string, any>>(item: T, overrideId?: string |
 function download(filename: string, content: string, type?: string) {
   const blob = new Blob([content], { type: type || 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function downloadBlob(filename: string, content: Blob) {
+  const url = URL.createObjectURL(content);
   const a = document.createElement('a');
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
@@ -111,9 +120,14 @@ export default function ClientActions({ work }: Props) {
   }, [work, t]);
 
   const onExportApa = useCallback(() => {
-    const content = toApaText(work);
-    download(`work-${work?.id || 'data'}-apa.txt`, content || ' ', 'text/plain;charset=utf-8');
-    showNotification(t('common.messages.apaExported'), 'success');
+    const run = async () => {
+      const paragraph = toApaParagraph(work, t('common.entities.authorUnknown'));
+      const doc = new Document({ sections: [{ children: [paragraph || new Paragraph(' ')] }] });
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(`work-${work?.id || 'data'}-apa.docx`, blob);
+      showNotification(t('common.messages.apaExported'), 'success');
+    };
+    void run();
   }, [work, t]);
 
   const doi = work?.doi || work?.publication?.doi;
@@ -199,6 +213,26 @@ function normalizeValue(value: any) {
   return value ? String(value).replace(/\s+/g, ' ').trim() : '';
 }
 
+function normalizeDoi(value: any) {
+  const raw = normalizeValue(value);
+  if (!raw) return '';
+  return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
+}
+
+function formatAccessLink(id: string | number | null | undefined) {
+  if (id === null || id === undefined) return '';
+  const value = String(id).trim();
+  return value ? `ethnos.app/works/${encodeURIComponent(value)}` : '';
+}
+
+function normalizeIssue(value: any) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'boolean') return '';
+  const raw = String(value).trim();
+  if (!raw || raw.toLowerCase() === 'true' || raw.toLowerCase() === 'false') return '';
+  return raw;
+}
+
 function getIsbn(work: any) {
   const direct = work?.isbn;
   if (Array.isArray(direct)) return direct.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
@@ -217,13 +251,16 @@ function toBibTeX(work: any) {
   const title = work?.title || '';
   const year = work?.publication?.year || work?.publication_year || work?.year || '';
   const venue = work?.venue?.name || work?.venue_name || '';
-  const doi = work?.doi || work?.publication?.doi || '';
+  const doi = normalizeDoi(work?.doi || work?.publication?.doi);
   const md5 = getMd5(work);
   const isbn = getIsbn(work);
   const language = normalizeValue(work?.language);
   const publisher = normalizeValue(work?.publisher?.name || work?.publisher_name);
   const series = normalizeValue(work?.series?.name || work?.series);
-  const accessLink = idValue ? `https://ethnos.app/works/${encodeURIComponent(idValue)}` : '';
+  const accessLink = formatAccessLink(idValue);
+  const volume = work?.publication?.volume || work?.volume || '';
+  const issue = work?.publication?.issue || work?.issue || '';
+  const pages = work?.publication?.pages || work?.pages || '';
   const authors = getAuthorTokens(work).map((item: any) => {
     if (typeof item === 'string') return item;
     const family = item?.family_name || '';
@@ -250,13 +287,19 @@ function toBibTeX(work: any) {
     ['doi', doi],
     ['title', title],
     ['series', series],
-    ['journal', type === 'article' ? venue : '']
+    ['journal', type === 'article' ? venue : ''],
+    ['volume', volume],
+    ['number', issue],
+    ['pages', pages]
   ].filter(([, value]) => value);
   const lines = fields.map(([key, value]) => `  ${key} = {${String(value)}}`);
   return `@${type}{${id},\n${lines.join(',\n')}\n}`;
 }
 
-function toApaText(work: any) {
+function toApaParagraph(work: any, fallbackAuthor: string) {
+  const typeRaw = (work?.work_type || work?.type || '').toString().toLowerCase();
+  const isBook = typeRaw === 'book';
+  const isArticle = typeRaw === 'article' || typeRaw === 'journal';
   const authors = getAuthorTokens(work).map((item: any) => {
     if (typeof item === 'string') return item;
     const family = item?.family_name || item?.name || '';
@@ -271,21 +314,44 @@ function toApaText(work: any) {
   if (authors.length === 1) authorText = authors[0];
   else if (authors.length === 2) authorText = `${authors[0]} & ${authors[1]}`;
   else if (authors.length > 2) authorText = `${authors.slice(0, -1).join(', ')}, & ${authors[authors.length - 1]}`;
+  if (!authorText) authorText = fallbackAuthor;
   const year = work?.publication?.year || work?.publication_year || work?.year || '';
   const title = work?.title || '';
+  const subtitle = work?.subtitle || '';
+  const titleText = title ? `${title}${subtitle ? `: ${subtitle}` : ''}` : '';
   const venue = work?.venue?.name || work?.venue_name || '';
-  const doi = work?.doi || work?.publication?.doi || '';
-  const idValue = work?.id ? String(work.id) : '';
-  const accessLink = idValue ? `https://ethnos.app/works/${encodeURIComponent(idValue)}` : '';
-  const parts = [
-    authorText || '',
-    year ? `(${year}).` : '',
-    title ? `${title}.` : '',
-    venue ? `${venue}.` : '',
-    doi ? `https://doi.org/${doi}` : '',
-    accessLink
-  ].filter(Boolean);
-  return parts.join(' ').trim();
+  const volume = work?.publication?.volume || work?.volume || '';
+  const issue = normalizeIssue(work?.publication?.issue || work?.issue || '');
+  const pages = work?.publication?.pages || work?.pages || '';
+  const publisher = work?.publisher?.name || work?.publisher_name || '';
+  const isbn = getIsbn(work);
+  const doi = normalizeDoi(work?.doi || work?.publication?.doi);
+  const accessLink = formatAccessLink(work?.id);
+  const children: TextRun[] = [];
+  if (authorText) children.push(new TextRun({ text: authorText }));
+  if (year) children.push(new TextRun({ text: ` (${year}).` }));
+  if (titleText) children.push(new TextRun({ text: ` ${titleText}.`, italics: isBook }));
+  if (isArticle && venue) {
+    children.push(new TextRun({ text: ` ${venue}`, italics: true }));
+    if (volume) children.push(new TextRun({ text: `, ${volume}`, italics: true }));
+    if (issue) children.push(new TextRun({ text: `(${issue})` }));
+    if (pages) children.push(new TextRun({ text: `, ${pages}` }));
+    children.push(new TextRun({ text: '.' }));
+  } else {
+    if (venue) children.push(new TextRun({ text: ` ${venue}.`, italics: true }));
+    if (publisher) children.push(new TextRun({ text: ` ${publisher}.` }));
+    if (volume || issue || pages) {
+      const volIssue = `${volume ? ` ${volume}` : ''}${issue ? `(${issue})` : ''}`;
+      if (volIssue.trim()) children.push(new TextRun({ text: volIssue, italics: true }));
+      if (pages) children.push(new TextRun({ text: `${volIssue.trim() ? ', ' : ' '}${pages}.` }));
+      else if (volIssue.trim()) children.push(new TextRun({ text: '.' }));
+    }
+  }
+  if (isbn) children.push(new TextRun({ text: ` ISBN: ${isbn}.` }));
+  if (doi) children.push(new TextRun({ text: ` DOI: ${doi}.` }));
+  if (accessLink) children.push(new TextRun({ text: ` Access: ${accessLink}.` }));
+  if (!children.length) return null;
+  return new Paragraph({ children, alignment: AlignmentType.JUSTIFIED });
 }
 
 function normalizeList(value: any) {

@@ -42,8 +42,7 @@
       "exportJson": "Export JSON",
       "exportRis": "Export RIS",
       "exportBib": "Export BibTeX",
-      "exportAbnt": "Export ABNT (.docx)",
-      "exportApa": "Export text (APA)",
+      "exportApa": "Export APA (.docx)",
       "clearList": "Clear list"
     },
     "labels": {
@@ -98,8 +97,7 @@
       "listCleared": "List cleared",
       "risExported": "RIS exported",
       "bibExported": "BibTeX exported",
-      "abntExported": "ABNT exported",
-      "apaExported": "APA text exported",
+      "apaExported": "APA exported",
       "confirmClear": "Confirm clearing list? This action is irreversible.",
       "personNotFoundRedirect": "Person page not found. Showing search instead.",
       "personNotFoundRedirectShort": "Person not found. Showing search.",

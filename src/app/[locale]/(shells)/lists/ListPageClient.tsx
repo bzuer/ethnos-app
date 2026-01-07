@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import { showNotification } from '@/lib/notify';
+import { AlignmentType, Document, Packer, Paragraph, TextRun } from 'docx';
 
 type SavedItem = { id: number | string; title?: string; authors?: any; publication_year?: number | string; venue_name?: string; type?: string; added_at?: string };
 type Work = any;
@@ -119,6 +120,26 @@ function normalizeValue(value: any) {
   return value ? String(value).replace(/\s+/g, ' ').trim() : '';
 }
 
+function normalizeDoi(value: any) {
+  const raw = normalizeValue(value);
+  if (!raw) return '';
+  return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
+}
+
+function formatAccessLink(id: string | number | null | undefined) {
+  if (id === null || id === undefined) return '';
+  const value = String(id).trim();
+  return value ? `ethnos.app/works/${encodeURIComponent(value)}` : '';
+}
+
+function normalizeIssue(value: any) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'boolean') return '';
+  const raw = String(value).trim();
+  if (!raw || raw.toLowerCase() === 'true' || raw.toLowerCase() === 'false') return '';
+  return raw;
+}
+
 function getIsbn(raw: any) {
   const direct = raw?.isbn;
   if (Array.isArray(direct)) return direct.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
@@ -145,7 +166,7 @@ function normWork(raw: any) {
     subtitle: raw.subtitle || null,
     abstract: raw.abstract || null,
     language: raw.language || null,
-    doi: raw.doi || null,
+    doi: raw.doi || publication.doi || null,
     md5,
     isbn,
     series: raw.series || raw.series_name || raw.series_title || raw.series_title_name || raw.series_title_value || raw.series_title_text || null,
@@ -185,7 +206,8 @@ function toRIS(nw: any): string {
   if (nw.publication?.volume) lines.push(`VL  - ${nw.publication.volume}`);
   if (nw.publication?.issue) lines.push(`IS  - ${nw.publication.issue}`);
   if (nw.publication?.pages) { const sp = String(nw.publication.pages).split('-')[0]; const ep = String(nw.publication.pages).split('-')[1]; if (sp) lines.push(`SP  - ${sp}`); if (ep) lines.push(`EP  - ${ep}`); }
-  if (nw.doi) lines.push(`DO  - ${nw.doi}`);
+  const doi = normalizeDoi(nw.doi);
+  if (doi) lines.push(`DO  - ${doi}`);
   if (nw.language) lines.push(`LA  - ${nw.language}`);
   const eid = formatEid(nw.id);
   if (eid) lines.push(`N1  - ${eid}`);
@@ -200,7 +222,8 @@ function toBibTeX(nw: any): string {
   const key = `${String(keyAuthor).toLowerCase().replace(/[^a-z0-9]/g, '')}${nw.publication?.year || ''}` || 'ref';
   const lines: string[] = [];
   lines.push(`@${bt}{${key},`);
-  const accessLink = nw.id ? `https://ethnos.app/works/${encodeURIComponent(String(nw.id))}` : '';
+  const accessLink = formatAccessLink(nw.id);
+  const doi = normalizeDoi(nw.doi);
   const annoteParts = [];
   if (accessLink) annoteParts.push(`Access: ${accessLink}`);
   if (nw.md5) {
@@ -229,51 +252,15 @@ function toBibTeX(nw: any): string {
   if (nw.publication?.volume) lines.push(`  volume = {${nw.publication.volume}},`);
   if (nw.publication?.issue) lines.push(`  number = {${nw.publication.issue}},`);
   if (nw.publication?.pages) lines.push(`  pages = {${nw.publication.pages}},`);
-  if (nw.doi) lines.push(`  doi = {${nw.doi}},`);
+  if (doi) lines.push(`  doi = {${doi}},`);
   lines.push('}');
   return lines.join('\n');
 }
 
-function toABNTLine(nw: any, fallbackAuthor: string, fallbackTitle: string): string {
-  let authors = fallbackAuthor;
-  if (Array.isArray(nw.authors) && nw.authors.length > 0) {
-    authors = nw.authors.map((a: any) => {
-      const fam = a.family_name || '';
-      const giv = a.given_names || '';
-      const pref = a.preferred_name || '';
-      if (fam && giv) return `${String(fam).toUpperCase()}, ${giv}`;
-      if (pref) {
-        const parts = String(pref).trim().split(/\s+/);
-        if (parts.length > 1) { const last = parts.pop() as string; const firsts = parts.join(' '); return `${String(last).toUpperCase()}, ${firsts}`; }
-        return String(pref).toUpperCase();
-      }
-      const any = fam || giv;
-      return any ? String(any).toUpperCase() : '';
-    }).filter(Boolean).join('; ');
-  }
-  const title = nw.title || fallbackTitle;
-  const subtitle = nw.subtitle ? `: ${nw.subtitle}` : '';
-  const year = nw.publication?.year || 'S.d.';
-  const venue = nw.venue?.name || '';
-  const volume = nw.publication?.volume || '';
-  const issue = nw.publication?.issue || '';
-  const pages = nw.publication?.pages || '';
-  const doi = nw.doi || '';
-  let ref = `${authors}. ${title}${subtitle}.`;
-  if (venue) ref += ` ${venue}.`;
-  const parts: string[] = [];
-  if (volume) parts.push(`v. ${volume}`);
-  if (issue) parts.push(`n. ${issue}`);
-  if (pages) parts.push(`${pages}`);
-  if (parts.length) ref += ` ${parts.join(', ')}.`;
-  ref += ` ${year}.`;
-  if (doi) ref += ` DOI: ${doi}.`;
-  const accessLink = nw.id ? `https://ethnos.app/works/${encodeURIComponent(String(nw.id))}` : '';
-  if (accessLink) ref += ` ${accessLink}.`;
-  return ref;
-}
-
-function toApaText(work: any, fallbackAuthor: string): string {
+function toApaParagraph(work: any, fallbackAuthor: string) {
+  const typeRaw = (work?.work_type || work?.type || '').toString().toLowerCase();
+  const isBook = typeRaw === 'book';
+  const isArticle = typeRaw === 'article' || typeRaw === 'journal';
   const authors = Array.isArray(work?.authors) ? work.authors.map((item: any) => {
     if (!item) return '';
     if (typeof item === 'string') return item;
@@ -292,24 +279,60 @@ function toApaText(work: any, fallbackAuthor: string): string {
   if (!authorText) authorText = fallbackAuthor;
   const year = work?.publication?.year || work?.publication_year || work?.year || '';
   const title = work?.title || '';
+  const subtitle = work?.subtitle || '';
+  const titleText = title ? `${title}${subtitle ? `: ${subtitle}` : ''}` : '';
   const venue = work?.venue?.name || work?.venue_name || '';
-  const doi = work?.doi || work?.publication?.doi || '';
-  const idValue = work?.id ? String(work.id) : '';
-  const accessLink = idValue ? `https://ethnos.app/works/${encodeURIComponent(idValue)}` : '';
-  const parts = [
-    authorText || '',
-    year ? `(${year}).` : '',
-    title ? `${title}.` : '',
-    venue ? `${venue}.` : '',
-    doi ? `https://doi.org/${doi}` : '',
-    accessLink
-  ].filter(Boolean);
-  return parts.join(' ').trim();
+  const volume = work?.publication?.volume || '';
+  const issue = normalizeIssue(work?.publication?.issue || '');
+  const pages = work?.publication?.pages || '';
+  const publisher = work?.publisher?.name || work?.publisher_name || '';
+  const isbn = work?.isbn || '';
+  const doi = normalizeDoi(work?.doi || work?.publication?.doi);
+  const accessLink = formatAccessLink(work?.id);
+  const children: TextRun[] = [];
+  if (authorText) children.push(new TextRun({ text: authorText }));
+  if (year) children.push(new TextRun({ text: ` (${year}).` }));
+  if (titleText) children.push(new TextRun({ text: ` ${titleText}.`, italics: isBook }));
+  if (isArticle && venue) {
+    children.push(new TextRun({ text: ` ${venue}`, italics: true }));
+    if (volume) children.push(new TextRun({ text: `, ${volume}`, italics: true }));
+    if (issue) children.push(new TextRun({ text: `(${issue})` }));
+    if (pages) children.push(new TextRun({ text: `, ${pages}` }));
+    children.push(new TextRun({ text: '.' }));
+  } else {
+    if (venue) children.push(new TextRun({ text: ` ${venue}.`, italics: true }));
+    if (publisher) children.push(new TextRun({ text: ` ${publisher}.` }));
+    if (volume || issue || pages) {
+      const volIssue = `${volume ? ` ${volume}` : ''}${issue ? `(${issue})` : ''}`;
+      if (volIssue.trim()) children.push(new TextRun({ text: volIssue, italics: true }));
+      if (pages) children.push(new TextRun({ text: `${volIssue.trim() ? ', ' : ' '}${pages}.` }));
+      else if (volIssue.trim()) children.push(new TextRun({ text: '.' }));
+    }
+  }
+  if (isbn) children.push(new TextRun({ text: ` ISBN: ${isbn}.` }));
+  if (doi) children.push(new TextRun({ text: ` DOI: ${doi}.` }));
+  if (accessLink) children.push(new TextRun({ text: ` Access: ${accessLink}.` }));
+  if (!children.length) return null;
+  return new Paragraph({ children, spacing: { after: 240 }, alignment: AlignmentType.JUSTIFIED });
+}
+
+async function exportApaDocx(items: any[], filename: string, fallbackAuthor: string) {
+  const paragraphs = items.map((item) => toApaParagraph(item, fallbackAuthor)).filter(Boolean) as Paragraph[];
+  const doc = new Document({ sections: [{ children: paragraphs.length ? paragraphs : [new Paragraph(' ')] }] });
+  const blob = await Packer.toBlob(doc);
+  downloadFile(filename, blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 
 function normalizeList(value: any): SavedItem[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item) => item && typeof item === 'object' && 'id' in item) as SavedItem[];
+}
+
+async function resolveWorksForExport(list: SavedItem[]) {
+  const ids = list.map((item) => item.id);
+  const fetched = await Promise.all(ids.map((id) => fetchWork(id)));
+  const byId = new Map(fetched.filter(Boolean).map((entry: any) => [String(entry.id), entry]));
+  return ids.map((id, idx) => byId.get(String(id)) || list[idx]);
 }
 
 export default function ListPageClient() {
@@ -344,9 +367,7 @@ export default function ListPageClient() {
   };
 
   const exportJson = async () => {
-    const ids = items.map((i) => i.id);
-    const works = (await Promise.all(ids.map((id) => fetchWork(id)))).filter(Boolean) as any[];
-    const resolved = works.length ? works : items;
+    const resolved = await resolveWorksForExport(items);
     const normalizedSource = resolved.map(normWork);
     const normalized = normalizedSource.filter(Boolean).map((entry) => attachEid(entry as Record<string, any>));
     const exportedItems = resolved.map((entry: any) => attachEid(entry));
@@ -356,29 +377,25 @@ export default function ListPageClient() {
   };
 
   const exportRIS = async () => {
-    const ids = items.map((i) => i.id);
-    const fetched = (await Promise.all(ids.map((id) => fetchWork(id)))).filter(Boolean) as any[];
-    const works = (fetched.length ? fetched : items).map(normWork).filter(Boolean);
+    const resolved = await resolveWorksForExport(items);
+    const works = resolved.map(normWork).filter(Boolean);
     const content = works.map(toRIS).join('\n\n');
     downloadFile(`references-${new Date().toISOString().split('T')[0]}.ris`, content || ' ', 'application/x-research-info-systems');
     showNotification(t('common.messages.risExported'), 'success');
   };
 
   const exportBib = async () => {
-    const ids = items.map((i) => i.id);
-    const fetched = (await Promise.all(ids.map((id) => fetchWork(id)))).filter(Boolean) as any[];
-    const works = (fetched.length ? fetched : items).map(normWork).filter(Boolean);
+    const resolved = await resolveWorksForExport(items);
+    const works = resolved.map(normWork).filter(Boolean);
     const content = works.map(toBibTeX).join('\n\n');
     downloadFile(`references-${new Date().toISOString().split('T')[0]}.bib`, content || ' ', 'application/x-bibtex');
     showNotification(t('common.messages.bibExported'), 'success');
   };
 
-  const exportABNT = async () => {
-    const ids = items.map((i) => i.id);
-    const fetched = (await Promise.all(ids.map((id) => fetchWork(id)))).filter(Boolean) as any[];
-    const works = (fetched.length ? fetched : items).map(normWork).filter(Boolean);
-    const lines = works.map((item) => toApaText(item, t('common.entities.authorUnknown'))).join('\n\n');
-    downloadFile(`references-apa-${new Date().toISOString().split('T')[0]}.txt`, lines || ' ', 'text/plain;charset=utf-8');
+  const exportApa = async () => {
+    const resolved = await resolveWorksForExport(items);
+    const works = resolved.map(normWork).filter(Boolean);
+    await exportApaDocx(works, `references-apa-${new Date().toISOString().split('T')[0]}.docx`, t('common.entities.authorUnknown'));
     showNotification(t('common.messages.apaExported'), 'success');
   };
 
@@ -446,7 +463,7 @@ export default function ListPageClient() {
           <button type="button" className="action-btn btn-positive" id="export-json-btn" onClick={exportJson}>{t('common.actions.exportJson')}</button>
           <button type="button" className="action-btn btn-positive" id="export-ris-btn" onClick={exportRIS}>{t('common.actions.exportRis')}</button>
           <button type="button" className="action-btn btn-positive" id="export-bib-btn" onClick={exportBib}>{t('common.actions.exportBib')}</button>
-          <button type="button" className="action-btn btn-positive" id="export-txt-btn" onClick={exportABNT}>{t('common.actions.exportAbnt')}</button>
+          <button type="button" className="action-btn btn-positive" id="export-apa-btn" onClick={exportApa}>{t('common.actions.exportApa')}</button>
         </div>
         <div id="export-empty-message" className={`description${hasItems ? ' hidden' : ''}`}>
           {t('lists.exportUnavailable')}

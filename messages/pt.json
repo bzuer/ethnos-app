@@ -4,7 +4,7 @@
     "brand": "ETHNOS_APP",
     "nav": {
       "home": "Início",
-      "search": "Busca Avançada",
+      "search": "Busca",
       "journals": "Periódicos",
       "lists": "Lista",
       "listCounterLabel": "Itens na lista pessoal",
@@ -42,8 +42,7 @@
       "exportJson": "Exportar JSON",
       "exportRis": "Exportar RIS",
       "exportBib": "Exportar BibTeX",
-      "exportAbnt": "Exportar ABNT (.docx)",
-      "exportApa": "Exportar texto (APA)",
+      "exportApa": "Exportar APA (.docx)",
       "clearList": "Limpar lista"
     },
     "labels": {
@@ -98,8 +97,7 @@
       "listCleared": "Lista limpa",
       "risExported": "RIS exportado",
       "bibExported": "BibTeX exportado",
-      "abntExported": "ABNT exportado",
-      "apaExported": "Texto APA exportado",
+      "apaExported": "APA exportado",
       "confirmClear": "Confirmar limpeza da lista? Esta ação é irreversível.",
       "personNotFoundRedirect": "Página de pessoa não encontrada. Exibindo a busca.",
       "personNotFoundRedirectShort": "Pessoa não encontrada. Exibindo a busca.",
