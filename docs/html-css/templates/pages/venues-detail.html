@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}{% if venue %}{{ venue.name }} - {% endif %}Detalhes do Periódico - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{{ (venue.name if venue and venue.name else 'Journal') ~ (', ISSN ' ~ venue.issn if venue and venue.issn else '') ~ (', ' ~ venue.publisher.name if venue and venue.publisher and venue.publisher.name else '') ~ ' — works, bibliography, references in anthropology' }}">
+{% endblock %}
+{% block meta_keywords %}
+<meta name="keywords" content="anthropology, antropologia, journal, periódico, issn, publisher, editora, works, publicações, bibliography, bibliografia, references, referências">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">
+    {% if venue %}{{ venue.name }}{% else %}Periódico não encontrado{% endif %}
+  </h1>
+</div>
+
+{% if venue %}
+<section aria-labelledby="venue-info">
+    <h2 class="title-section" id="venue-info">Dados do Periódico</h2>
+    <table class="data-table item-detail-table" id="venue-details">
+      <tbody>
+        {% if venue.type %}
+        <tr>
+          <th scope="row">TIPO</th>
+          <td class="field-value">{{ venue.type }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if venue.publisher and venue.publisher.name %}
+        <tr>
+          <th scope="row">EDITORA</th>
+          <td class="field-value">
+            {{ venue.publisher.name }}
+            {% if venue.publisher.country_code %} ({{ venue.publisher.country_code }}){% endif %}
+          </td>
+        </tr>
+        {% endif %}
+        
+        {% if venue.issn %}
+        <tr>
+          <th scope="row">ISSN</th>
+          <td class="field-value">{{ venue.issn }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if venue.eissn and venue.eissn != venue.issn %}
+        <tr>
+          <th scope="row">ISSN ELETRÔNICO</th>
+          <td class="field-value">{{ venue.eissn }}</td>
+        </tr>
+        {% endif %}
+        
+        <tr>
+          <th scope="row">TOTAL DE PUBLICAÇÕES</th>
+          <td class="field-value">{{ '{:,}'.format(venue.works_count or 0).replace(',', '.') }}</td>
+        </tr>
+        
+        {% if venue.coverage_start_year and venue.coverage_end_year %}
+        <tr>
+          <th scope="row">PERÍODO DE COBERTURA</th>
+          <td class="field-value">{{ venue.coverage_start_year }} - {{ venue.coverage_end_year }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if venue.country_code %}
+        <tr>
+          <th scope="row">PAÍS</th>
+          <td class="field-value">{{ venue.country_code }}</td>
+        </tr>
+        {% endif %}
+        
+        
+        {% set _metrics = venue.metrics if venue and venue.metrics else {} %}
+        {% set _legacy = venue.legacy_metrics if venue and venue.legacy_metrics else {} %}
+        {% set _sjr = (
+            _metrics.sjr if _metrics and _metrics.sjr is not none
+            else (_legacy.sjr if _legacy and _legacy.sjr is not none
+            else (venue.sjr if venue and venue.sjr is not none else None))
+          ) %}
+        {% set _snip = (
+            _metrics.snip if _metrics and _metrics.snip is not none
+            else (_legacy.snip if _legacy and _legacy.snip is not none
+            else (venue.snip if venue and venue.snip is not none else None))
+          ) %}
+        {% set _citescore = (
+            _metrics.citescore if _metrics and _metrics.citescore is not none
+            else (_legacy.citescore if _legacy and _legacy.citescore is not none
+            else (venue.citescore if venue and venue.citescore is not none else None))
+          ) %}
+        {% if _sjr %}
+        <tr>
+          <th scope="row">SJR</th>
+          <td class="field-value">{{ _sjr }}</td>
+        </tr>
+        {% endif %}
+        {% if _snip %}
+        <tr>
+          <th scope="row">SNIP</th>
+          <td class="field-value">{{ _snip }}</td>
+        </tr>
+        {% endif %}
+        {% if _citescore %}
+        <tr>
+          <th scope="row">CITESCORE</th>
+          <td class="field-value">{{ _citescore }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </section>
+{% endif %}
+
+  <section aria-labelledby="venue-publications-title">
+    <h2 class="title-section" id="venue-publications-title">Publicações neste Periódico</h2>
+    <div class="results-container" id="venue-publications">
+      {% if publications %}
+        {% for pub in publications %}
+        {% if pub.authors and pub.authors|length > 0 %}
+        <article class="result-item">
+          <h3 class="result-title">
+            <a href="{{ url_for('works_detail', work_id=pub.id) }}" class="result-link">
+              {% set title_text = pub.title %}
+              {% if pub.subtitle %}
+                {% set title_text = title_text + " - " + pub.subtitle %}
+              {% endif %}
+              {% if title_text|length > 200 %}
+                {{ title_text[:200] }}...
+              {% else %}
+                {{ title_text }}
+              {% endif %}
+            </a>
+          </h3>
+          
+          <div class="result-meta">
+            <span class="result-authors">
+              {% if pub.authors %}
+                {% for author in pub.authors[:2] %}
+                  {% if author.person_id %}
+                    <a class="action-link" href="/person/{{ author.person_id }}/works" aria-label="Ver obras de {{ author.name }}">
+                      {{ author.name }}
+                    </a>
+                  {% else %}
+                    <span>{{ author.name }}</span>
+                  {% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if pub.authors|length > 2 %} et al.{% endif %}
+              {% else %}
+                Autor não informado
+              {% endif %}
+            </span>
+            {% if pub.year %}
+            <span class="result-year"> • {{ pub.year }}</span>
+            {% endif %}
+            {% if pub.work_type %}
+            <span class="result-type"> • {{ pub.work_type|title }}</span>
+            {% endif %}
+            {% if pub.peer_reviewed %}
+            <span class="badge peer-reviewed"> • REVISADO</span>
+            {% endif %}
+          </div>
+          
+        </article>
+        {% endif %}
+        {% endfor %}
+        
+        {% if total_pages > 1 %}
+        <nav class="pagination-nav" aria-label="Navegação de páginas de publicações">
+          {% if has_prev %}
+          <a href="{{ url_for('venues_detail', venue_id=venue_id, page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+          {% else %}
+          <button class="action-btn pagination-btn disabled" disabled aria-label="Página anterior">← Anterior</button>
+          {% endif %}
+          
+          <span class="pagination-info">Página {{ page }} de {{ total_pages }}</span>
+          
+          {% if has_next %}
+          <a href="{{ url_for('venues_detail', venue_id=venue_id, page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+          {% else %}
+          <button class="action-btn pagination-btn disabled" disabled aria-label="Próxima página">Próxima →</button>
+          {% endif %}
+        </nav>
+        {% endif %}
+      {% else %}
+        <div class="no-results">
+          <p>Nenhuma publicação encontrada para este periódico.</p>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+{% endblock %}
+
+{% block scripts %}{% endblock %}

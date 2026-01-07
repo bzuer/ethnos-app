@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}{% if organization and organization.data %}{{ organization.data.name }} - {% endif %}Detalhes da Organização - ANTROPOTECA{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{{ (organization.data.name if organization and organization.data and organization.data.name else 'Organization') ~ (', ' ~ organization.data.country if organization and organization.data and organization.data.country else '') ~ ' — research, researchers, works; bibliography and references in anthropology' }}">
+{% endblock %}
+{% block meta_keywords %}
+<meta name="keywords" content="anthropology, antropologia, organization, organização, institution, instituição, research, pesquisa, researchers, pesquisadores, works, obras, bibliography, bibliografia, references, referências">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">
+    {% if organization and organization.data %}{{ organization.data.name }}{% else %}Organização não encontrada{% endif %}
+  </h1>
+</div>
+
+{% if organization and organization.data %}
+<section aria-labelledby="org-info">
+    <h2 class="title-section" id="org-info">Dados da Organização</h2>
+    <table class="data-table item-detail-table" id="org-details">
+      <tbody>
+        {% if organization.data.type %}
+        <tr>
+          <th scope="row">TIPO</th>
+          <td class="field-value">{{ organization.data.type }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.short_name %}
+        <tr>
+          <th scope="row">SIGLA</th>
+          <td class="field-value">{{ organization.data.short_name }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.country %}
+        <tr>
+          <th scope="row">PAÍS</th>
+          <td class="field-value">{{ organization.data.country }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.region %}
+        <tr>
+          <th scope="row">REGIÃO</th>
+          <td class="field-value">{{ organization.data.region }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.city %}
+        <tr>
+          <th scope="row">CIDADE</th>
+          <td class="field-value">{{ organization.data.city }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.website %}
+        <tr>
+          <th scope="row">WEBSITE</th>
+          <td class="field-value">
+            <a href="{{ organization.data.website }}" target="_blank" rel="noopener noreferrer" class="action-link">
+              {{ organization.data.website }}
+            </a>
+          </td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.identifiers and organization.data.identifiers.ror_id %}
+        <tr>
+          <th scope="row">ROR ID</th>
+          <td class="field-value">
+            <a href="https://ror.org/{{ organization.data.identifiers.ror_id }}" target="_blank" rel="noopener noreferrer" class="action-link">
+              {{ organization.data.identifiers.ror_id }}
+            </a>
+          </td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.metrics and organization.data.metrics.works_count %}
+        <tr>
+          <th scope="row">TOTAL DE OBRAS</th>
+          <td class="field-value">{{ '{:,}'.format(organization.data.metrics.works_count).replace(',', '.') }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.metrics and organization.data.metrics.affiliated_authors_count %}
+        <tr>
+          <th scope="row">PESQUISADORES AFILIADOS</th>
+          <td class="field-value">{{ '{:,}'.format(organization.data.metrics.affiliated_authors_count).replace(',', '.') }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if organization.data.h_index %}
+        <tr>
+          <th scope="row">ÍNDICE H</th>
+          <td class="field-value">{{ organization.data.h_index }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+</section>
+
+{% if authors and authors.data %}
+<section aria-labelledby="org-researchers-title">
+    <h2 class="title-section" id="org-researchers-title">Pesquisadores da Organização</h2>
+    <div class="results-container" id="org-researchers">
+        {% for author in authors.data[:10] %}
+        <article class="result-item">
+          <h3 class="result-title">
+            <a href="/person/{{ author.id }}/works" class="result-link">
+              {{ author.preferred_name or author.name }}
+            </a>
+          </h3>
+          
+          <div class="result-meta">
+            {% if author.works_count %}
+            <span class="result-works">{{ author.works_count }} obras</span>
+            {% endif %}
+            {% if author.orcid %}
+            <span class="result-orcid"> • ORCID: {{ author.orcid }}</span>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+        
+        {% if authors.pagination and authors.pagination.total > 10 %}
+        <div class="result-meta">
+            Mostrando 10 de {{ authors.pagination.total }} pesquisadores
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% if works and works.data %}
+<section aria-labelledby="org-publications-title">
+    <h2 class="title-section" id="org-publications-title">Publicações da Organização</h2>
+    
+    {% if works.total %}
+    <div class="search-stats">
+        <span class="stat-item">{{ '{:,}'.format(works.total).replace(',', '.') }} publicações encontradas</span>
+    </div>
+    {% endif %}
+    
+    <div class="results-container" id="org-publications">
+        {% for work in works.data %}
+        <article class="result-item">
+          <h3 class="result-title">
+            <a href="{{ url_for('works_detail', work_id=work.id) }}" class="result-link">
+              {{ work.title }}
+            </a>
+          </h3>
+          
+          {% if work.authors %}
+          <div class="result-authors">
+            {% for author in work.authors[:3] %}
+              {{ author.name }}{% if not loop.last %}; {% endif %}
+            {% endfor %}
+            {% if work.authors|length > 3 %} et al.{% endif %}
+          </div>
+          {% endif %}
+          
+          <div class="result-meta">
+            {% if work.year %}
+            <span class="result-year">{{ work.year }}</span>
+            {% endif %}
+            {% if work.type and work.type.strip() %}
+            <span class="result-type"> • {{ work.type|title }}</span>
+            {% endif %}
+            {% if work.doi %}
+            <span class="result-doi"> • DOI: {{ work.doi }}</span>
+            {% endif %}
+          </div>
+          
+          {% if work.abstract and work.abstract.strip() %}
+          <div class="result-abstract">
+            {{ work.abstract[:300] }}{% if work.abstract|length > 300 %}...{% endif %}
+          </div>
+          {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    
+    {% if pagination %}
+    <nav class="pagination-nav" aria-label="Navegação de páginas" role="navigation">
+        {% if pagination.hasPrev %}
+            {% if is_organization_detail %}
+            <a href="{{ url_for('organizations_detail', org_id=organization.data.id, page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+            {% else %}
+            <a href="{{ url_for('search_results', q=search_params.query, title=search_params.title, author=search_params.author, year_from=search_params.year_from, year_to=search_params.year_to, type=search_params.type, language=search_params.language, page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+            {% endif %}
+        {% else %}
+            <button class="action-btn pagination-btn disabled" disabled aria-label="Página anterior">← Anterior</button>
+        {% endif %}
+        
+        <span class="pagination-info">
+            Página {{ pagination.page }} de {{ pagination.totalPages }}
+        </span>
+        
+        {% if pagination.hasNext %}
+            {% if is_organization_detail %}
+            <a href="{{ url_for('organizations_detail', org_id=organization.data.id, page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+            {% else %}
+            <a href="{{ url_for('search_results', q=search_params.query, title=search_params.title, author=search_params.author, year_from=search_params.year_from, year_to=search_params.year_to, type=search_params.type, language=search_params.language, page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+            {% endif %}
+        {% else %}
+            <button class="action-btn pagination-btn disabled" disabled aria-label="Próxima página">Próxima →</button>
+        {% endif %}
+    </nav>
+    {% endif %}
+    
+</section>
+{% else %}
+<section aria-labelledby="no-publications-title">
+    <h2 class="title-section" id="no-publications-title">Publicações da Organização</h2>
+    <div class="no-results">
+        <p>Nenhuma publicação encontrada para esta organização.</p>
+    </div>
+</section>
+{% endif %}
+
+{% else %}
+<section aria-labelledby="not-found-title">
+    <h2 class="title-section" id="not-found-title">Organização não encontrada</h2>
+    <div class="no-results">
+        <p>A organização solicitada não foi encontrada no sistema.</p>
+        <a href="{{ url_for('search') }}" class="action-link">Voltar à busca</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

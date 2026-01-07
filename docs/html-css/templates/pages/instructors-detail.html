@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{% if instructor %}{{ instructor.preferred_name }}{% else %}Professor PPGAS{% endif %} - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{{ (instructor.preferred_name if instructor and instructor.preferred_name else 'Professor') ~ ' — courses, teaching, publications; bibliography, references, research in anthropology' }}">
+{% endblock %}
+{% block meta_keywords %}
+<meta name="keywords" content="anthropology, antropologia, professor, docente, instructor, courses, disciplinas, teaching, ensino, bibliography, bibliografia, references, referências, publications, obras">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">{% if instructor %}{{ instructor.preferred_name }}{% else %}Professor não encontrado{% endif %}</h1>
+</div>
+
+{% if instructor %}
+<section aria-labelledby="instructor-data">
+  <h2 class="title-section" id="instructor-data">Dados do Professor</h2>
+  <table class="data-table item-detail-table">
+    <tbody>
+      <tr>
+        <th scope="row">DISCIPLINAS MINISTRADAS</th>
+        <td class="field-value">{{ instructor.courses_taught }}</td>
+      </tr>
+      {% if instructor.bibliography_contributed %}
+      <tr>
+        <th scope="row">OBRAS NA BIBLIOGRAFIA</th>
+        <td class="field-value">{{ instructor.bibliography_contributed }}</td>
+      </tr>
+      {% endif %}
+      {% if instructor.works_authored %}
+      <tr>
+        <th scope="row">OBRAS PUBLICADAS</th>
+        <td class="field-value">
+          <a href="/persons/{{ instructor.id }}/works" class="action-link">
+            {{ instructor.works_authored }} obra{% if instructor.works_authored != 1 %}s{% endif %}
+          </a>
+        </td>
+      </tr>
+      {% endif %}
+      {% if instructor.teaching_span_years %}
+      <tr>
+        <th scope="row">ANOS DE ENSINO</th>
+        <td class="field-value">{{ instructor.teaching_span_years }}</td>
+      </tr>
+      {% endif %}
+      {% if instructor.earliest_year and instructor.latest_year %}
+      <tr>
+        <th scope="row">PERÍODO DE ENSINO</th>
+        <td class="field-value">{{ instructor.earliest_year }}-{{ instructor.latest_year }}</td>
+      </tr>
+      {% endif %}
+      {% if instructor.first_publication_year and instructor.latest_publication_year %}
+      <tr>
+        <th scope="row">PERÍODO DE PUBLICAÇÃO</th>
+        <td class="field-value">{{ instructor.first_publication_year }}-{{ instructor.latest_publication_year }}</td>
+      </tr>
+      {% endif %}
+      {% if instructor.orcid %}
+      <tr>
+        <th scope="row">ORCID</th>
+        <td class="field-value">
+          <a href="https://orcid.org/{{ instructor.orcid }}" target="_blank" rel="noopener" class="action-link">
+            {{ instructor.orcid }}
+          </a>
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="courses-taught">
+  <h2 class="title-section" id="courses-taught">Disciplinas Ministradas</h2>
+  {% if courses %}
+  {% for course in courses %}
+  <div class="result-item">
+    <h4 class="result-title">
+      <a href="{{ url_for('courses_ppgas_detail', course_id=course.id) }}" class="result-link">
+        {{ course.name }}
+      </a>
+    </h4>
+    <div class="result-meta">
+      <span class="result-year">{{ course.year }}</span>
+      {% if course.semester %}
+      <span class="result-type"> • {{ course.semester }}º Semestre</span>
+      {% endif %}
+      <span class="result-type"> • {{ course.bibliography_count or 0 }} obra{% if course.bibliography_count != 1 %}s{% endif %}</span>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="field-value">Nenhuma disciplina encontrada para este professor.</p>
+  {% endif %}
+  
+</section>
+
+
+{% else %}
+<p class="field-value">Professor não encontrado.</p>
+{% endif %}
+
+{% endblock %}

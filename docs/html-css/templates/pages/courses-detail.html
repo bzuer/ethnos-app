@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{% if course %}{{ course.name }}{% else %}Disciplina PPGAS{% endif %} - ethnos_app{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">{% if course %}{{ course.name }}{% else %}Disciplina não encontrada{% endif %}</h1>
+</div>
+
+{% if course %}
+<section aria-labelledby="course-data">
+  <h2 class="title-section" id="course-data">Dados da Disciplina</h2>
+  <table class="data-table item-detail-table">
+    <tbody>
+      <tr>
+        <th scope="row">ANO</th>
+        <td class="field-value">{{ course.year }}</td>
+      </tr>
+      <tr>
+        <th scope="row">SEMESTRE</th>
+        <td class="field-value">{{ course.semester }}º</td>
+      </tr>
+      {% if course.code %}
+      <tr>
+        <th scope="row">CÓDIGO</th>
+        <td class="field-value">{{ course.code }}</td>
+      </tr>
+      {% endif %}
+      {% if course.instructors %}
+      <tr>
+        <th scope="row">PROFESSOR(ES)</th>
+        <td class="field-value">{{ course.instructors }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <th scope="row">OBRAS NA BIBLIOGRAFIA</th>
+        <td class="field-value">{{ course.bibliography_count or 0 }}</td>
+      </tr>
+      {% if course.credits %}
+      <tr>
+        <th scope="row">CRÉDITOS</th>
+        <td class="field-value">{{ course.credits }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="bibliography-section">
+  <h2 class="title-section" id="bibliography-section">Bibliografia da Disciplina</h2>
+  {% if bibliography %}
+  {% for entry in bibliography %}
+  <div class="result-item">
+    <h4 class="result-title">
+      {% if entry.work_id %}
+      <a href="{{ url_for('works_detail', work_id=entry.work_id) }}" class="result-link">
+        {{ entry.title }}
+      </a>
+      {% else %}
+      {{ entry.title }}
+      {% endif %}
+    </h4>
+    <div class="result-meta">
+      {% if entry.authors %}
+      <span class="result-authors">{{ entry.authors | join(', ') if entry.authors is iterable and entry.authors is not string else entry.authors }}</span>
+      {% endif %}
+      {% if entry.publication_year %}
+      <span class="result-year"> • {{ entry.publication_year }}</span>
+      {% endif %}
+      {% if entry.document_type %}
+      <span class="result-type"> • {{ entry.document_type|title }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="field-value">Nenhuma obra encontrada na bibliografia desta disciplina.</p>
+  {% endif %}
+</section>
+
+{% else %}
+<p class="field-value">Disciplina não encontrada.</p>
+{% endif %}
+
+{% endblock %}

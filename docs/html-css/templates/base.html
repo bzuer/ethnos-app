@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="{{ page_lang or 'pt-BR' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ethnos_app{% endblock %}</title>
+  {% block meta_description %}
+  <meta name="description" content="{{ page_description or 'Anthropology catalog: works, journals, courses, professors — bibliography, references, research.' }}">
+  {% endblock %}
+  {% block meta_keywords %}
+  <meta name="keywords" content="anthropology, antropologia, bibliography, bibliografia, references, referências, research, pesquisa, journals, periódicos, works, obras, courses, cursos, professors, professores">
+  {% endblock %}
+  <meta name="ethnos-api-base" content="{{ api_client_base_url }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.min.css') }}">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Pular para conteúdo principal</a>
+  <div class="container">
+    {% include 'components/global-header.html' %}
+    <main id="main-content" tabindex="-1">
+      {% block content %}
+      {% endblock %}
+    </main>
+    {% include 'components/footer.html' %}
+  </div>
+  {% if initial_data %}{% endif %}
+  <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/api-client.min.js') }}?v=20250820-5"></script>
+  <script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/app.min.js') }}?v=20250820-5"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

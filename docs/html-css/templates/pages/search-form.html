@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Busca Avançada - ethnos_app{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">Busca Avançada</h1>
+</div>
+
+<section aria-labelledby="search-fields">
+  <h2 class="title-section" id="search-fields">Busca Detalhada</h2>
+  <form role="search" action="{{ url_for('search_results') }}" method="get" aria-label="Formulário de busca avançada">
+    <fieldset class="figure-plate">
+      <legend class="form-label">Busca Textual</legend>
+      <label class="form-label" for="title-input">Título</label>
+      <input class="form-input" id="title-input" name="title" type="text" placeholder="Digite o título" aria-label="Busca por título" autocomplete="off">
+      <label class="form-label" for="author-input">Autor</label>
+      <input class="form-input" id="author-input" name="author" type="text" placeholder="Digite o autor" aria-label="Busca por autor" autocomplete="off">
+      <label class="form-label" for="abstract-input">Resumo</label>
+      <input class="form-input" id="abstract-input" name="abstract" type="text" placeholder="Digite palavras do resumo" aria-label="Busca por resumo">
+      <label class="form-label" for="keywords-input">Assunto/Palavras-chave</label>
+      <input class="form-input" id="keywords-input" name="subject" type="text" placeholder="Digite palavras-chave" aria-label="Busca por palavras-chave">
+    </fieldset>
+
+    <fieldset class="figure-plate">
+      <legend class="form-label">Filtros Bibliográficos</legend>
+      <label class="form-label" for="journal-input">Periódico/Revista</label>
+      <input class="form-input" id="journal-input" name="venue" type="text" placeholder="Digite o nome do periódico" aria-label="Busca por periódico" autocomplete="off">
+      <label class="form-label" for="publisher-input">Editora</label>
+      <input class="form-input" id="publisher-input" name="publisher" type="text" placeholder="Digite a editora" aria-label="Busca por editora">
+      <label class="form-label" for="doc-type-select">Tipo de Documento</label>
+      <select class="form-select" id="doc-type-select" name="type" aria-label="Seleção de tipo de documento">
+        <option value="">Todos os tipos</option>
+        <option value="journal-article">Artigo de Revista</option>
+        <option value="book-chapter">Capítulo de Livro</option>
+        <option value="book">Livro</option>
+        <option value="proceedings-article">Artigo de Evento</option>
+        <option value="dissertation">Tese/Dissertação</option>
+        <option value="report">Relatório</option>
+      </select>
+      <label class="form-label" for="language-select">Idioma</label>
+      <select class="form-select" id="language-select" name="language" aria-label="Seleção de idioma">
+        <option value="">Todos os idiomas</option>
+        <option value="pt">Português</option>
+        <option value="en">Inglês</option>
+        <option value="es">Espanhol</option>
+        <option value="fr">Francês</option>
+        <option value="de">Alemão</option>
+        <option value="it">Italiano</option>
+      </select>
+    </fieldset>
+
+    <fieldset class="figure-plate">
+      <legend class="form-label">Período e Ordenação</legend>
+      <label class="form-label">Período de Publicação</label>
+      <div>
+        <input class="form-input" id="start-year" name="year_start" type="text" placeholder="De" aria-label="Ano inicial">
+        <span aria-hidden="true"> até </span>
+        <input class="form-input" id="end-year" name="year_end" type="text" placeholder="Até" aria-label="Ano final">
+      </div>
+      <label class="form-label" for="sort-select">Ordenar por</label>
+      <select class="form-select" id="sort-select" name="sort" aria-label="Seleção de ordenação">
+        <option value="relevance">Relevância</option>
+        <option value="year_desc">Ano (mais recente)</option>
+        <option value="year_asc">Ano (mais antigo)</option>
+        <option value="title">Título</option>
+        <option value="author">Autor</option>
+      </select>
+    </fieldset>
+
+    <fieldset class="figure-plate">
+      <legend class="form-label">Dicas de Busca</legend>
+      <div class="search-tips">
+        <p><strong>Busca simples:</strong> Digite qualquer termo</p>
+        <p><strong>Frase exata:</strong> Use aspas "frase completa"</p>
+        <p><strong>Múltiplas palavras:</strong> antropologia cultura ritual</p>
+        <p><strong>Excluir termo:</strong> antropologia -religião</p>
+        <p><strong>Autor específico:</strong> "Lévi-Strauss"</p>
+      </div>
+    </fieldset>
+
+    <div class="search-controls">
+      <button class="action-btn btn-negative" type="reset" aria-label="Limpar campos do formulário">Limpar Campos</button>
+      <button class="search-btn btn-positive" type="submit" aria-label="Executar busca avançada">Executar Busca Avançada</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/search.min.js') }}?v=20250828-1"></script>
+{% endblock %}

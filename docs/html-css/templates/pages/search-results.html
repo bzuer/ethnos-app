@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Resultados da Busca - ANTROPOTECA{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">RESULTADOS DA BUSCA</h1>
+    
+    {% if search_params and search_params.query %}
+    <div class="figure-plate">
+        <h2 class="title-section">CONSULTA</h2>
+        <div class="field-value">"{{ search_params.query }}"</div>
+        {% if pagination %}
+        <div class="result-meta">
+            {{ pagination.total }} resultados encontrados
+            {% if meta and meta.query_time_ms %}
+            <span class="performance-indicator">• {{ meta.query_time_ms }}ms</span>
+            {% endif %}
+            {% if meta and meta.search_engine %}
+            <span class="performance-indicator">• Engine: {{ meta.search_engine }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% elif query %}
+    <div class="figure-plate">
+        <h2 class="title-section">CONSULTA</h2>
+        <div class="field-value">"{{ query }}"</div>
+        {% if total or pagination %}
+        <div class="result-meta">
+            {{ total or pagination.total }} resultados encontrados
+            {% if meta and meta.query_time_ms %}
+            <span class="performance-indicator">• {{ meta.query_time_ms }}ms</span>
+            {% endif %}
+            {% if meta and meta.search_engine %}
+            <span class="performance-indicator">• Engine: {{ meta.search_engine }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <section aria-labelledby="search-results-title">
+        <h2 class="title-section" id="search-results-title">RESULTADOS ENCONTRADOS</h2>
+        <div class="results-container">
+            {% for work in results %}
+            {% if is_venues_listing %}
+            <article class="result-item">
+                <h3 class="result-title">
+                    <a href="{{ url_for('venues_detail', venue_id=work.venue_id) }}" class="result-link">
+                        {{ work.title }}
+                    </a>
+                </h3>
+                
+                <div class="result-meta">
+                    <span class="result-type">{{ work.type|title }}</span>
+                    {% if work.works_count %}
+                    <span class="result-works"> • {{ '{:,}'.format(work.works_count).replace(',', '.') }} publicações</span>
+                    {% endif %}
+                    {% if work.issn %}
+                    <span class="result-issn"> • ISSN: {{ work.issn }}</span>
+                    {% endif %}
+                    {% if work.eissn and work.eissn != work.issn %}
+                    <span class="result-eissn"> • eISSN: {{ work.eissn }}</span>
+                    {% endif %}
+                </div>
+            </article>
+            {% elif is_organizations_listing %}
+            <article class="result-item">
+                <h3 class="result-title">
+                    <a href="{{ url_for('organizations_detail', org_id=work.org_id) }}" class="result-link">
+                        {{ work.title }}
+                    </a>
+                </h3>
+                
+                <div class="result-meta">
+                    <span class="result-type">{{ work.type|title }}</span>
+                    {% if work.researchers_count %}
+                    <span class="result-researchers"> • {{ '{:,}'.format(work.researchers_count).replace(',', '.') }} pesquisadores</span>
+                    {% endif %}
+                    {% if work.ror_id %}
+                    <span class="result-ror"> • ROR ID: {{ work.ror_id }}</span>
+                    {% endif %}
+                </div>
+            </article>
+            {% elif work.authors and (work.authors|length > 0) %}
+            <article class="result-item">
+                <h3 class="result-title">
+                    <a href="{{ url_for('works_detail', work_id=work.id) }}" class="result-link">
+                        {{ work.title }}
+                    </a>
+                </h3>
+                
+                <div class="result-meta">
+                    <span class="result-authors">
+                        {% if work.authors %}
+                            {% for author in work.authors[:2] %}
+                                {% if author is string %}
+                                    {{ author }}
+                                {% elif author is mapping %}
+                                    {% if author.person_id %}
+                                        <a class="action-link" href="{{ url_for('person_id_works', person_id=author.person_id) }}">
+                                            {{ author.name or author.preferred_name or author }}
+                                        </a>
+                                    {% else %}
+                                        {{ author.name or author.preferred_name or author }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ author }}
+                                {% endif %}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                            {% if work.authors|length > 2 %} et al.{% endif %}
+                        {% else %}
+                            Autor não informado
+                        {% endif %}
+                    </span>
+                    {% set year = work.year or work.publication_year or (work.publication and work.publication.year) %}
+                    {% if year %}
+                    <span class="result-year"> • {{ year }}</span>
+                    {% endif %}
+                    {% if work.work_type %}
+                    <span class="result-type"> • {{ work.work_type|title }}</span>
+                    {% endif %}
+                    {% if work.is_open_access or (work.publication and work.publication.open_access) %}
+                    <span class="result-access"> • ACESSO ABERTO</span>
+                    {% endif %}
+                    {% if work.peer_reviewed %}
+                    <span class="badge peer-reviewed"> • REVISADO</span>
+                    {% endif %}
+                    {% if work.relevance_score %}
+                    <span class="relevance-score">Score: {{ work.relevance_score }}</span>
+                    {% endif %}
+                </div>
+            </article>
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+        {% if pagination and (pagination.totalPages or pagination.pages) > 1 %}
+        <nav class="pagination" aria-label="Navegação de páginas de resultados">
+            {% if pagination.hasPrev %}
+                {% if is_venues_listing %}
+                <a href="{{ url_for('venues_complete', page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+                {% elif is_organizations_listing %}
+                <a href="{{ url_for('organizations_complete', page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+                {% elif is_catalog_listing %}
+                <a href="{{ url_for('works_list', page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+                {% elif is_person_works %}
+                <a href="{{ url_for('person_id_works', person_id=person_data.id, page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+                {% else %}
+                <a href="{{ url_for('search_results', q=search_params.query, title=search_params.title, author=search_params.author, year_from=search_params.year_from, year_to=search_params.year_to, type=search_params.type, language=search_params.language, page=page-1) }}" class="action-btn btn-negative" aria-label="Página anterior">← Anterior</a>
+                {% endif %}
+            {% else %}
+                <button class="action-btn pagination-btn disabled" disabled aria-label="Página anterior">← Anterior</button>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Página {{ pagination.page }} de {{ pagination.totalPages or pagination.pages }}
+            </span>
+            
+            {% if pagination.hasNext %}
+                {% if is_venues_listing %}
+                <a href="{{ url_for('venues_complete', page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+                {% elif is_organizations_listing %}
+                <a href="{{ url_for('organizations_complete', page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+                {% elif is_catalog_listing %}
+                <a href="{{ url_for('works_list', page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+                {% elif is_person_works %}
+                <a href="{{ url_for('person_id_works', person_id=person_data.id, page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+                {% else %}
+                <a href="{{ url_for('search_results', q=search_params.query, title=search_params.title, author=search_params.author, year_from=search_params.year_from, year_to=search_params.year_to, type=search_params.type, language=search_params.language, page=page+1) }}" class="action-btn btn-positive" aria-label="Próxima página">Próxima →</a>
+                {% endif %}
+            {% else %}
+                <button class="action-btn pagination-btn disabled" disabled aria-label="Próxima página">Próxima →</button>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </section>
+    
+    {% else %}
+    <section class="figure-plate">
+        <h2 class="title-section">NENHUM RESULTADO</h2>
+        {% if search_params.query %}
+        <p class="description">
+            Não foram encontrados resultados para "{{ search_params.query }}".
+        </p>
+        {% else %}
+        <p class="description">
+            Nenhum resultado encontrado com os filtros aplicados.
+        </p>
+        {% endif %}
+        
+        <div class="result-meta">
+            Sugestões:
+            <ul>
+                <li>Verifique a ortografia dos termos de busca</li>
+                <li>Tente termos mais gerais</li>
+                <li>Use menos filtros</li>
+            </ul>
+        </div>
+        
+        <a href="{{ url_for('search_form') }}" class="action-link">Nova busca</a>
+    </section>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/search.min.js') }}?v=20250820-9"></script>
+{% endblock %}
+

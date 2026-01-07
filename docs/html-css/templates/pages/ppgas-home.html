@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}PPGAS - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="PPGAS overview — professors, courses, teaching and bibliography metrics in social anthropology.">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">PPGAS</h1>
+</div>
+
+<section aria-labelledby="professors-by-disciplines-section">
+  <h3 class="title-section" id="professors-by-disciplines-section">Professors</h3>
+  {% if disciplinas_por_professores %}
+  <table class="data-table ppgas-disciplinas-por-professores-table" aria-describedby="professors-by-disciplines-section">
+    <caption class="sr-only">List of professors with number of courses taught and period</caption>
+    <thead>
+      <tr>
+        <th scope="col">Professor</th>
+        <th scope="col">Courses</th>
+        <th scope="col">Period</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in disciplinas_por_professores %}
+      <tr>
+        <td class="field-value"><a class="action-link" href="{{ url_for('instructors_detail', instructor_id=item.professor_id) }}" aria-label="Ver detalhes de {{ item.professor }}">{{ item.professor }}</a></td>
+        <td class="field-value">{{ item.total_disciplinas }}</td>
+        <td class="field-value">{{ item.periodo or 'N/A' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="action-links">
+    <a href="{{ url_for('instructors_list') }}" class="action-btn btn-positive">View All Professors</a>
+  </div>
+  {% else %}
+  <p class="field-value">Nenhuma disciplina por professor encontrada.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="courses-section">
+  <h3 class="title-section" id="courses-section">Bibliography</h3>
+  {% if courses %}
+  <table class="data-table ppgas-courses-table" aria-describedby="courses-section">
+    <caption class="sr-only">List of courses with year, instructor, and bibliography count</caption>
+    <thead>
+      <tr>
+        <th scope="col">Course</th>
+        <th scope="col">Year</th>
+        <th scope="col">Professor</th>
+        <th scope="col">Works</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for course in courses %}
+      <tr>
+        <td class="field-value"><a class="action-link" href="{{ url_for('courses_ppgas_detail', course_id=course.id) }}" aria-label="Ver detalhes de {{ course.name }}">{{ course.name | truncate(60) }}</a></td>
+        <td class="field-value">{{ course.year or 'N/A' }}</td>
+        <td class="field-value">{{ course.instructors or 'N/A' }}</td>
+        <td class="field-value">{{ course.bibliography_count or 0 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="action-links">
+    <a href="{{ url_for('courses_ppgas') }}" class="action-btn btn-positive">View All Courses</a>
+  </div>
+{% else %}
+  <p class="field-value">Nenhuma disciplina encontrada.</p>
+{% endif %}
+</section>
+{% endblock %}

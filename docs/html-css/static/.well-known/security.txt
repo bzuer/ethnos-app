@@ -1,0 +1,36 @@
+Contact: security@ethnos.app
+Expires: 2026-09-17T23:59:59.000Z
+Encryption: https://keys.openpgp.org/search?q=security@ethnos.app
+Preferred-Languages: pt-BR, en
+Canonical: https://localhost:8888/.well-known/security.txt
+
+Policy: Please report security vulnerabilities responsibly.
+Acknowledgments: We appreciate responsible disclosure of security issues.
+
+# Security Contact Information
+# This file is used to indicate security contact information
+# See: https://securitytxt.org/
+
+# Reported vulnerabilities will be:
+# 1. Acknowledged within 48 hours
+# 2. Investigated and assessed for severity
+# 3. Fixed within reasonable timeframes based on severity
+# 4. Reporter credited if desired
+
+# Scope:
+# - Web application security vulnerabilities
+# - Infrastructure security issues  
+# - Data exposure or privacy concerns
+# - Authentication/authorization bypasses
+
+# Out of scope:
+# - Rate limiting bypass (system is designed to be aggressive)
+# - Social engineering attacks
+# - Physical security issues
+# - Issues requiring physical access
+
+# Severity Guidelines:
+# Critical: Remote code execution, data breach, authentication bypass
+# High: Privilege escalation, sensitive data exposure
+# Medium: Cross-site scripting, information disclosure
+# Low: UI/UX issues with minimal security impact

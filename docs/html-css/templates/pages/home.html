@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Home - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="Index of works, journals, courses and professors in social anthropology — updates, bibliography, references, research.">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">Home</h1>
+</div>
+
+
+<section aria-labelledby="search-section">
+  <h3 class="title-section" id="search-section">Search</h3>
+  <form class="search-form" role="search" action="{{ url_for('search_results') }}" method="get" id="search-form">
+    <div class="search-input-container">
+      <div class="search-input-wrapper">
+        <input class="form-input" type="search" id="search-input" name="q" placeholder="Buscar em obras por título, autor ou chave..." aria-label="Termo de busca" autocomplete="off">
+      </div>
+    </div>
+    <button class="search-btn btn-positive" type="submit" aria-label="Executar busca">Buscar</button>
+  </form>
+</section>
+
+<section aria-labelledby="recent-updates" id="recent-items-section">
+  <h3 class="title-section" id="recent-updates">Updates</h3>
+  <div class="recent-items-container">
+    {% if recent_works %}
+    <table class="data-table recent-items-table" aria-describedby="recent-updates">
+      <caption class="sr-only">Most recent works added to the catalog</caption>
+      <thead>
+        <tr>
+          <th scope="col">Title</th>
+          <th scope="col">Authors</th>
+          <th scope="col">Year</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for work in recent_works %}
+        <tr>
+          <td class="field-value">
+            <a class="action-link" href="/works/{{ work.id }}" aria-label="Ver detalhes de {{ work.title }}">
+              {{ work.title or 'Título não disponível' }}
+            </a>
+          </td>
+          <td class="field-value">
+            {{ work.formatted_authors or 'Autor não informado' }}
+          </td>
+          <td class="field-value">{{ work.publication_year or 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="action-links">
+      <a href="/search/results?" class="action-btn btn-positive">View Full Catalog</a>
+    </div>
+    {% else %}
+    <p class="field-value">Nenhuma atualização recente encontrada.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section aria-labelledby="venues-list" id="venues-section">
+  <h3 class="title-section" id="venues-list">Journals</h3>
+  <div class="venues-container">
+    {% if top_venues %}
+    <table class="data-table homepage-venues-table" aria-describedby="venues-list">
+      <caption class="sr-only">Journals with the highest number of indexed works</caption>
+      <thead>
+        <tr>
+          <th scope="col">Journal</th>
+          <th scope="col">Coverage</th>
+          <th scope="col">Publisher</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for venue in top_venues %}
+        <tr>
+          <td class="field-value">
+            <a class="action-link" href="/venues/{{ venue.id }}" aria-label="Ver detalhes de {{ venue.name }}">
+              {{ venue.name or 'Nome não disponível' }}
+            </a>
+          </td>
+          <td class="field-value">
+            {% if venue.coverage_start_year and venue.coverage_end_year %}
+              {{ venue.coverage_start_year }}-{{ venue.coverage_end_year }}
+            {% elif venue.coverage_start_year %}
+              {{ venue.coverage_start_year }}+
+            {% else %}
+              Não informado
+            {% endif %}
+          </td>
+          <td class="field-value">{{ venue.publisher_name or 'Não informado' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="action-links">
+      <a href="/venues" class="action-btn btn-positive">See All Journals</a>
+    </div>
+    {% else %}
+    <p class="field-value">Nenhum periódico encontrado.</p>
+    {% endif %}
+  </div>
+</section>
+
+
+
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/search.min.js') }}?v=20250820-9"></script>
+{% endblock %}

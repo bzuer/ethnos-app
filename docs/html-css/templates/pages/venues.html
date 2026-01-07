@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Journals in Anthropology - ANTROPOTECA{% endblock %}
+{% block meta_description %}
+<meta name="description" content="Guide to academic journals in anthropology — theory, traditions, specialized fields; bibliography and references.">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+    <h1 class="page-title" id="page-title">Academic Journals</h1>
+</div>
+
+{% if featured_venues %}
+<section aria-labelledby="featured-venues-section">
+    <h3 class="title-section" id="featured-venues-section">Representation</h3>
+    <div class="featured-venues-container">
+        <table class="data-table homepage-venues-table" aria-describedby="featured-venues-section">
+            <caption class="sr-only">Journals with the highest number of indexed works</caption>
+            <thead>
+                <tr>
+            <th scope="col">Journal</th>
+            <th scope="col">Works</th>
+            <th scope="col">Publisher</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for venue in featured_venues[:10] %}
+                <tr>
+                    <td class="field-value">
+                        <a class="action-link" href="/venues/{{ venue.id }}" aria-label="Ver detalhes de {{ venue.name }}">
+                            {{ venue.name or 'Nome não disponível' }}
+                        </a>
+                    </td>
+                    <td class="field-value">{{ '{:,}'.format(venue.works_count or 0).replace(',', '.') }}</td>
+                    <td class="field-value">{{ venue.publisher_name or 'Não informado' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="action-links">
+            <a href="/venues/complete" class="action-btn btn-positive">See All Journals</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<section aria-labelledby="intro-section">
+    <h3 class="title-section" id="intro-section">Traditions</h3>
+    <div class="intro-container">
+        <p class="field-value">This section presents key academic journals organized by regional traditions and thematic specializations, offering a neutral map of anthropology’s editorial landscape for researchers and students.</p>
+    </div>
+</section>
+
+
+<section aria-labelledby="theoretical-section">
+    <h3 class="title-section" id="theoretical-section">Theory</h3>
+    <div class="theoretical-venues-container">
+        <table class="data-table journals-complete-table" aria-describedby="theoretical-section">
+            <caption class="sr-only">Core journals relevant to theoretical anthropology</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Journal</th>
+                    <th scope="col">ISSN</th>
+                    <th scope="col">Publisher</th>
+                    <th scope="col">Works</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% set api_data = venues_by_name.get("anthropological theory") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Anthropological Theory</a>
+                        {% else %}
+                            Anthropological Theory
+                        {% endif %}
+                    </td>
+                    <td class="field-value">1463-4996</td>
+                    <td class="field-value">SAGE Publications</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("social analysis") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Social Analysis</a>
+                        {% else %}
+                            Social Analysis
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0155-977X</td>
+                    <td class="field-value">Berghahn Books</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("critique of anthropology") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Critique of Anthropology</a>
+                        {% else %}
+                            Critique of Anthropology
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0308-275X</td>
+                    <td class="field-value">SAGE Publications</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("focaal") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Focaal</a>
+                        {% else %}
+                            Focaal
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0920-1297</td>
+                    <td class="field-value">Berghahn Books</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section aria-labelledby="regional-section">
+    <h3 class="title-section" id="regional-section">Regions</h3>
+    <div class="regional-venues-container">
+        <table class="data-table journals-complete-table" aria-describedby="regional-section">
+            <caption class="sr-only">Important journals grouped by regional tradition</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Journal</th>
+                    <th scope="col">ISSN</th>
+                    <th scope="col">Publisher</th>
+                    <th scope="col">Works</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% set api_data = venues_by_name.get("zeitschrift für ethnologie") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Zeitschrift für Ethnologie</a>
+                        {% else %}
+                            Zeitschrift für Ethnologie
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0044-2666</td>
+                    <td class="field-value">Dietrich Reimer Verlag</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("anthropos") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Anthropos</a>
+                        {% else %}
+                            Anthropos
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0257-9774</td>
+                    <td class="field-value">Nomos Verlag</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("ethnos") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Ethnos</a>
+                        {% else %}
+                            Ethnos
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0014-1844</td>
+                    <td class="field-value">Routledge</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("anthropologica") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Anthropologica</a>
+                        {% else %}
+                            Anthropologica
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0003-5459</td>
+                    <td class="field-value">University of Victoria</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("asian ethnology") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Asian Ethnology</a>
+                        {% else %}
+                            Asian Ethnology
+                        {% endif %}
+                    </td>
+                    <td class="field-value">1882-6865</td>
+                    <td class="field-value">Nanzan University</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section aria-labelledby="specialized-section">
+    <h3 class="title-section" id="specialized-section">Specialized</h3>
+    <div class="specialized-venues-container">
+        <table class="data-table journals-complete-table" aria-describedby="specialized-section">
+            <caption class="sr-only">Specialized journals grouped by subject area</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Journal</th>
+                    <th scope="col">ISSN</th>
+                    <th scope="col">Publisher</th>
+                    <th scope="col">Field</th>
+                    <th scope="col">Works</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% set api_data = venues_by_name.get("medical anthropology quarterly") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Medical Anthropology Quarterly</a>
+                        {% else %}
+                            Medical Anthropology Quarterly
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0745-5194</td>
+                    <td class="field-value">Wiley-Blackwell</td>
+                    <td class="field-value">Antropologia Médica</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("journal of linguistic anthropology") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Journal of Linguistic Anthropology</a>
+                        {% else %}
+                            Journal of Linguistic Anthropology
+                        {% endif %}
+                    </td>
+                    <td class="field-value">1055-1360</td>
+                    <td class="field-value">Wiley-Blackwell</td>
+                    <td class="field-value">Antropologia Linguística</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("ethnic and racial studies") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Ethnic and Racial Studies</a>
+                        {% else %}
+                            Ethnic and Racial Studies
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0141-9870</td>
+                    <td class="field-value">Routledge</td>
+                    <td class="field-value">Raça e Etnia</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("cadernos pagu") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Cadernos Pagu</a>
+                        {% else %}
+                            Cadernos Pagu
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0104-8333</td>
+                    <td class="field-value">Unicamp</td>
+                    <td class="field-value">Estudos de Gênero</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+                <tr>
+                    {% set api_data = venues_by_name.get("social science & medicine") %}
+                    <td class="field-value">
+                        {% if api_data %}
+                            <a class="action-link" href="/venues/{{ api_data.id }}">Social Science & Medicine</a>
+                        {% else %}
+                            Social Science & Medicine
+                        {% endif %}
+                    </td>
+                    <td class="field-value">0277-9536</td>
+                    <td class="field-value">Elsevier</td>
+                    <td class="field-value">Interdisciplinar Saúde</td>
+                    <td class="field-value">{% if api_data %}{{ '{:,}'.format(api_data.works_count or 0).replace(',', '.') }}{% else %}—{% endif %}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Página Não Encontrada - ethnos_app{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2 class="page-title" id="page-title">Erro 404</h2>
+</div>
+<section>
+  <h3 class="title-section">Página Não Encontrada</h3>
+  <p class="description">
+    O recurso que procurou não foi encontrado neste servidor.
+  </p>
+  <p class="description">
+    Verifique o URL ou regresse à página inicial.
+  </p>
+  <a href="{{ url_for('home') }}" class="action-link">Voltar para a Página Inicial</a>
+</section>
+{% endblock %}

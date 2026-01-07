@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Professors (PPGAS) - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="Professors (PPGAS) — teaching, authorship, courses; bibliography and references in social anthropology.">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">Professors (PPGAS)</h1>
+</div>
+
+{% if instructors %}
+<section aria-labelledby="results-section">
+  {% for instructor in instructors %}
+  <div class="result-item">
+    <h4 class="result-title">
+      <a href="{{ url_for('instructors_detail', instructor_id=instructor.person_id) }}" class="result-link">
+        {{ instructor.preferred_name }}
+      </a>
+    </h4>
+    <div class="result-meta">
+      <span class="result-type">{{ instructor.courses_taught }} disciplina{% if instructor.courses_taught != 1 %}s{% endif %}</span>
+      {% if instructor.earliest_year and instructor.latest_year %}
+      <span class="result-year"> • {{ instructor.earliest_year }}-{{ instructor.latest_year }}</span>
+      {% endif %}
+      {% if instructor.bibliography_contributed %}
+      <span class="result-type"> • {{ instructor.bibliography_contributed }} obra{% if instructor.bibliography_contributed != 1 %}s{% endif %} na bibliografia</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if pagination and pagination.total > pagination.limit %}
+  <div class="pagination">
+    {% set current_page = (pagination.offset // pagination.limit) + 1 %}
+    {% set total_pages = ((pagination.total - 1) // pagination.limit) + 1 %}
+    
+    {% if pagination.offset > 0 %}
+    <a href="{{ url_for('instructors_list', page=current_page-1) }}" class="pagination-link">← Anterior</a>
+    {% endif %}
+    
+    <span class="pagination-info">Página {{ current_page }} de {{ total_pages }}</span>
+    
+    {% if pagination.has_next %}
+    <a href="{{ url_for('instructors_list', page=current_page+1) }}" class="pagination-link">Próxima →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% else %}
+<p class="field-value">Nenhum professor encontrado.</p>
+{% endif %}
+
+{% endblock %}

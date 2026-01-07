@@ -1,0 +1,17 @@
+<header class="global-header" role="banner">
+  <h1 class="title-primary">ETHNOS_APP</h1>
+  <nav class="main-navigation" role="navigation" aria-label="Main navigation">
+    <a class="nav-breadcrumb" href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}aria-current="page"{% endif %}>Home</a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <a class="nav-breadcrumb" href="{{ url_for('search_form') }}" {% if request.endpoint in ['search_form', 'search_advanced'] %}aria-current="page"{% endif %}>Advanced Search</a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <a class="nav-breadcrumb" href="{{ url_for('ppgas_home') }}" {% if request.endpoint and request.endpoint.startswith('ppgas') %}aria-current="page"{% endif %}>PPGAS</a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <a class="nav-breadcrumb" href="{{ url_for('venues_list') }}" {% if request.endpoint and request.endpoint.startswith('venues') %}aria-current="page"{% endif %}>Journals</a>
+    <span class="breadcrumb-separator" aria-hidden="true">/</span>
+    <a class="nav-breadcrumb" href="{{ url_for('lists') }}" {% if request.endpoint == 'lists' %}aria-current="page"{% endif %} aria-describedby="reading-list-counter">
+      My List
+      <span id="reading-list-counter" class="list-counter" aria-label="Número de itens na lista pessoal">0</span>
+    </a>
+  </nav>
+</header>

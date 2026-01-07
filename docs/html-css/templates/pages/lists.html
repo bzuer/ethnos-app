@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Minha Lista - ethnos_app{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">Minha Lista</h1>
+</div>
+
+<section aria-labelledby="personal-list-section">
+  <h2 class="title-section" id="personal-list-section">Lista de Itens Salvos</h2>
+  <div id="personal-list-container" aria-live="polite">
+    <div class="loading-state">
+      <p class="field-value">Carregando sua lista pessoal...</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="export-title">
+  <h2 class="title-section" id="export-title">Exportar Lista</h2>
+  <div class="tools-actions hidden" id="export-section">
+    <button 
+      id="export-txt-btn" 
+      class="action-btn btn-positive"
+      aria-label="Exportar lista em formato ABNT">
+      Exportar ABNT (.docx)
+    </button>
+    <button 
+      id="export-bib-btn" 
+      class="action-btn btn-positive"
+      aria-label="Exportar lista em formato BibTeX">
+      Exportar BibTeX (.bib)
+    </button>
+    <button 
+      id="export-ris-btn" 
+      class="action-btn btn-positive"
+      aria-label="Exportar lista em formato RIS">
+      Exportar RIS (.ris)
+    </button>
+    <button 
+      id="export-json-btn" 
+      class="action-btn btn-positive"
+      aria-label="Exportar lista em formato JSON">
+      Exportar JSON (.json)
+    </button>
+    <button 
+      id="clear-all-btn" 
+      class="action-btn btn-negative clear-all-btn"
+      aria-label="Limpar toda a lista">
+      Limpar Lista
+    </button>
+  </div>
+  <div id="export-empty-message" class="description">
+    Sua lista está vazia. Adicione itens visitando as páginas de detalhes dos trabalhos.
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/vendor/docx.iife.js') }}?v=20250914-1"></script>
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/my-list.min.js') }}?v=20250914-2"></script>
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}{{ work.title if work else 'Obra' }} - ANTROPOTECA{% endblock %}
+{% block meta_description %}
+<meta name="description" content="{{ (work.title ~ ' — ' if work and work.title else '') ~ (work.formatted_authors ~ '; ' if work and work.formatted_authors else '') ~ (work.publication_year if work and work.publication_year else '') ~ ' — bibliography, references, research in anthropology' }}">
+{% endblock %}
+{% block meta_keywords %}
+<meta name="keywords" content="anthropology, antropologia, work, obra, article, artigo, bibliography, bibliografia, references, referências, journal, periódico, author, autor, {{ work.publication_year if work and work.publication_year }}, {{ venue_details.name if venue_details and venue_details.name }}">
+{% endblock %}
+
+{% block content %}
+<header class="page-header">
+    <h1 class="page-title">{{ work.title if work else 'Obra não encontrada' }}</h1>
+    {% if work and work.subtitle %}
+    <p class="item-subtitle">{{ work.subtitle }}</p>
+    {% endif %}
+</header>
+
+{% if work %}
+
+<section aria-labelledby="data-title">
+    <h2 class="title-section" id="data-title">Dados Bibliográficos</h2>
+    <table class="data-table">
+        <tbody>
+            {% if author_details %}
+                {% set authors = author_details | selectattr("role", "equalto", "AUTHOR") | list %}
+                {% set editors = author_details | selectattr("role", "equalto", "EDITOR") | list %}
+                
+                {% if authors %}
+                <tr>
+                    <th>AUTOR(ES)</th>
+                    <td class="field-value">
+                        {% for author in authors %}
+                            {% if author.person_id %}
+                                <a href="/person/{{ author.person_id }}/works" class="action-link">{{ author.name }}</a>
+                            {% else %}
+                                <span>{{ author.name }}</span>
+                            {% endif %}
+                            {% if author.is_corresponding %}<sup title="Autor correspondente">✉</sup>{% endif %}
+                            {% if author.orcid %}
+                                <br><small>ORCID: <a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ author.orcid }}</a></small>
+                            {% endif %}
+                            {% if author.affiliation and author.affiliation.name %}
+                                <br><small>{{ author.affiliation.name }}</small>
+                            {% endif %}
+                            {% if not loop.last %}<br><br>{% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
+                
+                
+                {% if editors %}
+                <tr>
+                    <th>EDITOR(ES)</th>
+                    <td class="field-value">
+                        <span class="editor">
+                            {% for editor in editors %}
+                                {% if editor.person_id %}
+                                    <a href="/person/{{ editor.person_id }}/works" class="action-link">{{ editor.name }}</a>
+                                {% else %}
+                                    <span>{{ editor.name }}</span>
+                                {% endif %}
+                                {% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    </td>
+                </tr>
+                {% endif %}
+            {% elif work.display_authors %}
+            <tr>
+                <th>AUTOR(ES)</th>
+                <td class="field-value">
+                    <span class="author">
+                        {% for author in work.display_authors %}
+                            {{ author }}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </span>
+                </td>
+            </tr>
+            {% endif %}
+            
+            <tr>
+                <th>ANO</th>
+                <td class="field-value">{{ work.publication_year or 'Não informado' }}</td>
+            </tr>
+            
+            {% if work.publication %}
+            {% if work.publication.volume %}
+            <tr>
+                <th>VOLUME</th>
+                <td class="field-value">{{ work.publication.volume }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if work.publication.issue %}
+            <tr>
+                <th>FASCÍCULO</th>
+                <td class="field-value">{{ work.publication.issue }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if work.publication.pages %}
+            <tr>
+                <th>PÁGINAS</th>
+                <td class="field-value">{{ work.publication.pages }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if work.publication.publication_date %}
+            <tr>
+                <th>DATA DE PUBLICAÇÃO</th>
+                <td class="field-value">{{ work.publication.publication_date[:10] }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if work.publication.peer_reviewed is not none %}
+            <tr>
+                <th>REVISÃO POR PARES</th>
+                <td class="field-value">{{ "Sim" if work.publication.peer_reviewed else "Não" }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if work.publication.open_access is not none %}
+            <tr>
+                <th>ACESSO ABERTO</th>
+                <td class="field-value">{{ "Sim" if work.publication.open_access else "Não" }}</td>
+            </tr>
+            {% endif %}
+            {% endif %}
+            
+            {% if work.formatted_type %}
+            <tr>
+                <th>TIPO</th>
+                <td class="field-value">{{ work.formatted_type }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if venue_details %}
+            <tr>
+                <th>PERIÓDICO</th>
+                <td class="field-value">
+                    <a href="/venues/{{ venue_details.id }}" class="action-link">{{ venue_details.name }}</a>
+                    {% if venue_details.type %} ({{ venue_details.type }}){% endif %}
+                    {% if venue_details.issn or venue_details.eissn %}
+                        <br><small>
+                            {% if venue_details.issn %}ISSN: {{ venue_details.issn }}{% endif %}
+                            {% if venue_details.issn and venue_details.eissn %} | {% endif %}
+                            {% if venue_details.eissn %}E-ISSN: {{ venue_details.eissn }}{% endif %}
+                        </small>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            
+            {% if work.publisher and work.publisher.name %}
+            <tr>
+                <th>EDITORA</th>
+                <td class="field-value">
+                    {{ work.publisher.name }}
+                    {% if work.publisher.type or work.publisher.country %}
+                        <br><small>
+                            {% if work.publisher.type %}{{ work.publisher.type }}{% endif %}
+                            {% if work.publisher.type and work.publisher.country %} | {% endif %}
+                            {% if work.publisher.country %}{{ work.publisher.country }}{% endif %}
+                        </small>
+                    {% endif %}
+                </td>
+            </tr>
+            {% elif venue_details and venue_details.publisher_name %}
+            <tr>
+                <th>EDITORA</th>
+                <td class="field-value">{{ venue_details.publisher_name }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if work.doi or work.temp_doi %}
+            {% set has_md5 = false %}
+            {% if files_data %}
+                {% for file in files_data %}
+                    {% if file.md5 or (file.file_info and file.file_info.md5) %}
+                        {% set has_md5 = true %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if not has_md5 %}
+            <tr>
+                <th>DOI</th>
+                <td class="field-value">
+                    {% if work.doi_url %}
+                    <a href="{{ work.doi_url }}" target="_blank" rel="noopener noreferrer" class="action-link">
+                        {{ work.temp_doi or work.doi }}
+                    </a>
+                    {% else %}
+                    {{ work.temp_doi or work.doi }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endif %}
+            
+            {% if work.identifiers %}
+            {% for id_type, id_values in work.identifiers.items() %}
+            {% if id_values and id_type != 'doi' %}
+            <tr>
+                <th>{{ id_type.upper() }}</th>
+                <td class="field-value">
+                    {% if id_values is iterable and id_values is not string %}
+                        {% for id_val in id_values %}
+                            {% if id_type == 'pmid' %}
+                                <a href="https://pubmed.ncbi.nlm.nih.gov/{{ id_val }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ id_val }}</a>
+                            {% elif id_type == 'arxiv' %}
+                                <a href="https://arxiv.org/abs/{{ id_val }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ id_val }}</a>
+                            {% elif id_type == 'handle' %}
+                                <a href="https://hdl.handle.net/{{ id_val }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ id_val }}</a>
+                            {% else %}
+                                {{ id_val }}
+                            {% endif %}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% if id_type == 'pmid' %}
+                            <a href="https://pubmed.ncbi.nlm.nih.gov/{{ id_values }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ id_values }}</a>
+                        {% elif id_type == 'arxiv' %}
+                            <a href="https://arxiv.org/abs/{{ id_values }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ id_values }}</a>
+                        {% elif id_type == 'handle' %}
+                            <a href="https://hdl.handle.net/{{ id_values }}" target="_blank" rel="noopener noreferrer" class="action-link">{{ id_values }}</a>
+                        {% else %}
+                            {{ id_values }}
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+            
+            {% if work.language %}
+            <tr>
+                <th>IDIOMA</th>
+                <td class="field-value">{{ work.language|upper }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if metrics_data %}
+            {% if metrics_data.citation_count and metrics_data.citation_count > 0 %}
+            <tr>
+                <th>CITAÇÕES RECEBIDAS</th>
+                <td class="field-value">{{ metrics_data.citation_count }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if metrics_data.reference_count and metrics_data.reference_count > 0 %}
+            <tr>
+                <th>REFERÊNCIAS CITADAS</th>
+                <td class="field-value">{{ metrics_data.reference_count }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if metrics_data.download_count and metrics_data.download_count > 0 %}
+            <tr>
+                <th>DOWNLOADS</th>
+                <td class="field-value">{{ metrics_data.download_count }}</td>
+            </tr>
+            {% endif %}
+            
+            {% if metrics_data.view_count and metrics_data.view_count > 0 %}
+            <tr>
+                <th>VISUALIZAÇÕES</th>
+                <td class="field-value">{{ metrics_data.view_count }}</td>
+            </tr>
+            {% endif %}
+            {% endif %}
+            
+            <tr>
+                <th>ADICIONADO EM</th>
+                <td class="field-value">{{ work.created_at[:10] if work.created_at else 'Não informado' }}</td>
+            </tr>
+            
+            {% if files_data %}
+            {% for file in files_data %}
+            {% set file_md5 = file.md5 or (file.file_info and file.file_info.md5) %}
+            {% if file_md5 %}
+            <tr>
+                <th>MD5</th>
+                <td class="field-value">
+                    <code class="md5-code">{{ file_md5 }}</code>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+</section>
+
+{% if work.abstract %}
+<section aria-labelledby="abstract-title">
+    <h2 class="title-section" id="abstract-title">Resumo</h2>
+    <p class="field-value">{{ work.abstract }}</p>
+</section>
+{% endif %}
+
+{% if similar_works %}
+<section aria-labelledby="related-title">
+    <h2 class="title-section" id="related-title">
+        {% if show_references %}
+            Referências Citadas
+        {% else %}
+            Obras Relacionadas
+        {% endif %}
+    </h2>
+    <div class="similar-works">
+        {% for related in similar_works %}
+        <div class="similar-work">
+            {% if related.id %}
+            <a href="/works/{{ related.id }}" class="action-link">
+                <strong>{{ related.title }}</strong>
+            </a>
+            {% else %}
+            <strong>{{ related.title }}</strong>
+            {% endif %}
+            {% if related.authors %}
+            <p class="similar-authors">{{ related.authors[:2]|join(', ') }}{% if related.authors|length > 2 %} et al.{% endif %}</p>
+            {% endif %}
+            {% if related.year %}
+            <p class="similar-year">({{ related.year }})</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section aria-labelledby="tools-title" class="tools-section">
+    <h2 class="title-section" id="tools-title">Ferramentas</h2>
+    <div class="action-links tools-buttons">
+        {% if work.doi_url %}
+        {% set has_md5 = false %}
+        {% if files_data %}
+            {% for file in files_data %}
+                {% if file.md5 or (file.file_info and file.file_info.md5) %}
+                    {% set has_md5 = true %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% if not has_md5 %}
+        <a href="{{ work.doi_url }}" target="_blank" rel="noopener noreferrer" class="action-btn btn-positive">Acessar via DOI</a>
+        {% endif %}
+        {% endif %}
+        {% if files_data %}
+        {% for file in files_data %}
+        {% set file_md5 = file.md5 or (file.file_info and file.file_info.md5) %}
+        {% if file_md5 %}
+        <a href="https://annas-archive.org/md5/{{ file_md5 }}" target="_blank" rel="noopener noreferrer" class="action-btn btn-positive">Anna's Archive</a>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        <button id="add-to-list-btn" class="action-btn btn-positive">Adicionar à Lista</button>
+        <button id="share-btn" class="action-btn btn-positive" data-title="{{ work.title }}" data-url="{{ request.url }}">Compartilhar</button>
+        <button id="print-btn" class="action-btn btn-positive">Imprimir</button>
+    </div>
+</section>
+
+{% else %}
+<section aria-labelledby="not-found">
+    <h2 class="title-section" id="not-found">Obra não encontrada</h2>
+    <p class="field-value">A obra solicitada não foi encontrada no sistema.</p>
+    <a href="{{ url_for('home') }}" class="action-link">Voltar ao início</a>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}" src="{{ url_for('static', filename='js/item-detail.min.js') }}?v=20250820-10"></script>
+{% endblock %}

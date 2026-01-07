@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados da Busca - ANTROPOTECA</title>
+  <style>
+    /* CSS Unificado e Refinado - Versão Final */
+    :root {
+      --document-white: #F8F8F7; --bg-light: #F5F5F4; --border-gray: #CCCCCA;
+      --text-black: #0D0D0D; --label-gray: #555555; --data-gray: #333333;
+      --subtle-gray: #888888; --primary-red: #C41E3A; --primary-blue: #1B365D;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Display", sans-serif;
+      --mono: "SF Mono", "Monaco", "Roboto Mono", "Consolas", monospace;
+      --spacing-sm: 8px; --spacing-md: 16px; --spacing-lg: 24px;
+      --spacing-xl: 40px; --spacing-xxl: 60px; --container-max: 800px;
+      --grid-unit: 40px; --grid-height: 24px; --border-thin: 1px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: var(--sans); background-color: var(--document-white);
+      color: var(--text-black); line-height: 1.4;
+      display: flex; justify-content: center; align-items: flex-start;
+      min-height: 100vh; padding: var(--spacing-xxl) 0; position: relative;
+    }
+    body::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background-image: 
+        linear-gradient(90deg, rgba(204, 204, 202, 0.1) 1px, transparent 1px),
+        linear-gradient(rgba(204, 204, 202, 0.1) 1px, transparent 1px);
+      background-size: var(--grid-unit) var(--grid-height);
+      pointer-events: none; z-index: -1;
+    }
+    .container { max-width: var(--container-max); width: 100%; padding: 0 var(--spacing-xl); }
+    .title-primary { font-family: var(--mono); font-size: 16px; font-weight: 700; text-transform: uppercase; color: var(--text-black); margin-bottom: var(--spacing-sm); letter-spacing: 0; }
+    .page-title { font-family: var(--mono); font-size: 24px; font-weight: 700; text-transform: uppercase; color: var(--text-black); margin-bottom: var(--spacing-sm); letter-spacing: 0; }
+    .nav-breadcrumb { font-family: var(--mono); font-size: 12px; text-transform: uppercase; color: var(--subtle-gray); text-decoration: none; }
+    .nav-breadcrumb:hover { text-decoration: underline; }
+    .description { font-size: 16px; font-style: italic; margin-bottom: var(--spacing-lg); color: var(--data-gray); }
+    .result-title { font-size: 20px; font-weight: 700; color: var(--primary-blue); text-transform: uppercase; text-decoration: none; }
+    .result-title:hover { text-decoration: underline; }
+    .result-subtitle { font-size: 14px; font-style: italic; color: var(--data-gray); margin-top: var(--spacing-sm); }
+    .result-meta { font-family: var(--mono); font-size: 12px; color: var(--subtle-gray); text-transform: uppercase; margin-top: var(--spacing-sm); }
+    .result-meta .author { color: var(--data-gray); font-weight: 600; }
+    .global-header { padding-bottom: var(--spacing-md); border-bottom: var(--border-thin) solid var(--border-gray); margin-bottom: var(--spacing-xl); }
+    .page-header { margin-bottom: var(--spacing-xl); }
+    .breadcrumb-separator { margin: 0 var(--spacing-sm); }
+    .search-form { display: flex; margin-bottom: var(--spacing-lg); }
+    .form-input { width: 100%; border: var(--border-thin) solid var(--border-gray); background: var(--document-white); font-family: var(--mono); font-size: 14px; padding: var(--spacing-sm) var(--spacing-md); outline: none; height: 36px; line-height: 1.4; }
+    .form-input:focus { border-color: var(--primary-red); }
+    .search-btn, .action-btn { padding: var(--spacing-sm) var(--spacing-md); border: var(--border-thin) solid var(--border-gray); background-color: var(--document-white); color: var(--text-black); font-family: var(--mono); font-size: 12px; text-transform: uppercase; cursor: pointer; transition: transform 0.1s ease; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+    .search-btn:hover, .btn-positive:hover { background-color: var(--primary-blue); color: var(--document-white); border-color: var(--primary-blue); }
+    .btn-negative:hover { background-color: var(--primary-red); color: var(--document-white); border-color: var(--primary-red); }
+    .search-btn:active { transform: translateY(1px); }
+    .search-form .form-input { border-right: none; }
+    .results-list { list-style: none; margin: 0; padding: 0; border-top: var(--border-thin) solid var(--border-gray); }
+    .result-item { padding: var(--spacing-md) 0; border-bottom: var(--border-thin) solid var(--border-gray); transition: background-color 0.2s ease; }
+    .result-item:hover { background-color: var(--bg-light); padding-left: var(--spacing-md); padding-right: var(--spacing-md); margin: 0 calc(-1 * var(--spacing-md)); }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: var(--spacing-sm); margin-top: var(--spacing-xl); }
+    .pagination-btn, .pagination-number { font-family: var(--mono); font-size: 12px; padding: var(--spacing-sm) var(--spacing-md); border: var(--border-thin) solid var(--border-gray); background: var(--bg-light); text-decoration: none; color: var(--primary-red); transition: transform 0.1s ease; }
+    .pagination-btn:hover, .pagination-number:hover { background: var(--border-gray); }
+    .pagination-btn:active, .pagination-number:active { transform: translateY(1px); }
+    .pagination-number.current { background: var(--primary-red); color: var(--document-white); border-color: var(--primary-red); }
+    .pagination-btn.disabled { color: var(--border-gray); pointer-events: none; background-color: var(--bg-light); }
+    .pagination-info { font-family: var(--mono); font-size: 12px; color: var(--subtle-gray); text-align: center; margin-top: var(--spacing-md); }
+    .footer { text-align: center; padding-top: var(--spacing-md); border-top: var(--border-thin) solid var(--border-gray); margin-top: var(--spacing-xl); font-family: var(--mono); font-size: 12px; color: var(--subtle-gray); text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="global-header" role="banner">
+      <h1 class="title-primary">ANTROPOTECA</h1>
+      <nav aria-label="Navegação principal">
+        <a href="index.html" class="nav-breadcrumb">HOME</a> &nbsp;•&nbsp;
+        <a href="busca-avancada.html" class="nav-breadcrumb">BUSCA AVANÇADA</a> &nbsp;•&nbsp;
+        <a href="minha-lista.html" class="nav-breadcrumb">MINHA LISTA</a> &nbsp;•&nbsp;
+        <a href="visualizador-redes.html" class="nav-breadcrumb">REDES</a> &nbsp;•&nbsp;
+        <a href="#" class="nav-breadcrumb">SOBRE</a>
+      </nav>
+    </header>
+    <main role="main">
+      <header class="page-header">
+        <nav class="breadcrumb" aria-label="Navegação estrutural">
+          <a href="index.html" class="nav-breadcrumb">HOME</a>
+          <span class="breadcrumb-separator">/</span>
+          <span class="nav-breadcrumb">RESULTADOS</span>
+        </nav>
+        <h1 class="page-title">Resultados da Busca</h1>
+      </header>
+      <section>
+        <form class="search-form" action="resultados.html" method="get">
+          <input type="search" class="form-input" value="malinowski" placeholder="Pesquisar por autor, título, tema...">
+          <button type="submit" class="search-btn btn-positive">Buscar</button>
+        </form>
+        <ol class="results-list" role="list">
+          <li class="result-item">
+            <a href="item-detail.html" class="result-title">Os Argonautas do Pacífico Ocidental</a>
+            <p class="result-subtitle">Um relato do empreendimento e da aventura dos nativos nos arquipélagos da Nova Guiné melanésia</p>
+            <p class="result-meta"><span class="author">Malinowski, Bronisław</span> • 1978</p>
+          </li>
+          <li class="result-item">
+            <a href="item-detail.html" class="result-title">The Sexual Life of Savages</a>
+            <p class="result-subtitle">An ethnographic account of courtship, marriage, and family life among the natives of the Trobriand Islands</p>
+            <p class="result-meta"><span class="author">Malinowski, Bronisław</span> • 1929</p>
+          </li>
+        </ol>
+        <nav class="pagination" aria-label="Navegação de páginas">
+          <span class="pagination-btn disabled">‹ ANTERIOR</span>
+          <span class="pagination-number current">1</span>
+          <a href="#" class="pagination-number">2</a>
+          <a href="#" class="pagination-btn">PRÓXIMO ›</a>
+        </nav>
+        <div class="pagination-info">
+          Mostrando 1-2 de 25 itens
+        </div>
+      </section>
+    </main>
+    <footer class="footer" role="contentinfo">
+      Antropoteca © 2025 • Funcionalidade com Respiração
+    </footer>
+  </div>
+</body>
+</html>

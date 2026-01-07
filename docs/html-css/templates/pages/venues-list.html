@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Journals - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="Anthropology journals — impact, representation, bibliography metrics, references.">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">Journals</h1>
+</div>
+
+<section>
+  <h3 class="title-section">Impact</h3>
+  <div class="venues-impact-container">
+    {% if impact_venues %}
+    <table class="data-table journals-impact-table">
+      <thead>
+        <tr>
+          <th scope="col">PERIÓDICO</th>
+          <th scope="col">OBRAS</th>
+          <th scope="col">AÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for venue in impact_venues %}
+        <tr>
+          <td class="field-value"><strong>{{ venue.name or 'Nome não disponível' }}</strong></td>
+          <td class="field-value"><strong>{{ '{:,}'.format(venue.works_count or 0).replace(',', '.') }}</strong></td>
+          <td class="field-value"><a href="/venues/{{ venue.id }}" class="action-link">Ver detalhes</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="field-value">Dados de impacto não disponíveis no momento.</p>
+    {% endif %}
+  </div>
+</section>
+
+<section>
+  <h3 class="title-section">Representation</h3>
+  <div class="venues-representation-container">
+    {% if representation_venues %}
+    <table class="data-table journals-representation-table">
+      <thead>
+        <tr>
+          <th scope="col">PERIÓDICO</th>
+          <th scope="col">OBRAS</th>
+          <th scope="col">AÇÃO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for venue in representation_venues %}
+        <tr>
+          <td class="field-value"><strong>{{ venue.name or 'Nome não disponível' }}</strong></td>
+          <td class="field-value"><strong>{{ '{:,}'.format(venue.works_count or 0).replace(',', '.') }}</strong></td>
+          <td class="field-value"><a href="/venues/{{ venue.id }}" class="action-link">Ver detalhes</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="field-value">Dados de representação não disponíveis no momento.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Courses (PPGAS) - ethnos_app{% endblock %}
+{% block meta_description %}
+<meta name="description" content="PPGAS courses — year, term, instructors; bibliography and references in social anthropology.">
+{% endblock %}
+
+{% block content %}
+<div class="page-header" aria-labelledby="page-title">
+  <h1 class="page-title" id="page-title">Courses (PPGAS)</h1>
+</div>
+
+{% if courses %}
+<section aria-labelledby="results-section">
+  {% for course in courses %}
+  <div class="result-item">
+    <h4 class="result-title">
+      <a href="{{ url_for('courses_ppgas_detail', course_id=course.id) }}" class="result-link">
+        {{ course.name }}
+      </a>
+    </h4>
+    <div class="result-meta">
+      <span class="result-year">{{ course.year }}</span>
+      {% if course.semester %}
+      <span class="result-type"> • {{ course.semester }}º Semestre</span>
+      {% endif %}
+      {% if course.instructors %}
+      <span class="result-authors"> • Prof.: {{ course.instructors }}</span>
+      {% endif %}
+      <span class="result-type"> • {{ course.bibliography_count or 0 }} obra{% if (course.bibliography_count or 0) != 1 %}s{% endif %}</span>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if pagination %}
+  <div class="pagination">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('courses_ppgas', page=pagination.page-1) }}" class="pagination-link">← Anterior</a>
+    {% endif %}
+    
+    <span class="pagination-info">Página {{ pagination.page }} de {{ pagination.totalPages }}</span>
+    
+    {% if pagination.has_next %}
+    <a href="{{ url_for('courses_ppgas', page=pagination.page+1) }}" class="pagination-link">Próxima →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% else %}
+<p class="field-value">Nenhuma disciplina encontrada.</p>
+{% endif %}
+
+{% endblock %}
