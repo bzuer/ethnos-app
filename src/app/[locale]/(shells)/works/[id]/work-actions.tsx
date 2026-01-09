@@ -19,6 +19,7 @@ function toSavedItem(work: any) {
     title: work?.title || null,
     authors: work?.authors || work?.authors_preview || work?.author_string || null,
     publication_year: work?.publication?.year || work?.publication_year || work?.year || null,
+    venue_id: work?.venue?.id || work?.venue_id || null,
     venue_name: work?.venue?.name || work?.venue_name || null,
     type: work?.work_type || work?.type || null,
     added_at: new Date().toISOString()
@@ -56,11 +57,29 @@ function normWork(raw: any) {
     publication: {
       year: publication.year || raw.publication_year || raw.year || null,
       volume: publication.volume || raw.volume || null,
-      issue: publication.issue || raw.issue || null,
       pages: publication.pages || raw.pages || null
     },
-    venue: { id: venue.id || null, name: venue.name || raw.venue_name || null, issn: venue.issn || venue.eissn || null },
-    publisher: { name: publisher.name || raw.publisher_name || null },
+    venue: {
+      id: venue.id || null,
+      name: venue.name || raw.venue_name || null,
+      issn: venue.issn || null,
+      eissn: venue.eissn || null,
+      scopus_id: venue.scopus_id || null,
+      wikidata_id: venue.wikidata_id || null,
+      openalex_id: venue.openalex_id || null,
+      mag_id: venue.mag_id || null
+    },
+    publisher: {
+      id: publisher.id || null,
+      name: publisher.name || raw.publisher_name || null,
+      type: publisher.type || null,
+      country: publisher.country || null,
+      ror_id: publisher.ror_id || null,
+      wikidata_id: publisher.wikidata_id || null,
+      openalex_id: publisher.openalex_id || null,
+      mag_id: publisher.mag_id || null,
+      url: publisher.url || null
+    },
     authors
   };
 }
@@ -213,24 +232,16 @@ function normalizeValue(value: any) {
   return value ? String(value).replace(/\s+/g, ' ').trim() : '';
 }
 
-function normalizeDoi(value: any) {
-  const raw = normalizeValue(value);
-  if (!raw) return '';
-  return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
-}
-
 function formatAccessLink(id: string | number | null | undefined) {
   if (id === null || id === undefined) return '';
   const value = String(id).trim();
   return value ? `ethnos.app/works/${encodeURIComponent(value)}` : '';
 }
 
-function normalizeIssue(value: any) {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'boolean') return '';
-  const raw = String(value).trim();
-  if (!raw || raw.toLowerCase() === 'true' || raw.toLowerCase() === 'false') return '';
-  return raw;
+function normalizeDoi(value: any) {
+  const raw = normalizeValue(value);
+  if (!raw) return '';
+  return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
 }
 
 function getIsbn(work: any) {
@@ -259,7 +270,6 @@ function toBibTeX(work: any) {
   const series = normalizeValue(work?.series?.name || work?.series);
   const accessLink = formatAccessLink(idValue);
   const volume = work?.publication?.volume || work?.volume || '';
-  const issue = work?.publication?.issue || work?.issue || '';
   const pages = work?.publication?.pages || work?.pages || '';
   const authors = getAuthorTokens(work).map((item: any) => {
     if (typeof item === 'string') return item;
@@ -289,7 +299,6 @@ function toBibTeX(work: any) {
     ['series', series],
     ['journal', type === 'article' ? venue : ''],
     ['volume', volume],
-    ['number', issue],
     ['pages', pages]
   ].filter(([, value]) => value);
   const lines = fields.map(([key, value]) => `  ${key} = {${String(value)}}`);
@@ -321,7 +330,6 @@ function toApaParagraph(work: any, fallbackAuthor: string) {
   const titleText = title ? `${title}${subtitle ? `: ${subtitle}` : ''}` : '';
   const venue = work?.venue?.name || work?.venue_name || '';
   const volume = work?.publication?.volume || work?.volume || '';
-  const issue = normalizeIssue(work?.publication?.issue || work?.issue || '');
   const pages = work?.publication?.pages || work?.pages || '';
   const publisher = work?.publisher?.name || work?.publisher_name || '';
   const isbn = getIsbn(work);
@@ -334,17 +342,16 @@ function toApaParagraph(work: any, fallbackAuthor: string) {
   if (isArticle && venue) {
     children.push(new TextRun({ text: ` ${venue}`, italics: true }));
     if (volume) children.push(new TextRun({ text: `, ${volume}`, italics: true }));
-    if (issue) children.push(new TextRun({ text: `(${issue})` }));
     if (pages) children.push(new TextRun({ text: `, ${pages}` }));
     children.push(new TextRun({ text: '.' }));
   } else {
     if (venue) children.push(new TextRun({ text: ` ${venue}.`, italics: true }));
     if (publisher) children.push(new TextRun({ text: ` ${publisher}.` }));
-    if (volume || issue || pages) {
-      const volIssue = `${volume ? ` ${volume}` : ''}${issue ? `(${issue})` : ''}`;
-      if (volIssue.trim()) children.push(new TextRun({ text: volIssue, italics: true }));
-      if (pages) children.push(new TextRun({ text: `${volIssue.trim() ? ', ' : ' '}${pages}.` }));
-      else if (volIssue.trim()) children.push(new TextRun({ text: '.' }));
+    if (volume || pages) {
+      const volumeText = volume ? ` ${volume}` : '';
+      if (volumeText) children.push(new TextRun({ text: volumeText, italics: true }));
+      if (pages) children.push(new TextRun({ text: `${volumeText ? ', ' : ' '}${pages}.` }));
+      else if (volumeText) children.push(new TextRun({ text: '.' }));
     }
   }
   if (isbn) children.push(new TextRun({ text: ` ISBN: ${isbn}.` }));

@@ -51,8 +51,15 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const language = work?.language;
   const metrics = work?.metrics || {};
   const identifiers = work?.identifiers && typeof work.identifiers === 'object' ? work.identifiers : {};
-  const ids: Array<{ label: string; values: Array<{ text: string; href?: string }> }> = [];
-  const addValues = (label: string, raw?: any, hrefBuilder?: (value: string) => string | null) => {
+  type IdentifierEntry = { label: string; values: Array<{ text: string; href?: string }> };
+  const ids: IdentifierEntry[] = [];
+  const venueIds: IdentifierEntry[] = [];
+  const addValues = (
+    label: string,
+    raw?: any,
+    hrefBuilder?: (value: string) => string | null,
+    targetList: IdentifierEntry[] = ids
+  ) => {
     const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
     const values = list.map((value: any) => {
       if (value && typeof value === 'object') {
@@ -67,14 +74,31 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
       return href ? { text, href } : { text };
     }).filter(Boolean) as Array<{ text: string; href?: string }>;
     if (!values.length) return;
-    const existing = ids.find((entry) => entry.label === label);
+    const existing = targetList.find((entry) => entry.label === label);
     const target = existing ? existing.values : [];
     values.forEach((entry) => {
       if (target.some((item) => item.text === entry.text && item.href === entry.href)) return;
       target.push(entry);
     });
-    if (!existing) ids.push({ label, values: target });
+    if (!existing) targetList.push({ label, values: target });
   };
+  const renderGroupedIdentifiers = (entries: IdentifierEntry[], keyPrefix: string) => (
+    entries.map((kv, kvIdx) => (
+      <span key={`${keyPrefix}-${kv.label}-${kvIdx}`}>
+        {kv.label}: {kv.values.map((entry, idx: number) => (
+          <span key={`${keyPrefix}-${kv.label}-${entry.text}-${idx}`}>
+            {entry.href ? (
+              <a className="action-link table-link" href={entry.href} target="_blank" rel="noopener noreferrer">{entry.text}</a>
+            ) : (
+              <span>{entry.text}</span>
+            )}
+            {idx < kv.values.length - 1 ? ', ' : ''}
+          </span>
+        ))}
+        {kvIdx < entries.length - 1 ? ' • ' : ''}
+      </span>
+    ))
+  );
   addValues('DOI', work?.doi || publication?.doi, (value) => `https://doi.org/${encodeURIComponent(String(value))}`);
   addValues('PMID', work?.pmid, (value) => `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(value))}`);
   addValues('PMCID', work?.pmcid);
@@ -82,22 +106,19 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   addValues('WOS ID', work?.wos_id);
   addValues('Handle', work?.handle, (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`);
   addValues('Wikidata', work?.wikidata_id);
-  addValues(t('works.detail.labels.openAlex'), work?.openalex_id, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
   addValues('MAG', work?.mag_id);
   addValues(t('works.detail.labels.openLibraryId'), work?.openlibrary_id, (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`);
   addValues(t('works.detail.labels.isbn'), work?.isbn);
   const idLabelMap: Record<string, string> = {
     openlibrary: t('works.detail.labels.openLibraryId'),
     openlibraryid: t('works.detail.labels.openLibraryId'),
-    isbn: t('works.detail.labels.isbn'),
-    openalex: t('works.detail.labels.openAlex'),
-    openalexid: t('works.detail.labels.openAlex')
+    isbn: t('works.detail.labels.isbn')
   };
   Object.entries(identifiers).forEach(([rawKey, rawValue]) => {
     const key = String(rawKey || '');
     if (!key) return;
     const normalized = key.replace(/_/g, '').toLowerCase();
-    if (normalized === 'doi') return;
+    if (normalized === 'doi' || normalized === 'openalex' || normalized === 'openalexid') return;
     const label = idLabelMap[normalized] || (normalized.startsWith('isbn') ? t('works.detail.labels.isbn') : key.toUpperCase());
     addValues(label, rawValue, normalized === 'pmid'
       ? (value) => `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(value))}`
@@ -105,12 +126,12 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         ? (value) => `https://arxiv.org/abs/${encodeURIComponent(String(value))}`
         : normalized === 'handle'
           ? (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`
-          : normalized === 'openalex' || normalized === 'openalexid'
-            ? (value) => `https://openalex.org/${encodeURIComponent(String(value))}`
-            : normalized === 'openlibrary' || normalized === 'openlibraryid'
-              ? (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`
-              : undefined);
+          : normalized === 'openlibrary' || normalized === 'openlibraryid'
+            ? (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`
+            : undefined);
   });
+  addValues(t('venues.detail.issn'), venueIssn, undefined, venueIds);
+  addValues(t('venues.detail.eissn'), venueEissn, undefined, venueIds);
   const abstractText = work?.abstract || '';
   const refs: any[] = Array.isArray(work?.citations?.references) ? work.citations.references : [];
   const citedBy: any[] = Array.isArray(work?.citations?.cited_by) ? work.citations.cited_by : [];
@@ -260,11 +281,20 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                 </td>
               </tr>
             ) : null}
+            {venueIds.length > 0 ? (
+              <tr>
+                <th scope="row">{t('works.detail.labels.venueIds')}</th>
+                <td className="field-value">
+                  {renderGroupedIdentifiers(venueIds, 'venue-ids')}
+                </td>
+              </tr>
+            ) : null}
             {publisherName ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.publisher')}</th>
                 <td className="field-value">
                   {publisherName}
+                  {publisherType || publisherCountry ? ` (${[publisherType, publisherCountry].filter(Boolean).join(' • ')})` : ''}
                 </td>
               </tr>
             ) : null}

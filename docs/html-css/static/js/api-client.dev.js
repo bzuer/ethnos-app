@@ -125,7 +125,7 @@ class ethnos_appAPI {
         if (params.page) queryParams.append('page', params.page);
         if (params.sort) queryParams.append('sort', params.sort);
         const queryString = queryParams.toString();
-        return this._fetch('/search/sphinx' + (queryString ? '?' + queryString : ''));
+    return this._fetch('/search/advanced' + (queryString ? '?' + queryString : ''));
     }
 
     async getWork(id) {
@@ -137,7 +137,7 @@ class ethnos_appAPI {
         if (params.limit) queryParams.append('limit', params.limit);
         if (params.page) queryParams.append('page', params.page);
         const queryString = queryParams.toString();
-        return this._fetch('/works/vitrine' + (queryString ? '?' + queryString : ''));
+    return this._fetch('/works/showcase' + (queryString ? '?' + queryString : ''));
     }
     async searchAuthors(name, limit = 25) {
         const queryParams = new URLSearchParams({

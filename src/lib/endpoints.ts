@@ -10,7 +10,7 @@ export async function getHomeRecentWorks(limit = 20) {
   const safeLimit = normalizeLimit(limit, 20);
   const init = { cache: 'force-cache' as RequestCache };
   try {
-    const r: any = await fetchJson(`/works/vitrine?limit=${encodeURIComponent(String(safeLimit))}`, init);
+    const r: any = await fetchJson(`/works/showcase?limit=${encodeURIComponent(String(safeLimit))}`, init);
     return r?.data || r?.results || r || [];
   } catch {
     try {
@@ -23,7 +23,7 @@ export async function getHomeRecentWorks(limit = 20) {
 }
 
 export async function getVitrinePage(page = 1, limit = 25) {
-  const r: any = await fetchJson(`/works/vitrine?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
+  const r: any = await fetchJson(`/works/showcase?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
   return r;
 }
 
@@ -52,14 +52,6 @@ export async function searchWorks(params: Record<string, string | number | boole
   if (!qv || qv === '*') return fallbackList();
 
   const tryPaths: string[] = [];
-  const sphinx = new URLSearchParams(base as any);
-  const offset = base.has('offset') ? Number(base.get('offset') || '0') : Math.max(0, (Number(page) - 1) * Number(limit));
-  sphinx.set('limit', String(limit));
-  sphinx.delete('page');
-  if (!sphinx.has('offset')) sphinx.set('offset', String(offset));
-  if (sphinx.has('include_facets') && !sphinx.has('facets')) sphinx.set('facets', String(sphinx.get('include_facets')));
-  tryPaths.push(`/search/sphinx?${sphinx.toString()}`);
-
   const qs = new URLSearchParams(base as any);
   if (qs.has('work_type') && !qs.has('type')) qs.set('type', String(qs.get('work_type')));
   if (qs.has('year') && !qs.has('year_from')) qs.set('year_from', String(qs.get('year')));
@@ -94,7 +86,18 @@ export async function getVenueWorksPage(id: string | number, page = 1, limit = 2
 }
 
 export async function getPersonsWorks(personId: string | number, page = 1, limit = 25) {
-  const p: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(personId))}`);
-  const w: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(personId))}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
-  return { person: p?.data || p?.person || p, works: w };
+  let person: any = null;
+  let works: any = null;
+  try {
+    const p: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(personId))}`);
+    person = p?.data || p?.person || p;
+  } catch {
+    person = null;
+  }
+  try {
+    works = await fetchJson<any>(`/persons/${encodeURIComponent(String(personId))}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
+  } catch {
+    works = null;
+  }
+  return { person, works };
 }

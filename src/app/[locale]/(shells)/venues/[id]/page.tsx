@@ -64,6 +64,57 @@ const getVenueSubjectsText = (venue?: Venue | null) => {
   ]);
 };
 
+type IdentifierEntry = { label: string; values: Array<{ text: string; href?: string }> };
+
+const addIdentifierValues = (
+  target: IdentifierEntry[],
+  label: string,
+  raw?: any,
+  hrefBuilder?: (value: string) => string | null
+) => {
+  const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
+  const values = list
+    .map((value: any) => {
+      if (value && typeof value === 'object') {
+        const picked = value?.id || value?.identifier || value?.value;
+        if (!picked) return null;
+        const text = String(picked);
+        const href = hrefBuilder ? hrefBuilder(text) : null;
+        return href ? { text, href } : { text };
+      }
+      const text = String(value);
+      const href = hrefBuilder ? hrefBuilder(text) : null;
+      return href ? { text, href } : { text };
+    })
+    .filter(Boolean) as Array<{ text: string; href?: string }>;
+  if (!values.length) return;
+  const existing = target.find((entry) => entry.label === label);
+  const targetValues = existing ? existing.values : [];
+  values.forEach((entry) => {
+    if (targetValues.some((item) => item.text === entry.text && item.href === entry.href)) return;
+    targetValues.push(entry);
+  });
+  if (!existing) target.push({ label, values: targetValues });
+};
+
+const renderGroupedIdentifiers = (entries: IdentifierEntry[], keyPrefix: string) => (
+  entries.map((kv, kvIdx) => (
+    <span key={`${keyPrefix}-${kv.label}-${kvIdx}`}>
+      {kv.label}: {kv.values.map((entry, idx: number) => (
+        <span key={`${keyPrefix}-${kv.label}-${entry.text}-${idx}`}>
+          {entry.href ? (
+            <a className="action-link table-link" href={entry.href} target="_blank" rel="noopener noreferrer">{entry.text}</a>
+          ) : (
+            <span>{entry.text}</span>
+          )}
+          {idx < kv.values.length - 1 ? ', ' : ''}
+        </span>
+      ))}
+      {kvIdx < entries.length - 1 ? ' • ' : ''}
+    </span>
+  ))
+);
+
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
   return buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`);
@@ -90,6 +141,51 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   const sjr = (metrics && (metrics as any).sjr) ?? venue?.sjr;
   const snip = (metrics && (metrics as any).snip) ?? venue?.snip;
   const citescore = (metrics && (metrics as any).citescore) ?? venue?.citescore;
+  const identifierEntries: IdentifierEntry[] = [];
+  const venueIdentifiers = (venue as any)?.identifiers;
+  let venueIssn = venue?.issn;
+  let venueEissn = venue?.eissn;
+  const venueIssnL = (venue as any)?.issn_l || (venue as any)?.issnl;
+  let venueScopus = (venue as any)?.scopus_id || (venue as any)?.scopus;
+  const venueWikidata = (venue as any)?.wikidata_id || (venue as any)?.wikidata;
+  const venueOpenalex = (venue as any)?.openalex_id || (venue as any)?.openalex;
+  const venueMag = (venue as any)?.mag_id || (venue as any)?.mag;
+  addIdentifierValues(identifierEntries, 'ISSN-L', venueIssnL);
+  addIdentifierValues(identifierEntries, t('works.detail.labels.wikidata'), venueWikidata, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
+  addIdentifierValues(identifierEntries, t('works.detail.labels.openAlex'), venueOpenalex, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
+  addIdentifierValues(identifierEntries, t('works.detail.labels.mag'), venueMag);
+  if (venueIdentifiers && typeof venueIdentifiers === 'object') {
+    const identifierLabelMap: Record<string, { label: string; hrefBuilder?: (value: string) => string | null }> = {
+      issnl: { label: 'ISSN-L' },
+      issn_l: { label: 'ISSN-L' },
+      wikidata: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
+      openalex: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
+      openalexid: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
+      openalex_id: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
+      mag: { label: t('works.detail.labels.mag') },
+      magid: { label: t('works.detail.labels.mag') },
+      mag_id: { label: t('works.detail.labels.mag') }
+    };
+    Object.entries(venueIdentifiers as Record<string, any>).forEach(([rawKey, rawValue]) => {
+      const normalized = String(rawKey || '').replace(/[-\s]/g, '').toLowerCase();
+      if (!venueIssn && (normalized === 'issn' || normalized === 'eissn')) {
+        const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
+        if (normalized === 'issn' && first && !venueIssn) venueIssn = String(first);
+        if (normalized === 'eissn' && first && !venueEissn) venueEissn = String(first);
+        return;
+      }
+      if (!venueScopus && (normalized === 'scopus' || normalized === 'scopusid' || normalized === 'scopus_id')) {
+        const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
+        if (first) venueScopus = String(first);
+        return;
+      }
+      const entry = identifierLabelMap[normalized];
+      if (!entry) return;
+      addIdentifierValues(identifierEntries, entry.label, rawValue, entry.hrefBuilder);
+    });
+  }
+  const issnParts = [venueIssn, venueEissn && venueEissn !== venueIssn ? venueEissn : null].filter(Boolean).map((value) => String(value));
+  const issnText = issnParts.join(' / ');
 
   return (
     <div className="page-header" aria-labelledby="page-title">
@@ -115,16 +211,24 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                   </td>
                 </tr>
               ) : null}
-              {venue?.issn ? (
+              {issnText ? (
                 <tr>
                   <th scope="row">{t('venues.detail.issn')}</th>
-                  <td className="field-value">{venue.issn}</td>
+                  <td className="field-value">{issnText}</td>
                 </tr>
               ) : null}
-              {venue?.eissn && venue.eissn !== venue.issn ? (
+              {venueScopus ? (
                 <tr>
-                  <th scope="row">{t('venues.detail.eissn')}</th>
-                  <td className="field-value">{venue.eissn}</td>
+                  <th scope="row">{t('works.detail.labels.scopus')}</th>
+                  <td className="field-value">{venueScopus}</td>
+                </tr>
+              ) : null}
+              {identifierEntries.length > 0 ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.ids')}</th>
+                  <td className="field-value">
+                    {renderGroupedIdentifiers(identifierEntries, 'venue-identifiers')}
+                  </td>
                 </tr>
               ) : null}
               <tr>

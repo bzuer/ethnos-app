@@ -157,7 +157,7 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
   sphinx.delete('page');
   if (!sphinx.has('offset')) sphinx.set('offset', String(offset));
   if (sphinx.has('include_facets') && !sphinx.has('facets')) sphinx.set('facets', String(sphinx.get('include_facets')));
-  tryPaths.push(`/api/search/sphinx?${sphinx.toString()}`);
+  tryPaths.push(`/api/search/advanced?${sphinx.toString()}`);
   const qs = new URLSearchParams(base as any);
   if (qs.has('work_type') && !qs.has('type')) qs.set('type', String(qs.get('work_type')));
   if (qs.has('year') && !qs.has('year_from')) qs.set('year_from', String(qs.get('year')));
@@ -186,11 +186,22 @@ function parseSearchState(data: any, page: string, limit: string): SearchState {
   else if (Array.isArray(data?.data)) items = data.data as any[];
   else if (Array.isArray(data?.items)) items = data.items as any[];
   else if (Array.isArray(data?.results?.items)) items = data.results.items as any[];
+  const uniqueItems: any[] = [];
+  const seen = new Set<string>();
+  items.forEach((item) => {
+    const keySource = item?.id ?? item?.work_id;
+    const key = keySource === null || keySource === undefined ? null : String(keySource);
+    if (key) {
+      if (seen.has(key)) return;
+      seen.add(key);
+    }
+    uniqueItems.push(item);
+  });
   const totalCount = Number(data?.total ?? data?.data?.total ?? data?.meta?.total ?? 0) || 0;
   const psrc: any = data?.pagination || data?.meta?.pagination || data?.data?.pagination || data?.results?.pagination || {};
   const pageNum = Number((psrc?.page ?? psrc?.current_page ?? page) || 1);
   const totalPages = Number(psrc?.totalPages ?? psrc?.total_pages ?? (totalCount && limit ? Math.ceil(Number(totalCount) / Number(limit)) : 0)) || undefined;
   const hasPrev = Boolean(psrc?.hasPrev) || pageNum > 1;
-  const hasNext = Boolean(psrc?.hasNext) || (totalPages ? pageNum < totalPages : (totalCount ? pageNum * Number(limit) < totalCount : items.length === Number(limit)));
-  return { items, pageNum, totalPages, hasPrev, hasNext, totalCount };
+  const hasNext = Boolean(psrc?.hasNext) || (totalPages ? pageNum < totalPages : (totalCount ? pageNum * Number(limit) < totalCount : uniqueItems.length === Number(limit)));
+  return { items: uniqueItems, pageNum, totalPages, hasPrev, hasNext, totalCount };
 }
