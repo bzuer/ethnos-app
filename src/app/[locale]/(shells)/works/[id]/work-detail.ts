@@ -34,6 +34,10 @@ function formatPublicationDate(publicationDate: any, year: any) {
   return '';
 }
 
+function pickIssueValue(...values: any[]) {
+  return values.find((value) => value !== undefined && value !== null && value !== '' && typeof value !== 'boolean') ?? null;
+}
+
 function getFilesList(work: any) {
   const files = work?.files;
   if (Array.isArray(files)) return files;
@@ -98,8 +102,7 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   const year = publication?.year || work?.publication_year || work?.year;
   const publicationDate = publication?.publication_date || work?.publication_date;
   const volume = publication?.volume || work?.volume;
-  const issueRaw = publication?.issue || publication?.number || work?.issue || work?.number;
-  const issue = typeof issueRaw === 'boolean' ? null : issueRaw;
+  const issue = pickIssueValue(publication?.issue, publication?.number, work?.issue, work?.number);
   const pages = publication?.pages || work?.pages;
   const pageParts = splitPages(pages);
   const doi = work?.doi || publication?.doi;
@@ -165,8 +168,7 @@ export function buildCoins(work: any, locale: string, id: string) {
   const year = publication?.year || work?.publication_year || work?.year;
   const publicationDate = publication?.publication_date || work?.publication_date;
   const volume = publication?.volume || work?.volume;
-  const issueRaw = publication?.issue || publication?.number || work?.issue || work?.number;
-  const issue = typeof issueRaw === 'boolean' ? null : issueRaw;
+  const issue = pickIssueValue(publication?.issue, publication?.number, work?.issue, work?.number);
   const pages = publication?.pages || work?.pages;
   const pageParts = splitPages(pages);
   const doi = work?.doi || publication?.doi;
