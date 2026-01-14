@@ -1,15 +1,19 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
-import { fetchJson } from '@/lib/api';
 import ClientActions from './work-actions';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
 import { redirect } from '@/i18n/routing';
+import { buildCoins, buildCitationMeta, loadWork, pickReferenceAuthors } from './work-detail';
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
-  return buildPageMetadata(Promise.resolve({ locale }), 'metadata.workDetail', `/works/${id}`);
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.workDetail', `/works/${id}`);
+  const work = await loadWork(id);
+  if (!work || !work.id) return base;
+  const other = buildCitationMeta(work, locale, id);
+  return { ...base, other: { ...(base.other || {}), ...other } };
 }
 
 export const dynamic = 'force-dynamic';
@@ -17,15 +21,7 @@ export const revalidate = 0;
 
 export default async function WorkDetailPage(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
-  let work: any = null;
-  let envelope: any = null;
-  try {
-    envelope = await fetchJson<any>(
-      `/works/${encodeURIComponent(id)}?include=${encodeURIComponent('metrics,references,files,venue,authors')}`,
-      { cache: 'no-store', next: { revalidate: 0 } }
-    );
-  } catch {}
-  try { work = envelope?.data || envelope?.work || envelope || null; } catch {}
+  const work = await loadWork(id);
   if (!work || !work.id) redirect({ href: '/works?notice=work-not-found', locale });
   const t = await getTranslations({ locale });
   const authorsArr = Array.isArray(work?.authors) ? work.authors : [];
@@ -135,35 +131,16 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const abstractText = work?.abstract || '';
   const refs: any[] = Array.isArray(work?.citations?.references) ? work.citations.references : [];
   const citedBy: any[] = Array.isArray(work?.citations?.cited_by) ? work.citations.cited_by : [];
-  const pickAuthors = (item: any): string => {
-    const arr = Array.isArray(item?.authors) ? item.authors : (Array.isArray(item?.authors_preview) ? item.authors_preview : []);
-    if (arr.length) {
-      const base = arr.slice(0, 2).map((a: any) => {
-        if (!a) return '';
-        if (typeof a === 'string') return a;
-        const p = a.preferred_name || a.name;
-        const given = a.given_names;
-        const family = a.family_name;
-        return p || [given, family].filter(Boolean).join(' ');
-      }).filter(Boolean).join(', ');
-      if (base && arr.length > 2 && item?.author_count && item.author_count > 2) return `${base} et al.`;
-      return base;
-    }
-    const s = typeof item?.authors === 'string' ? item.authors : (typeof item?.authors_preview === 'string' ? item.authors_preview : (item?.formatted_authors || item?.author_string || ''));
-    if (!s) return '';
-    const parts = String(s).split(';').map((x) => x.trim()).filter(Boolean);
-    const firstTwo = parts.slice(0, 2).join(', ');
-    if (firstTwo && parts.length > 2 && item?.author_count && item.author_count > 2) return `${firstTwo} et al.`;
-    return firstTwo || s;
-  };
+  const coins = buildCoins(work, locale, id);
   return (
     <div className="page-header" aria-labelledby="page-title">
+      {coins ? <span className="Z3988 visually-hidden" title={coins} /> : null}
       <h1 className="page-title" id="page-title">{work?.title || t('works.detail.titleFallback')}</h1>
       {work?.subtitle ? (<p className="item-subtitle">{work.subtitle}</p>) : null}
 
       <section aria-labelledby="bib-block">
         <h2 className="title-section" id="bib-block">{t('works.detail.sections.bibliographic')}</h2>
-        <table className="data-table">
+        <table className="data-table item-detail-table">
           <tbody>
             <tr>
               <th scope="row">{t('works.detail.labels.id')}</th>
@@ -363,7 +340,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
             {refs.map((r: any, idx: number) => {
               const rid = r?.id || r?.work_id;
               const rtitle = r?.title || r?.work_title || t('common.entities.titleUnavailable');
-              const rauth = pickAuthors(r);
+              const rauth = pickReferenceAuthors(r);
               const ryear = r?.publication_year || r?.year || '';
               const rabstract = getWorkAbstractSnippet(r);
               const rOpen = isWorkOpenAccess(r);
@@ -392,7 +369,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
             {citedBy.map((c: any, idx: number) => {
               const cid = c?.id || c?.work_id;
               const ctitle = c?.title || c?.work_title || t('common.entities.titleUnavailable');
-              const cauth = pickAuthors(c);
+              const cauth = pickReferenceAuthors(c);
               const cyear = c?.publication_year || c?.year || '';
               const cabstract = getWorkAbstractSnippet(c);
               const cOpen = isWorkOpenAccess(c);
