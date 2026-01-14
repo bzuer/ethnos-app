@@ -30,6 +30,8 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const publication = work?.publication || {};
   const year = publication?.year || work?.publication_year || work?.year;
   const volume = publication?.volume || work?.volume;
+  const issueRaw = publication?.issue || publication?.number || work?.issue || work?.number;
+  const issue = typeof issueRaw === 'boolean' ? null : issueRaw;
   const pages = publication?.pages || work?.pages;
   const publicationDate = publication?.publication_date || work?.publication_date;
   const peerReviewed = typeof publication?.peer_reviewed === 'boolean' ? publication.peer_reviewed : (typeof work?.peer_reviewed === 'boolean' ? work.peer_reviewed : null);
@@ -213,6 +215,12 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               <tr>
                 <th scope="row">{t('works.detail.labels.volume')}</th>
                 <td className="field-value">{volume}</td>
+              </tr>
+            ) : null}
+            {issue ? (
+              <tr>
+                <th scope="row">{t('works.detail.labels.issue')}</th>
+                <td className="field-value">{issue}</td>
               </tr>
             ) : null}
             {pages ? (
