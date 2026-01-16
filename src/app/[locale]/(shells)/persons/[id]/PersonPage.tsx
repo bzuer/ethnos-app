@@ -4,10 +4,98 @@ import LocaleLink from '@/components/common/LocaleLink';
 import { getPersonsWorks } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
+import { fetchJson } from '@/lib/api';
+import { localizedPath } from '@/i18n/paths';
+import type { Locale } from '@/i18n/config';
+
+const pickPersonName = (person: any) => {
+  if (!person) return '';
+  return person?.preferred_name || person?.name || [person?.given_names, person?.family_name].filter(Boolean).join(' ');
+};
+
+const getAffiliationsText = (person: any) => {
+  const affiliationsRaw: any = person?.affiliations || person?.affiliation || person?.current_affiliation || [];
+  const affiliations: string[] = Array.isArray(affiliationsRaw)
+    ? affiliationsRaw.map((a: any) => {
+        if (!a) return '';
+        if (typeof a === 'string') return a;
+        const org = a.organization || a.org || a.name || a.institution || '';
+        const role = a.role || a.position || '';
+        return [org, role].filter(Boolean).join(' — ');
+      }).filter(Boolean)
+    : [
+        typeof affiliationsRaw === 'string'
+          ? affiliationsRaw
+          : [
+              affiliationsRaw?.organization || affiliationsRaw?.org || affiliationsRaw?.name || affiliationsRaw?.institution || '',
+              affiliationsRaw?.role || affiliationsRaw?.position || '',
+            ].filter(Boolean).join(' — '),
+      ].filter(Boolean);
+  return affiliations.join('; ');
+};
+
+const uniqueList = (items: Array<string | null | undefined>) => Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
+
+const buildPersonMeta = (person: any, locale: string, id: string, workTitles: string[]) => {
+  const name = pickPersonName(person);
+  const ids = person?.identifiers || {};
+  const orcid = ids?.orcid || person?.orcid;
+  const wikidataId = ids?.wikidata_id || person?.wikidata_id;
+  const openalexId = ids?.openalex_id || person?.openalex_id;
+  const scopusId = ids?.scopus_id || person?.scopus_id;
+  const lattesId = ids?.lattes_id || person?.lattes_id;
+  const homepageUrl = ids?.url || person?.url;
+  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/persons/${id}`)}`;
+  const affiliations = getAffiliationsText(person);
+  const titles = uniqueList(workTitles);
+  const identifierList = uniqueList([
+    publicUrl,
+    homepageUrl,
+    orcid ? `https://orcid.org/${String(orcid)}` : '',
+    wikidataId ? `https://www.wikidata.org/wiki/${String(wikidataId)}` : '',
+    openalexId ? `https://openalex.org/${String(openalexId)}` : '',
+    scopusId ? String(scopusId) : '',
+    lattesId ? String(lattesId) : ''
+  ]);
+  const other: Record<string, string | string[]> = {};
+  if (name) {
+    other.citation_title = name;
+    other.citation_author = name;
+  }
+  if (publicUrl) other.citation_public_url = publicUrl;
+  if (titles.length === 1) other.author = titles[0];
+  if (titles.length > 1) other.author = titles;
+  if (name) {
+    other['dc.title'] = name;
+    other['dc.creator'] = name;
+  }
+  if (affiliations) other['dc.description'] = affiliations;
+  if (identifierList.length === 1) other['dc.identifier'] = identifierList[0];
+  if (identifierList.length > 1) other['dc.identifier'] = identifierList;
+  other['dc.type'] = 'Person';
+  return other;
+};
+
+const loadPerson = async (id: string) => {
+  try {
+    const res: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(id))}`);
+    return res?.data || res?.person || res || null;
+  } catch {
+    return null;
+  }
+};
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
-  return buildPageMetadata(Promise.resolve({ locale }), 'metadata.persons', `/persons/${id}`);
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.persons', `/persons/${id}`);
+  const data = await getPersonsWorks(id, 1, 25);
+  const person = data?.person || null;
+  const works = data?.works || null;
+  const items: any[] = works?.data || works?.results || works?.items || [];
+  if (!person) return base;
+  const workTitles = items.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
+  const other = buildPersonMeta(person, locale, id, workTitles);
+  return { ...base, other: { ...(base.other || {}), ...other } };
 }
 
 export default async function PersonPage(props: { params: Promise<{ locale: string; id: string }>, searchParams?: Promise<{ page?: string }> }) {
@@ -23,7 +111,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   if (!person) redirect({ href: '/search?notice=person-not-found', locale });
   const t = await getTranslations({ locale });
 
-  const personName = person?.preferred_name || person?.name || [person?.given_names, person?.family_name].filter(Boolean).join(' ') || t('common.entities.personNotFound');
+  const personName = pickPersonName(person) || t('common.entities.personNotFound');
   const ids = person?.identifiers || {};
   const givenNames = person?.given_names || '';
   const familyName = person?.family_name || '';

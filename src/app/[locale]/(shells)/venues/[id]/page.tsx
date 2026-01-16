@@ -7,6 +7,8 @@ import { getVenueWorksPage } from '@/lib/endpoints';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
+import { localizedPath } from '@/i18n/paths';
+import type { Locale } from '@/i18n/config';
 
 const pickText = (values: Array<string | null | undefined>) => {
   for (const value of values) {
@@ -64,6 +66,73 @@ const getVenueSubjectsText = (venue?: Venue | null) => {
   ]);
 };
 
+const toStringList = (raw: any) => {
+  const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
+  return list.map((value: any) => {
+    if (value && typeof value === 'object') {
+      const picked = value?.id || value?.identifier || value?.value || value?.code;
+      return picked ? String(picked).trim() : '';
+    }
+    return value === 0 ? '0' : (value ? String(value).trim() : '');
+  }).filter((value: string) => value);
+};
+
+const uniqueList = (items: Array<string | null | undefined>) => Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
+
+const pickAuthorName = (author: any) => {
+  if (!author) return '';
+  if (typeof author === 'string') return author.trim();
+  return author?.preferred_name || author?.name || [author?.given_names, author?.family_name].filter(Boolean).join(' ');
+};
+
+const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTitles: string[], workAuthors: string[]) => {
+  if (!venue) return {};
+  const name = venue?.name || '';
+  const publisherName = venue?.publisher?.name || '';
+  const issnValues = uniqueList([
+    ...toStringList(venue?.issn),
+    ...toStringList(venue?.eissn),
+    ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
+  ]);
+  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/venues/${id}`)}`;
+  const subjectsText = getVenueSubjectsText(venue);
+  const titles = uniqueList(workTitles);
+  const authors = uniqueList(workAuthors);
+  const identifiers = uniqueList([
+    publicUrl,
+    ...issnValues
+  ]);
+  const other: Record<string, string | string[]> = {};
+  if (titles.length === 1) other.citation_title = titles[0];
+  if (titles.length > 1) other.citation_title = titles;
+  if (authors.length === 1) {
+    other.author = authors[0];
+    other.citation_author = authors[0];
+  }
+  if (authors.length > 1) {
+    other.author = authors;
+    other.citation_author = authors;
+  }
+  if (titles.length === 1) other['dc.relation'] = titles[0];
+  if (titles.length > 1) other['dc.relation'] = titles;
+  if (authors.length === 1) other['dc.creator'] = authors[0];
+  if (authors.length > 1) other['dc.creator'] = authors;
+  if (name) {
+    other.citation_journal_title = name;
+    other.citation_title = name;
+  }
+  if (publisherName) other.citation_publisher = publisherName;
+  if (issnValues.length) other.citation_issn = issnValues;
+  if (publicUrl) other.citation_public_url = publicUrl;
+  if (name) other['dc.title'] = name;
+  if (publisherName) other['dc.publisher'] = publisherName;
+  if (subjectsText) other['dc.subject'] = subjectsText;
+  if (venue?.type) other['dc.type'] = String(venue.type);
+  if (identifiers.length === 1) other['dc.identifier'] = identifiers[0];
+  if (identifiers.length > 1) other['dc.identifier'] = identifiers;
+  return other;
+};
+
 type IdentifierEntry = { label: string; values: Array<{ text: string; href?: string }> };
 
 const addIdentifierValues = (
@@ -117,7 +186,16 @@ const renderGroupedIdentifiers = (entries: IdentifierEntry[], keyPrefix: string)
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
-  return buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`);
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`);
+  const venue = await getVenue(id);
+  if (!venue) return base;
+  let worksPage: any = null;
+  try { worksPage = await getVenueWorksPage(id, 1, 25); } catch {}
+  const works: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
+  const workTitles = works.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
+  const workAuthors = works.flatMap((work) => (Array.isArray(work?.authors) ? work.authors : []).map(pickAuthorName)).filter(Boolean);
+  const other = buildVenueMeta(venue, locale, id, workTitles, workAuthors);
+  return { ...base, other: { ...(base.other || {}), ...other } };
 }
 
 export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams?: Promise<{ page?: string }> }) {

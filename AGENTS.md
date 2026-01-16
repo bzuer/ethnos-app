@@ -16,6 +16,8 @@
 ## Project Layout
 - App: `src/app/**`, `src/components/**`, `src/lib/**`, `public/**`.
 - Global CSS: `public/css/styles.css` aligned with `docs/html-css/static/css/styles.dev.css`.
+- SSOT references: `docs/html-css/**` (templates/CSS) and `docs/tsx/**` (reference TSX).
+- Design guide: `docs/guides/DESIGN_GUIDE.md`.
 
 ## Routes
 - Home: `/`
@@ -121,6 +123,7 @@
 - Always expose `Sitemap: https://ethnos.app/sitemap.xml`.
 - Sitemap static shells: include `/, /search, /venues, /lists`; do not list legacy redirect aliases.
 - Manifest assets live under `public/` and referenced files must exist.
+- Detail pages should expose citation/Dublin Core metadata in `generateMetadata` to support connectors and search engines.
 
 ## Internationalization
 - Default locale is English; `pt` and `es` must mirror structure and meaning for every UI label, heading, and metadata entry.
