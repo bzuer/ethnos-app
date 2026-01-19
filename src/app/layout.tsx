@@ -1,9 +1,16 @@
 import type { ReactNode } from 'react';
+import type { Viewport } from 'next';
 import '@/styles/globals.css';
 import { defaultLocale } from '@/i18n/config';
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const locale = defaultLocale;
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1
+};
+
+export default async function RootLayout({ children, params }: { children: ReactNode; params?: Promise<{ locale?: string }> }) {
+  const resolved = params ? await params : {};
+  const locale = resolved?.locale || defaultLocale;
   const cssPath = process.env.NODE_ENV === 'development' ? '/css/styles.css' : '/css/styles.min.css';
   return (
     <html lang={locale} suppressHydrationWarning>

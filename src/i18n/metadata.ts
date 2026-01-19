@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { locales, type Locale } from './config';
+import { defaultLocale, locales, type Locale } from './config';
 import { localizedPath } from './paths';
 
 const safeTranslate = (translate: (path: string) => string, path: string) => {
@@ -28,7 +28,7 @@ export async function buildPageMetadata(params: Promise<{ locale: string }>, key
         languages: locales.reduce<Record<string, string>>((acc, code) => {
           acc[code] = localizedPath(code, path);
           return acc;
-        }, {})
+        }, { 'x-default': localizedPath(defaultLocale, path) })
       }
     : undefined;
 

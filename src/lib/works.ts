@@ -10,10 +10,38 @@ function resolveBoolean(value: any) {
   return undefined;
 }
 
-export function getWorkAbstractSnippet(item: any, limit = 450) {
-  const raw = item?.abstract || item?.abstract_text || item?.summary || item?.description || '';
+const stripAbstractNoise = (text: string) => {
+  const cleaned = text
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/click to (increase|decrease) image size/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^\s*abstract\s*[:.-]\s*/i, '')
+    .trim();
+  if (!cleaned) return '';
+  if (/^(notes|acknowledg(e)?ments?)\b/i.test(cleaned)) return '';
+  const sentences = cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const dropPatterns = [
+    /click to (increase|enlarge|zoom|view)/i,
+    /view full size/i,
+    /open in new window/i,
+    /supplementary material/i,
+    /acknowledg(e)?ments?/i,
+    /funding:/i
+  ];
+  const filtered = sentences.filter((sentence) => !dropPatterns.some((re) => re.test(sentence)));
+  return (filtered.length ? filtered : sentences).join(' ').trim();
+};
+
+export function sanitizeWorkAbstract(raw: any) {
   if (!raw) return '';
   const text = String(raw).replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return stripAbstractNoise(text);
+}
+
+export function getWorkAbstractSnippet(item: any, limit = 450) {
+  const raw = item?.abstract || item?.abstract_text || item?.summary || item?.description || '';
+  const text = sanitizeWorkAbstract(raw);
   if (!text) return '';
   if (!limit || limit <= 0) return text;
   if (text.length <= limit) return text;

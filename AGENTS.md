@@ -124,6 +124,10 @@
 - Sitemap static shells: include `/, /search, /venues, /lists`; do not list legacy redirect aliases.
 - Manifest assets live under `public/` and referenced files must exist.
 - Detail pages should expose citation/Dublin Core metadata in `generateMetadata` to support connectors and search engines.
+- Work and person detail pages must generate item-specific `title`, `description`, `openGraph`, and `twitter` metadata, including the canonical URL, correct locale, and `article` or `profile` type.
+- Add JSON-LD for detail pages (`ScholarlyArticle` or `Book` for works, `Person` for persons) with consistent identifiers.
+- Metadata abstracts must be sanitized to remove UI strings and acknowledgements; omit `citation_abstract` and JSON-LD `description` when only noise remains.
+- Avoid emitting `meta name="author"` lists from related works on person pages.
 
 ## Internationalization
 - Default locale is English; `pt` and `es` must mirror structure and meaning for every UI label, heading, and metadata entry.

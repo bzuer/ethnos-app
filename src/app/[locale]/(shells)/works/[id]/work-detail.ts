@@ -2,6 +2,7 @@ import 'server-only';
 import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { fetchJson } from '@/lib/api';
+import { sanitizeWorkAbstract } from '@/lib/works';
 
 const workIncludes = 'metrics,references,files,venue,authors';
 
@@ -49,6 +50,13 @@ function getFilesList(work: any) {
   return [];
 }
 
+function pickBestOaUrl(work: any) {
+  const files = getFilesList(work);
+  const best = files.find((file: any) => file?.best_oa_url || file?.best_oa?.url);
+  if (!best) return '';
+  return best?.best_oa_url || best?.best_oa?.url || '';
+}
+
 function looksLikePdf(url: string, file: any) {
   const suffix = url.toLowerCase();
   const mime = String(file?.mime_type || file?.content_type || '').toLowerCase();
@@ -74,18 +82,46 @@ function toAuthorName(author: any) {
   return author?.preferred_name || author?.name || [author?.given_names, author?.family_name].filter(Boolean).join(' ');
 }
 
+function normalizeAuthorKey(name: string) {
+  const parts = name.split(/\s+/).map((part) => part.trim()).filter(Boolean);
+  if (!parts.length) return '';
+  const last = parts[parts.length - 1].replace(/[^a-zA-Z]/g, '').toLowerCase();
+  const first = parts[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
+  if (!last) return '';
+  const initial = first ? first[0] : '';
+  return `${last}-${initial}`;
+}
+
+function uniqueAuthorNames(names: string[]) {
+  const byKey = new Map<string, string>();
+  const extras: string[] = [];
+  names.forEach((name) => {
+    const key = normalizeAuthorKey(name);
+    if (!key) {
+      extras.push(name);
+      return;
+    }
+    const existing = byKey.get(key);
+    if (!existing || name.length > existing.length) byKey.set(key, name);
+  });
+  return [...byKey.values(), ...extras];
+}
+
 function pickAuthorNames(authors: any[]) {
   const list = Array.isArray(authors) ? authors : [];
   const onlyAuthors = list.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role);
   const names = onlyAuthors.map(toAuthorName).filter(Boolean);
-  return names.length ? names : list.map(toAuthorName).filter(Boolean);
+  const fallback = list.map(toAuthorName).filter(Boolean);
+  const picked = names.length ? names : fallback;
+  return uniqueAuthorNames(picked);
 }
 
 function pickEditorNames(authors: any[]) {
   const list = Array.isArray(authors) ? authors : [];
-  return list.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'EDITOR')
+  const names = list.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'EDITOR')
     .map(toAuthorName)
     .filter(Boolean);
+  return uniqueAuthorNames(names);
 }
 
 export function buildCitationMeta(work: any, locale: string, id: string) {
@@ -122,6 +158,7 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   const publicationDateFormatted = formatPublicationDate(publicationDate, year);
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
   const { pdf, fulltext } = pickFulltextUrls(work);
+  const bestOaUrl = pickBestOaUrl(work);
   const other: Record<string, string | string[]> = {};
   if (fullTitle) other.citation_title = fullTitle;
   if (authors.length) other.citation_author = authors;
@@ -141,12 +178,15 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   if (seriesName) other.citation_series_title = String(seriesName);
   if (isbnValues.length) other.citation_isbn = isbnValues;
   if (issnValues.length) other.citation_issn = issnValues;
-  if (work?.abstract) other.citation_abstract = String(work.abstract);
+  const cleanedAbstract = sanitizeWorkAbstract(work?.abstract);
+  if (cleanedAbstract) other.citation_abstract = cleanedAbstract;
   if (publicUrl) {
-    other.citation_public_url = publicUrl;
-    other.citation_fulltext_html_url = fulltext || publicUrl;
+    if (!bestOaUrl && !pdf) {
+      other.citation_public_url = publicUrl;
+      other.citation_fulltext_html_url = fulltext || publicUrl;
+    }
   }
-  if (pdf) other.citation_pdf_url = pdf;
+  if (bestOaUrl || pdf) other.citation_pdf_url = bestOaUrl || pdf;
   if (fullTitle) other['dc.title'] = fullTitle;
   if (authors.length) other['dc.creator'] = authors;
   if (publicationDateFormatted) other['dc.date'] = publicationDateFormatted;

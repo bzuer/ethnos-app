@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
 import ScrollTools from '@/components/common/ScrollTools';
+import HtmlLangSync from '@/components/common/HtmlLangSync';
 import { locales, type Locale } from '@/i18n/config';
 
 type NavLinks = {
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
   category: 'reference',
   creator: 'Ethnos Research Lab',
   publisher: 'Ethnos Research Lab',
-  authors: [{ name: 'Ethnos Research Lab', url: 'https://ethnos.app' }],
+  authors: [{ name: 'Ethnos Research Lab' }],
   robots: {
     index: true,
     follow: true
@@ -112,6 +113,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   };
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
+      <HtmlLangSync />
       <a href="#main-content" className="skip-link">{t('skipLink')}</a>
       <div className="container">
         <Header

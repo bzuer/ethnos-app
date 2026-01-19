@@ -6,7 +6,7 @@ import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 import { fetchJson } from '@/lib/api';
 import { localizedPath } from '@/i18n/paths';
-import type { Locale } from '@/i18n/config';
+import { locales, type Locale } from '@/i18n/config';
 
 const pickPersonName = (person: any) => {
   if (!person) return '';
@@ -36,6 +36,12 @@ const getAffiliationsText = (person: any) => {
 
 const uniqueList = (items: Array<string | null | undefined>) => Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
 
+const openGraphLocaleMap: Record<string, string> = {
+  en: 'en_US',
+  pt: 'pt_BR',
+  es: 'es_ES'
+};
+
 const buildPersonMeta = (person: any, locale: string, id: string, workTitles: string[]) => {
   const name = pickPersonName(person);
   const ids = person?.identifiers || {};
@@ -63,8 +69,6 @@ const buildPersonMeta = (person: any, locale: string, id: string, workTitles: st
     other.citation_author = name;
   }
   if (publicUrl) other.citation_public_url = publicUrl;
-  if (titles.length === 1) other.author = titles[0];
-  if (titles.length > 1) other.author = titles;
   if (name) {
     other['dc.title'] = name;
     other['dc.creator'] = name;
@@ -93,9 +97,51 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const works = data?.works || null;
   const items: any[] = works?.data || works?.results || works?.items || [];
   if (!person) return base;
+  const personName = pickPersonName(person);
+  const affiliations = getAffiliationsText(person);
+  const ids = person?.identifiers || {};
+  const orcid = ids?.orcid || person?.orcid;
+  const publicPath = localizedPath(locale as Locale, `/persons/${id}`);
+  const publicUrl = `https://ethnos.app${publicPath}`;
+  const descriptionParts = [
+    personName ? `Researcher profile for ${personName}` : '',
+    affiliations ? `Affiliations: ${affiliations}` : '',
+    orcid ? `ORCID: ${orcid}` : ''
+  ].filter(Boolean);
+  const description = descriptionParts.join('. ');
+  const ogLocale = openGraphLocaleMap[locale] || 'en_US';
+  const alternateLocale = locales.filter((code) => code !== locale).map((code) => openGraphLocaleMap[code] || 'en_US');
+  const ogTitle = personName ? `${personName} - Ethnos Bibliography` : 'Ethnos Bibliography';
+  const ogImage = {
+    url: 'https://ethnos.app/android-chrome-512x512.png',
+    width: 512,
+    height: 512,
+    alt: 'Ethnos Bibliography interface symbol'
+  };
   const workTitles = items.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
   const other = buildPersonMeta(person, locale, id, workTitles);
-  return { ...base, other: { ...(base.other || {}), ...other } };
+  return {
+    ...base,
+    title: personName || base.title,
+    description: description || base.description,
+    openGraph: {
+      title: ogTitle,
+      description: description || base.description || '',
+      type: 'profile',
+      locale: ogLocale,
+      alternateLocale,
+      url: publicUrl,
+      siteName: 'Ethnos Bibliography',
+      images: [ogImage]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: description || base.description || '',
+      images: [ogImage.url]
+    },
+    other: { ...(base.other || {}), ...other }
+  };
 }
 
 export default async function PersonPage(props: { params: Promise<{ locale: string; id: string }>, searchParams?: Promise<{ page?: string }> }) {
@@ -143,9 +189,25 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               affiliationsRaw?.role || affiliationsRaw?.position || '',
             ].filter(Boolean).join(' — '),
       ].filter(Boolean);
+  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/persons/${id}`)}`;
+  const jsonLd: Record<string, any> = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: personName,
+    url: publicUrl
+  };
+  const sameAs = uniqueList([
+    orcid ? `https://orcid.org/${String(orcid)}` : '',
+    wikidataId ? `https://www.wikidata.org/wiki/${String(wikidataId)}` : '',
+    openalexId ? `https://openalex.org/${String(openalexId)}` : '',
+    homepageUrl ? String(homepageUrl) : ''
+  ]);
+  if (sameAs.length) jsonLd.sameAs = sameAs;
+  if (affiliations.length) jsonLd.affiliation = affiliations.map((item) => ({ '@type': 'Organization', name: item }));
 
   return (
     <div className="page-header" aria-labelledby="page-title">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <h1 className="page-title" id="page-title">{personName}</h1>
 
       {person && (
