@@ -1,4 +1,4 @@
-const DEFAULT_LOCAL_API_BASE = process.env.NEXT_PUBLIC_DEV_API || 'http://127.0.0.1:3000';
+const DEFAULT_LOCAL_API_BASE = process.env.NEXT_PUBLIC_DEV_API || 'http://127.0.0.1:1211';
 const RATE_LIMIT_WINDOW_MS = Number(process.env.ETHNOS_RATE_LIMIT_WINDOW_MS || 60000);
 const RATE_LIMIT_MAX = Number(process.env.ETHNOS_RATE_LIMIT_MAX || 1200);
 const RATE_LIMIT_SUSPICIOUS_MAX = Number(process.env.ETHNOS_RATE_LIMIT_SUSPICIOUS_MAX || 120);

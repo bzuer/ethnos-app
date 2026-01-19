@@ -1,6 +1,6 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-const DEFAULT_LOCAL_API_BASE = process.env.NEXT_PUBLIC_DEV_API || 'http://127.0.0.1:3000';
+const DEFAULT_LOCAL_API_BASE = process.env.NEXT_PUBLIC_DEV_API || 'http://127.0.0.1:1211';
 
 const API_BASE =
   process.env.ETHNOS_UPSTREAM_API ||

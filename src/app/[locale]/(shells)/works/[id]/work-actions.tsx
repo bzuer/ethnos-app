@@ -151,13 +151,13 @@ export default function ClientActions({ work }: Props) {
 
   const doi = work?.doi || work?.publication?.doi;
   const scimagFile = files.find((file: any) => file?.scimag_id);
-  const openAccessFile = files.find((file: any) => file?.openacess_id || file?.openaccess_id);
+  const openAccessFile = files.find((file: any) => file?.best_oa_url || file?.best_oa?.url || file?.openacess_id || file?.openaccess_id);
   const libgenFile = files.find((file: any) => file?.md5 && file?.libgen_id);
   const doiHref = doi ? `https://doi.org/${encodeURIComponent(String(doi))}` : undefined;
   const scihubTarget = scimagFile ? (scimagFile?.doi || doi) : null;
-  const scihubHref = scimagFile && scihubTarget ? `https://sci-hub.se/${encodeURIComponent(String(scihubTarget))}` : undefined;
+  const scihubHref = scimagFile && scihubTarget ? `https://sci-hub.st/${encodeURIComponent(String(scihubTarget))}` : undefined;
   const openAccessHref = openAccessFile?.best_oa_url || openAccessFile?.best_oa?.url || openAccessFile?.url;
-  const libgenHref = libgenFile?.md5 ? `https://annas-archive.org/md5/${encodeURIComponent(String(libgenFile.md5))}` : undefined;
+  const libgenHref = libgenFile?.md5 ? `https://libgen.li/md5/${encodeURIComponent(String(libgenFile.md5))}` : undefined;
   const onOpenDoi = useCallback(() => {
     if (!doiHref) return;
     const w = window.open(doiHref, '_blank', 'noopener,noreferrer');

@@ -38,14 +38,15 @@
       "openDoi": "Abrir DOI",
       "openSciHub": "Sci-Hub",
       "openBestOa": "Open Access",
-      "openLibgen": "Anna's Archive",
+      "openLibgen": "Libgen",
       "exportJson": "Exportar JSON",
       "exportRis": "Exportar RIS",
       "exportBib": "Exportar BibTeX",
       "exportApa": "Exportar APA (.docx)",
       "scrollTop": "Volver arriba",
       "scrollBottom": "Ir al final",
-      "clearList": "Limpiar lista"
+      "clearList": "Limpiar lista",
+      "removeItem": "Eliminar elemento"
     },
     "labels": {
       "searchInput": "Término de búsqueda",
@@ -124,7 +125,8 @@
       "year": "Año",
       "journal": "Revista",
       "coverage": "Cobertura",
-      "publisher": "Editorial"
+      "publisher": "Editorial",
+      "actions": "X"
     },
     "meta": {
       "peerReviewed": "Peer Reviewed",

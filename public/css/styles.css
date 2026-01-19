@@ -19,7 +19,7 @@
     --spacing-xxl: 60px;
     --skip-link-bg: #000000;
     --container-max: 800px;
-    --container-large: 960px;
+    --container-large: 860px;
     --grid-unit: 36px;
     --grid-height: 24px;
     --border-thin: 1px;
@@ -47,7 +47,7 @@
     --spacing-xxl: 60px;
     --skip-link-bg: #ffffff;
     --container-max: 800px;
-    --container-large: 960px;
+    --container-large: 860px;
     --grid-unit: 36px;
     --grid-height: 24px;
     --border-thin: 1px;
@@ -106,7 +106,7 @@ body::before {
 .container {
     max-width: var(--container-max);
     width: 100%;
-    padding: 0 var(--spacing-xl);
+    padding: 0 var(--spacing-lg);
 }
 
 .title-primary {
@@ -262,7 +262,7 @@ figcaption {
     border: var(--border-thin) solid var(--border-gray);
     background-color: var(--bg-light);
     margin: var(--spacing-md) 0;
-    table-layout: auto;
+    table-layout: fixed;
 }
 .data-table th,
 .data-table td {
@@ -562,6 +562,20 @@ a.action-btn {
     text-decoration: none;
     font-weight: 400;
     font-size: 12px;
+}
+.list-remove-btn {
+    text-align: left;
+    background: none;
+    border: 0;
+    color: var(--primary-red);
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.list-remove-btn:hover {
+    font-weight: 900;
 }
 .result-venue {
     font-family: var(--mono);
@@ -902,7 +916,7 @@ a.action-btn {
 
 .recent-items-table th:nth-child(1),
 .recent-items-table td:nth-child(1) {
-    width: 50%;
+    width: 45%;
 }
 .recent-items-table th:nth-child(2),
 .recent-items-table td:nth-child(2) {
@@ -910,20 +924,20 @@ a.action-btn {
 }
 .recent-items-table th:nth-child(3),
 .recent-items-table td:nth-child(3) {
-    width: 15%;
+    width: 20%;
 }
 
 .homepage-venues-table th:nth-child(1),
 .homepage-venues-table td:nth-child(1) {
-    width: 50%;
+    width: 40%;
 }
 .homepage-venues-table th:nth-child(2),
 .homepage-venues-table td:nth-child(2) {
-    width: 30%;
+    width: 35%;
 }
 .homepage-venues-table th:nth-child(3),
 .homepage-venues-table td:nth-child(3) {
-    width: 20%;
+    width: 25%;
 }
 
 .api-endpoints-table th:nth-child(1),
@@ -988,11 +1002,11 @@ a.action-btn {
 
 .item-detail-table th:nth-child(1),
 .item-detail-table td:nth-child(1) {
-    width: 25%;
+    width: 45%;
 }
 .item-detail-table th:nth-child(2),
 .item-detail-table td:nth-child(2) {
-    width: 75%;
+    width: 55%;
 }
 
 .hidden {
@@ -1106,13 +1120,15 @@ a.action-btn {
     line-height: 1.2;
     color: var(--border-gray);
     display: flex;
-    flex-wrap: flex;
+    flex-wrap: wrap;
     gap: 4px;
     align-items: baseline;
 }
 .result-doi a {
     color: inherit;
     text-decoration-color: var(--border-gray);
+    overflow-wrap: normal;
+    word-break: normal;
 }
 
 .search-controls {
@@ -1242,19 +1258,15 @@ a.action-btn {
 
 .personal-list-table th:nth-child(1),
 .personal-list-table td:nth-child(1) {
-    width: 45%;
+    width: 50%;
 }
 .personal-list-table th:nth-child(2),
 .personal-list-table td:nth-child(2) {
-    width: 25%;
+    width: 35%;
 }
 .personal-list-table th:nth-child(3),
 .personal-list-table td:nth-child(3) {
-    width: 10%;
-}
-.personal-list-table th:nth-child(4),
-.personal-list-table td:nth-child(4) {
-    width: 20%;
+    width: 15%;
 }
 
 .list-info-table th:nth-child(1),
@@ -1347,6 +1359,13 @@ a.action-btn {
   .scroll-tool {
     width: var(--grid-unit);
     height: var(--grid-height);
+  }
+
+  .data-table th,
+  .data-table td,
+  .data-table a {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 }
 .fade-out {
@@ -1524,6 +1543,8 @@ section:last-of-type {
 .result-doi a {
     color: var(--primary-blue);
     text-decoration: none;
+    overflow-wrap: normal;
+    word-break: normal;
 }
 
 .result-doi a:hover {

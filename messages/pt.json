@@ -38,14 +38,15 @@
       "openDoi": "Abrir DOI",
       "openSciHub": "Sci-Hub",
       "openBestOa": "Open Access",
-      "openLibgen": "Anna's Archive",
+      "openLibgen": "Libgen",
       "exportJson": "Exportar JSON",
       "exportRis": "Exportar RIS",
       "exportBib": "Exportar BibTeX",
       "exportApa": "Exportar APA (.docx)",
       "scrollTop": "Voltar ao topo",
       "scrollBottom": "Ir para o fim",
-      "clearList": "Limpar lista"
+      "clearList": "Limpar lista",
+      "removeItem": "Remover item"
     },
     "labels": {
       "searchInput": "Termo de busca",
@@ -123,8 +124,9 @@
       "authors": "Autores",
       "year": "Ano",
       "journal": "Periódico",
-      "coverage": "Cobertura",
-      "publisher": "Editora"
+      "coverage": "Corpo",
+      "publisher": "Editora",
+      "actions": "Ações"
     },
     "meta": {
       "peerReviewed": "Peer Reviewed",
@@ -174,9 +176,9 @@
       "publisher": "Editora",
       "issn": "ISSN",
       "eissn": "E-ISSN",
-      "ids": "Identificadores",
+      "ids": "Identificadores do Periódico",
       "total": "Total de publicações",
-      "coverage": "Período de cobertura",
+      "coverage": "Período coberto",
       "country": "País",
       "sjr": "SJR",
       "snip": "SNIP",
@@ -185,11 +187,11 @@
       "hIndexLabel": "Índice h",
       "impact": "Impacto",
       "openAccess": "Open Access",
-      "indexedScopus": "Indexado na Scopus",
-      "doaj": "Indexado no DOAJ",
+      "indexedScopus": "Scopus",
+      "doaj": "DOAJ",
       "description": "Resumo",
       "subjects": "Assuntos",
-      "publications": "Publicações neste periódico"
+      "publications": "Número de publicações"
     }
   },
   "works": {
@@ -217,7 +219,7 @@
         "openAccess": "Open Access",
         "type": "Tipo",
         "publisher": "Editora",
-        "publisherIds": "Identificadores da editora",
+        "publisherIds": "IDs da editora",
         "language": "Idioma",
         "citations": "Citações recebidas",
         "references": "Referências citadas",

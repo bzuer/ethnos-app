@@ -408,18 +408,13 @@ export default function ListPageClient() {
           {mounted && hasItems ? (
             <>
               <div className="list-header">
-                <p className="list-stats">
-                  <span className="field-value">{listCountLabel}</span>
-                  <span className="description">{listOrderLabel}</span>
-                </p>
               </div>
               <table className="data-table personal-list-table" aria-label={t('common.meta.ariaPersonalList')}>
                 <thead>
                   <tr>
                     <th scope="col">{t('common.table.title')}</th>
                     <th scope="col">{t('common.table.authors')}</th>
-                    <th scope="col">{t('common.table.year')}</th>
-                    <th scope="col" />
+                    <th scope="col">{t('common.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -437,9 +432,10 @@ export default function ListPageClient() {
                           </LocaleLink>
                         </td>
                         <td className="field-value">{authors}</td>
-                        <td className="field-value">{item.publication_year || t('common.entities.yearUnavailable')}</td>
                         <td className="field-value">
-                          <button type="button" className="action-btn btn-negative" onClick={() => onRemove(item.id)}>×</button>
+                          <button type="button" className="list-remove-btn" onClick={() => onRemove(item.id)}>
+                            {t('common.actions.removeItem')}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -449,7 +445,7 @@ export default function ListPageClient() {
             </>
           ) : (
             <div className="empty-state">
-              <p className="field-value">{t('lists.emptyStateTitle')}</p>
+              <p className="description">{t('lists.emptyStateTitle')}</p>
               <p className="description">{t('lists.emptyStateDescription')}</p>
             </div>
           )}
