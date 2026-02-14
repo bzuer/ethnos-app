@@ -5,10 +5,13 @@ import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
 import { getVenueWorksPage } from '@/lib/endpoints';
 import { formatNumber } from '@/lib/format';
-import { buildPageMetadata } from '@/i18n/metadata';
+import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const pickText = (values: Array<string | null | undefined>) => {
   for (const value of values) {
@@ -187,7 +190,8 @@ const renderGroupedIdentifiers = (entries: IdentifierEntry[], keyPrefix: string)
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`);
-  const venue = await getVenue(id);
+  let venue: Venue | null = null;
+  try { venue = await getVenue(id); } catch {}
   if (!venue) return base;
   let worksPage: any = null;
   try { worksPage = await getVenueWorksPage(id, 1, 25); } catch {}
@@ -195,7 +199,68 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const workTitles = works.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
   const workAuthors = works.flatMap((work) => (Array.isArray(work?.authors) ? work.authors : []).map(pickAuthorName)).filter(Boolean);
   const other = buildVenueMeta(venue, locale, id, workTitles, workAuthors);
-  return { ...base, other: { ...(base.other || {}), ...other } };
+  const name = venue?.name || base.title || '';
+  const descriptionSource = getVenueDescription(venue) || base.description || '';
+  const buildDescription = (text: string, limit = 170) => {
+    const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+    let acc = '';
+    for (const sentence of sentences) {
+      const candidate = acc ? `${acc} ${sentence}` : sentence;
+      if (candidate.length <= limit) {
+        acc = candidate;
+      } else {
+        break;
+      }
+    }
+    if (!acc) acc = text.slice(0, limit).replace(/\s+\S*$/, '').trimEnd();
+    if (acc && !/[.!?…]$/.test(acc)) acc = `${acc}.`;
+    return acc;
+  };
+  const description = descriptionSource ? buildDescription(descriptionSource) : undefined;
+  const canonicalPath = localizedPath(locale as Locale, `/venues/${id}`);
+  const canonicalUrl = new URL(canonicalPath, metadataBase).toString();
+  const ogLocale = openGraphLocales[locale as Locale] || openGraphLocales.en;
+  const alternateLocale = ['en', 'pt', 'es'].filter((code) => code !== locale).map((code) => openGraphLocales[code as Locale]);
+  const ogImage = {
+    url: new URL('/og-default.png', metadataBase).toString(),
+    width: 1200,
+    height: 630,
+    alt: 'Ethnos Bibliography catalog interface'
+  };
+  const keywords = Array.from(new Set([
+    name || '',
+    venue?.publisher?.name || '',
+    getVenueSubjectsText(venue),
+    ...(workTitles.slice(0, 3)),
+    ...(workAuthors.slice(0, 3))
+  ].map((k) => (k ? String(k) : '')).filter(Boolean)));
+  return {
+    ...base,
+    title: name || base.title,
+    description: description || base.description,
+    keywords: keywords.length ? keywords : base.keywords,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: base.alternates?.languages
+    },
+    openGraph: {
+      type: 'website',
+      locale: ogLocale,
+      alternateLocale,
+      url: canonicalUrl,
+      siteName: 'Ethnos Bibliography',
+      title: name || base.title || '',
+      description: description || base.description || '',
+      images: [ogImage]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: name || base.title || '',
+      description: description || base.description || '',
+      images: [ogImage.url]
+    },
+    other: { ...(base.other || {}), ...other }
+  };
 }
 
 export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams?: Promise<{ page?: string }> }) {
@@ -214,6 +279,23 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   const name = venue?.name ?? t('common.entities.journalNotFound');
   const descriptionText = getVenueDescription(venue);
   const subjectsText = getVenueSubjectsText(venue);
+  const issnValues = uniqueList([
+    ...toStringList(venue?.issn),
+    ...toStringList(venue?.eissn),
+    ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
+  ]);
+  const canonical = new URL(localizedPath(locale as Locale, `/venues/${id}`), metadataBase).toString();
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Periodical',
+    name,
+    issn: issnValues.length ? issnValues : undefined,
+    publisher: venue?.publisher?.name ? { '@type': 'Organization', name: venue.publisher.name } : undefined,
+    url: canonical,
+    mainEntityOfPage: canonical,
+    inLanguage: locale,
+    description: descriptionText || undefined
+  };
 
   const metrics = venue?.metrics || venue?.legacy_metrics || null;
   const sjr = (metrics && (metrics as any).sjr) ?? venue?.sjr;
@@ -267,6 +349,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
 
   return (
     <div className="page-header" aria-labelledby="page-title">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <h1 className="page-title" id="page-title">{name}</h1>
 
       {hasVenue && (

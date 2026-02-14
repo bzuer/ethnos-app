@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
 import ClientActions from './work-actions';
-import { buildPageMetadata } from '@/i18n/metadata';
+import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { getWorkAbstractSnippet, isWorkOpenAccess, sanitizeWorkAbstract } from '@/lib/works';
@@ -21,6 +21,8 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const work = await loadWork(id);
   if (!work || !work.id) return base;
   const publication = work?.publication || {};
+  const venue = work?.venue || {};
+  const publisher = work?.publisher || {};
   const workType = work?.formatted_type || work?.work_type || work?.type;
   const isBookType = String(workType || '').toUpperCase().includes('BOOK');
   const subtitle = work?.subtitle ? String(work.subtitle) : '';
@@ -28,35 +30,84 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const fullTitle = subtitle ? `${titleBase}: ${subtitle}` : titleBase;
   const year = publication?.year || work?.publication_year || work?.year;
   const titleWithYear = fullTitle && year ? `${fullTitle} (${year})` : fullTitle;
-  const abstractSnippet = getWorkAbstractSnippet(work, 220);
+  const cleanedAbstract = sanitizeWorkAbstract(work?.abstract);
+  const buildDescription = (text: string, limit = 170) => {
+    const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+    let acc = '';
+    for (const sentence of sentences) {
+      const candidate = acc ? `${acc} ${sentence}` : sentence;
+      if (candidate.length <= limit) {
+        acc = candidate;
+      } else {
+        break;
+      }
+    }
+    if (!acc) acc = text.slice(0, limit).replace(/\s+\S*$/, '').trimEnd();
+    if (acc && !/[.!?]$/.test(acc)) acc = `${acc}.`;
+    return acc;
+  };
+  const abstractSnippet = cleanedAbstract ? buildDescription(cleanedAbstract) : buildDescription(getWorkAbstractSnippet(work, 220));
+  const authorNames = Array.isArray(work?.authors)
+    ? work.authors
+        .filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role)
+        .map((a: any) => a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' '))
+        .filter(Boolean)
+    : [];
   const authorSummary = pickReferenceAuthors(work);
-  const description = abstractSnippet || [fullTitle || titleBase, authorSummary, year].filter(Boolean).join('. ');
+  const descriptionRaw = abstractSnippet || [fullTitle || titleBase, authorSummary, year].filter(Boolean).join('. ');
+  const description = descriptionRaw && !/[.!?…]$/.test(descriptionRaw) ? `${descriptionRaw}.` : descriptionRaw;
   const canonicalPath = localizedPath(locale as Locale, `/works/${id}`);
   const canonicalUrl = `https://ethnos.app${canonicalPath}`;
   const ogLocale = openGraphLocaleMap[locale] || 'en_US';
   const alternateLocale = locales.filter((code) => code !== locale).map((code) => openGraphLocaleMap[code] || 'en_US');
   const ogTitle = titleWithYear ? `${titleWithYear} - Ethnos Bibliography` : 'Ethnos Bibliography';
   const ogImage = {
-    url: 'https://ethnos.app/android-chrome-512x512.png',
-    width: 512,
-    height: 512,
-    alt: 'Ethnos Bibliography interface symbol'
+    url: new URL('/og-default.png', metadataBase).toString(),
+    width: 1200,
+    height: 630,
+    alt: 'Ethnos Bibliography catalog interface'
   };
+  const articleAuthors = Array.from(new Set((authorNames.length ? authorNames : (authorSummary ? [authorSummary] : [])).map((a: any) => String(a))));
+  const keywords = [
+    fullTitle || '',
+    venue?.name || work?.venue_name || '',
+    workType || '',
+    publisher?.name || work?.publisher_name || '',
+    ...(Array.isArray(authorSummary) ? authorSummary : authorSummary ? [authorSummary] : [])
+  ].map((k) => (k ? String(k) : '')).filter(Boolean);
   const other = buildCitationMeta(work, locale, id);
+  const openGraph = isBookType
+    ? {
+        title: ogTitle,
+        description: abstractSnippet || description || base.description || '',
+        type: 'book' as const,
+        releaseDate: publication?.publication_date || work?.publication_date || (year ? String(year) : undefined),
+        authors: articleAuthors,
+        locale: ogLocale,
+        alternateLocale,
+        url: canonicalUrl,
+        siteName: 'Ethnos Bibliography',
+        images: [ogImage]
+      }
+    : {
+        title: ogTitle,
+        description: abstractSnippet || description || base.description || '',
+        type: 'article' as const,
+        publishedTime: publication?.publication_date || work?.publication_date || (year ? String(year) : undefined),
+        authors: articleAuthors,
+        section: venue?.name || work?.venue_name || undefined,
+        locale: ogLocale,
+        alternateLocale,
+        url: canonicalUrl,
+        siteName: 'Ethnos Bibliography',
+        images: [ogImage]
+      };
   return {
     ...base,
     title: titleWithYear || base.title,
     description: description || base.description,
-    openGraph: {
-      title: ogTitle,
-      description: description || base.description || '',
-      type: isBookType ? 'book' : 'article',
-      locale: ogLocale,
-      alternateLocale,
-      url: canonicalUrl,
-      siteName: 'Ethnos Bibliography',
-      images: [ogImage]
-    },
+    keywords: keywords.length ? keywords : undefined,
+    openGraph,
     twitter: {
       card: 'summary_large_image',
       title: ogTitle,
@@ -84,6 +135,13 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const issue = [publication?.issue, publication?.number, work?.issue, work?.number]
     .find((value) => value !== undefined && value !== null && value !== '' && typeof value !== 'boolean');
   const pages = publication?.pages || work?.pages;
+  const pageParts = (() => {
+    const text = pages ? String(pages).trim() : '';
+    if (!text) return { first: '', last: '' };
+    const parts = text.split(/[-–—]/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) return { first: parts[0], last: parts[parts.length - 1] };
+    return { first: parts[0], last: '' };
+  })();
   const publicationDate = publication?.publication_date || work?.publication_date;
   const publicationDateFormatted = publicationDate ? String(publicationDate).slice(0, 10) : (year ? String(year) : '');
   const peerReviewed = typeof publication?.peer_reviewed === 'boolean' ? publication.peer_reviewed : (typeof work?.peer_reviewed === 'boolean' ? work.peer_reviewed : null);
@@ -198,15 +256,29 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const jsonLd: Record<string, any> = {
     '@context': 'https://schema.org',
     '@type': isBookType ? 'Book' : 'ScholarlyArticle',
+    headline: fullTitle,
     name: fullTitle,
-    url: publicUrl
+    url: publicUrl,
+    mainEntityOfPage: publicUrl
   };
   if (publicationDateFormatted) jsonLd.datePublished = publicationDateFormatted;
   if (language) jsonLd.inLanguage = String(language);
   if (authorNames.length) jsonLd.author = authorNames.map((name: string) => ({ '@type': 'Person', name }));
   if (publisherName) jsonLd.publisher = { '@type': 'Organization', name: publisherName };
   if (doi) jsonLd.identifier = { '@type': 'PropertyValue', propertyID: 'DOI', value: String(doi) };
-  if (venueName && !isBookType) jsonLd.isPartOf = { '@type': 'Periodical', name: venueName };
+  if (venueName && !isBookType) {
+    const issn = [venueIssn, venueEissn].flatMap((v) => (Array.isArray(v) ? v : v ? [v] : [])).filter(Boolean);
+    jsonLd.isPartOf = {
+      '@type': 'Periodical',
+      name: venueName,
+      issn: issn.length ? issn : undefined,
+      publisher: publisherName ? { '@type': 'Organization', name: publisherName } : undefined
+    };
+  }
+  if (volume) jsonLd.volumeNumber = String(volume);
+  if (issue) jsonLd.issueNumber = String(issue);
+  if (pageParts.first) jsonLd.pageStart = pageParts.first;
+  if (pageParts.last) jsonLd.pageEnd = pageParts.last;
   if (cleanedAbstract) jsonLd.description = getWorkAbstractSnippet(work, 700);
   return (
     <div className="page-header" aria-labelledby="page-title">

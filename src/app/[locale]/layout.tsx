@@ -7,6 +7,8 @@ import LocaleLink from '@/components/common/LocaleLink';
 import ScrollTools from '@/components/common/ScrollTools';
 import HtmlLangSync from '@/components/common/HtmlLangSync';
 import { locales, type Locale } from '@/i18n/config';
+import { buildLanguageAlternates, metadataBase, openGraphLocales } from '@/i18n/metadata';
+import { localizedPath } from '@/i18n/paths';
 
 type NavLinks = {
   home: string;
@@ -28,60 +30,74 @@ type FooterStrings = {
   tagline: string;
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://ethnos.app'),
-  title: {
-    template: '%s | Ethnos Bibliography',
-    default: 'Ethnos Bibliography | Anthropology & Sociology Research Tool'
-  },
-  description: 'Ethnos delivers an open bibliography for anthropology and sociology, joining works, journals, metrics, and research tools in a single catalog.',
-  abstract: 'Ethnos Bibliography is a reference discovery environment dedicated to anthropology, sociology, and ethnographic studies.',
-  keywords: [
-    'anthropology bibliography tool',
-    'sociology research index',
-    'ethnography reference platform',
-    'open bibliographic database',
-    'latin american social sciences catalog',
-    'journals directory anthropology',
-    'research metrics export'
-  ],
-  applicationName: 'Ethnos Bibliography',
-  category: 'reference',
-  creator: 'Ethnos Research Lab',
-  publisher: 'Ethnos Research Lab',
-  authors: [{ name: 'Ethnos Research Lab' }],
-  robots: {
-    index: true,
-    follow: true
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://ethnos.app/',
-    title: 'Ethnos Bibliography | Anthropology & Sociology Research Tool',
-    description: 'Open bibliography focused on anthropology and sociology with indexed works, journals, metrics, and export tools.',
-    siteName: 'Ethnos Bibliography',
-    images: [
-      {
-        url: 'https://ethnos.app/android-chrome-512x512.png',
-        width: 512,
-        height: 512,
-        alt: 'Ethnos Bibliography interface symbol'
-      }
-    ]
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Ethnos Bibliography | Anthropology & Sociology Research Tool',
-    description: 'Discover anthropology and sociology works, journals, and research utilities in a unified open bibliography.',
-    images: ['https://ethnos.app/android-chrome-512x512.png']
-  },
-  other: {
-    'ethnos:disciplines': 'anthropology;sociology;ethnography;social sciences',
-    'ethnos:capabilities': 'bibliographic indexing;scholarly discovery;reference export;open research observatory',
-    'ethnos:audiences': 'researchers;students;librarians;documentation centers'
-  }
-};
+const siteDescription = 'Ethnos delivers an open bibliography for anthropology and sociology, joining works, journals, metrics, and research tools in a single catalog.';
+const siteAbstract = 'Ethnos Bibliography is a reference discovery environment dedicated to anthropology, sociology, and ethnographic studies.';
+const siteKeywords = [
+  'anthropology bibliography tool',
+  'sociology research index',
+  'ethnography reference platform',
+  'open bibliographic database',
+  'latin american social sciences catalog',
+  'journals directory anthropology',
+  'research metrics export'
+];
+const socialImage = new URL('/og-default.png', metadataBase).toString();
+
+export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await props.params;
+  const safeLocale = locale as Locale;
+  const ogLocale = openGraphLocales[safeLocale] || openGraphLocales.en;
+  const alternateLocale = locales.filter((code) => code !== safeLocale).map((code) => openGraphLocales[code as Locale]);
+  const canonicalPath = localizedPath(safeLocale, '/');
+  const canonical = new URL(canonicalPath, metadataBase).toString();
+
+  return {
+    metadataBase,
+    title: {
+      template: '%s | Ethnos Bibliography',
+      default: 'Ethnos Bibliography | Anthropology & Sociology Research Tool'
+    },
+    description: siteDescription,
+    abstract: siteAbstract,
+    keywords: siteKeywords,
+    applicationName: 'Ethnos Bibliography',
+    category: 'reference',
+    creator: 'Ethnos Research Lab',
+    publisher: 'Ethnos Research Lab',
+    authors: [{ name: 'Ethnos Research Lab' }],
+    robots: {
+      index: true,
+      follow: true
+    },
+    alternates: {
+      canonical,
+      languages: buildLanguageAlternates('/')
+    },
+    openGraph: {
+      type: 'website',
+      locale: ogLocale,
+      alternateLocale,
+      url: canonical,
+      title: 'Ethnos Bibliography | Anthropology & Sociology Research Tool',
+      description: siteDescription,
+      siteName: 'Ethnos Bibliography',
+      images: [
+        {
+          url: socialImage,
+          width: 1200,
+          height: 630,
+          alt: 'Ethnos Bibliography catalog interface'
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Ethnos Bibliography | Anthropology & Sociology Research Tool',
+      description: siteDescription,
+      images: [socialImage]
+    }
+  };
+}
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -111,9 +127,25 @@ export default async function LocaleLayout({ children, params }: { children: Rea
     doi: t('footer.doi'),
     tagline: t('footer.tagline')
   };
+  const searchPath = localizedPath(locale as Locale, '/search/results');
+  const searchTarget = `${metadataBase.origin}${searchPath}?q={search_term_string}`;
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Ethnos Bibliography',
+    url: new URL(localizedPath(locale as Locale, '/'), metadataBase).toString(),
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: searchTarget,
+      'query-input': 'required name=search_term_string'
+    },
+    inLanguage: locale
+  };
+
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <HtmlLangSync />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <a href="#main-content" className="skip-link">{t('skipLink')}</a>
       <div className="container">
         <Header

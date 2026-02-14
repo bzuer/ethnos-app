@@ -181,12 +181,13 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   const cleanedAbstract = sanitizeWorkAbstract(work?.abstract);
   if (cleanedAbstract) other.citation_abstract = cleanedAbstract;
   if (publicUrl) {
-    if (!bestOaUrl && !pdf) {
-      other.citation_public_url = publicUrl;
-      other.citation_fulltext_html_url = fulltext || publicUrl;
-    }
+    other.citation_public_url = publicUrl;
+    if (cleanedAbstract) other.citation_abstract_html_url = publicUrl;
   }
-  if (bestOaUrl || pdf) other.citation_pdf_url = bestOaUrl || pdf;
+  if (bestOaUrl || pdf) {
+    other.citation_pdf_url = bestOaUrl || pdf;
+    other.citation_fulltext_html_url = bestOaUrl || pdf;
+  }
   if (fullTitle) other['dc.title'] = fullTitle;
   if (authors.length) other['dc.creator'] = authors;
   if (publicationDateFormatted) other['dc.date'] = publicationDateFormatted;
