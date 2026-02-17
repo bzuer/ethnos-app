@@ -230,3 +230,7 @@ Operational directive: at the end of each session or significant change, create 
 - Removed the flexible growth rule from `.result-venue` and downgraded metadata token wrapping from `overflow-wrap: anywhere` to `overflow-wrap: break-word` in `public/css/styles.css`.
 - This preserves wrapping and hyphenation while preventing isolated metadata chunks and large spacing artifacts in mixed-token rows.
 - Validation status for metadata wrapping stabilization: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: In-list badge hover labels were fixed to avoid simultaneous rendering.
+- Narrowed the metadata span selector in `public/css/styles.css` from descendant scope to direct-child scope so nested spans inside `.badge-list-toggle` are not overridden.
+- This restores the expected state behavior: only `In the list` at rest, `Remove item` only on hover/focus.
+- Validation status for badge-label fix: `npm run lint` passed and `npm run build` passed.
