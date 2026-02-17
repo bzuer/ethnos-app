@@ -199,3 +199,8 @@ Operational directive: at the end of each session or significant change, create 
 - Removed language display from work result metadata in search and Sphinx result lists.
 - Metadata delimiters are now rendered through a single `.meta-separator` element to avoid mixed glyph/font rendering and keep uniform spacing/alignment.
 - Validation status for language/separator normalization: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Metadata/action spacing and horizontal alignment were refined for work-list items.
+- Open Access badge and metadata tokens were normalized to inline-flex alignment for consistent horizontal rhythm and vertical centering.
+- Paragraph spacing hierarchy was tuned to `title -> metadata` (2 units), `metadata -> list action` (1 unit), and `list action -> abstract` (2 units).
+- Locale action labels were standardized for uniform length and wording in list states/actions (`en`, `es`, `pt`).
+- Validation status for spacing/alignment/labels refinement: `npm run lint` passed and `npm run build` passed.
