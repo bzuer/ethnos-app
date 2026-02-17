@@ -6,8 +6,9 @@ function resolveLocale(locale?: string): Locale {
   return defaultLocale;
 }
 
-export default getRequestConfig(async ({ locale }) => {
-  const safeLocale = resolveLocale(locale);
+export default getRequestConfig(async ({ locale, requestLocale }) => {
+  const requestedLocale = locale || await requestLocale;
+  const safeLocale = resolveLocale(requestedLocale);
   const messages = (await import(`../../messages/${safeLocale}.json`)).default;
   return { locale: safeLocale, messages };
 });

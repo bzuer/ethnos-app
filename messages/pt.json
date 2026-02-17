@@ -84,6 +84,7 @@
     "states": {
       "loadingWorks": "Carregando obras...",
       "loadingJournals": "Carregando periódicos...",
+      "unableToLoadWorks": "Não foi possível carregar as obras.",
       "unableToLoadJournals": "Não foi possível carregar os periódicos.",
       "noJournals": "Nenhum periódico disponível.",
       "noPersonWorks": "Nenhuma obra encontrada para esta pessoa.",
@@ -351,6 +352,11 @@
       "title": "Detalhes da Pessoa — Ethnos_APP",
       "description": "Registro de autoridade de pesquisador com identificadores ORCID, Lattes, afiliações e produção acadêmica.",
       "keywords": "perfil acadêmico, autor, antropologia, sociologia, ORCID, Lattes"
+    },
+    "license": {
+      "title": "Licença MIT — Ethnos_APP",
+      "description": "Termos de licença que regem a distribuição e reutilização do frontend da Ethnos Bibliography sob licença MIT.",
+      "keywords": "licença MIT, licença open source, Ethnos Bibliography, licenciamento do frontend"
     },
     "privacy": {
       "title": "Privacidade e Cookies — Ethnos_APP",

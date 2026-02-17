@@ -84,6 +84,7 @@
     "states": {
       "loadingWorks": "Loading works...",
       "loadingJournals": "Loading journals...",
+      "unableToLoadWorks": "Unable to load works.",
       "unableToLoadJournals": "Unable to load journals.",
       "noJournals": "No journals available.",
       "noPersonWorks": "No works found for this person.",
@@ -351,6 +352,11 @@
       "title": "Person Details — Ethnos_APP",
       "description": "Researcher authority record including ORCID, Lattes identifiers, affiliations, and academic production.",
       "keywords": "academic profile, author, anthropology, sociology, ORCID, Lattes"
+    },
+    "license": {
+      "title": "MIT License — Ethnos_APP",
+      "description": "License terms governing the Ethnos Bibliography frontend distribution and reuse under the MIT license.",
+      "keywords": "MIT license, open source license, Ethnos Bibliography, frontend licensing"
     },
     "privacy": {
       "title": "Privacy and Cookies — Ethnos_APP",

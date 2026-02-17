@@ -131,11 +131,40 @@
 
 ## Internationalization
 - Default locale is English; `pt` and `es` must mirror structure and meaning for every UI label, heading, and metadata entry.
-- Use `next-intl` with `src/i18n/{config,metadata,request,routing}.ts`, keep the locale-aware middleware at `middleware.ts`, and store messages in `/messages/{locale}.json`.
-- App Router pages live in `src/app/[locale]/**` so `/` is English and `/pt`, `/es` are localized variants.
+- Use `next-intl` with `src/i18n/{config,metadata,request,routing}.ts`, keep the locale-aware middleware at `src/middleware.ts`, and store messages in `/messages/{locale}.json`.
+- App Router pages live in `src/app/(site)/[locale]/**` so `/` is English and `/pt`, `/es` are localized variants.
 - Static rendering is required per locale, and locale-specific shells must be generated at build time. Locale targeting does not make a page dynamic.
 - Home, Search, and Venues stay fully static with `dynamic = 'force-static'` and no `revalidate`.
 - Avoid request-bound APIs in static shells and layouts. Locale resolution must be handled by middleware and static params, not by `headers()` or `cookies()` in server components for these routes.
 - Navigation helpers must come from `@/i18n/routing`.
 - Every localized page calls `buildPageMetadata` with the matching message key.
 - Middleware resolves the active locale from the `NEXT_LOCALE` cookie or the `Accept-Language` header before rewriting to the locale-prefixed path.
+
+## Maintenance Log
+- 2026-02-16: Stage 1 executed and validated.
+- `src/i18n/request.ts` now resolves locale from `requestLocale` with explicit-locale precedence.
+- `src/app/layout.tsx` no longer emits an incorrect `html lang` value when locale context is unavailable at root.
+- `src/app/[locale]/license/page.tsx` now uses `metadata.license`.
+- `messages/en.json`, `messages/pt.json`, and `messages/es.json` include `metadata.license`.
+- Added custom global not-found page at `src/app/not-found.tsx`.
+- 2026-02-16: Stage 1 review/validation completed for `docs/ethnos.app`.
+- Snapshot integrity issue identified: only `docs/ethnos.app/ethnos.app/index.html` is full HTML; other `.html` files are RSC/Flight fragments and not crawler-ready static documents.
+- Validation status: `npm run build` passed; `npm run lint` failed due to pre-existing `react-hooks/set-state-in-effect` errors in list/search/venues client notices.
+- 2026-02-16: Application-level corrections executed in source code (`src/app/**`) with focus on content, SEO, and runtime behavior.
+- Hook effects refactored to resolve `react-hooks/set-state-in-effect` errors in personal list and notice components.
+- Work DOI external link restored to `https://doi.org/...` in work detail identifiers.
+- Venue metadata builder no longer emits related-work author arrays as page-level author metadata.
+- Locale loading notices now use translated strings in search results and venues client lists.
+- Global header brand in locale layout changed from `h1` to non-page heading text to keep one page-level `h1` per page shell.
+- Validation status after fixes: `npm run lint` passed and `npm run build` passed.
+- 2026-02-16: Next steps executed with incremental validation after each change set.
+- Root sitemap switched from dynamic generation to static build output in `src/app/sitemap.ts`.
+- Search results error state now uses work-specific i18n key `common.states.unableToLoadWorks` with messages updated in `messages/en.json`, `messages/pt.json`, and `messages/es.json`.
+- Search results and venue detail loading components now render localized loading messages via `next-intl`.
+- Validation status for next steps: `npm run lint` passed and `npm run build` passed; root `/sitemap.xml` now outputs as static route.
+- 2026-02-16: Locale/SSR refactor completed for definitive `html lang` by locale without breaking SSG shells.
+- Locale root moved to `src/app/(site)/[locale]/layout.tsx` with SSR `<html lang={locale}>` and locale-scoped head/body.
+- Middleware moved to `src/middleware.ts` and continues locale resolution via `NEXT_LOCALE`/`Accept-Language` before rewrite.
+- Added locale fallback route `src/app/(site)/[locale]/[...rest]/page.tsx` to trigger localized not-found flow within locale layout.
+- Validation status for locale SSR refactor: `npm run lint` passed, `npm run build` passed, and SSG shells remained static for home/search/venues.
+- Runtime checks executed on dev `:1210` and production `next start` (`:4010`) confirmed locale rewrite headers and `html lang` SSR for `/`, `/pt`, `/es`.
