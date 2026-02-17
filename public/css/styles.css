@@ -1194,7 +1194,7 @@ a.action-btn {
     min-width: 0;
     max-width: 100%;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 
 }
 .result-year,
@@ -1210,7 +1210,7 @@ a.action-btn {
     min-width: 0;
     max-width: 100%;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 .result-doi {
     font-family: var(--mono);
@@ -1221,16 +1221,13 @@ a.action-btn {
     min-width: 0;
     max-width: 100%;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 .result-doi a {
     color: inherit;
     text-decoration-color: var(--border-gray);
     white-space: normal;
-    overflow-wrap: anywhere;
-}
-.result-venue {
-    flex: 1 1 24ch;
+    overflow-wrap: break-word;
 }
 
 .search-controls {

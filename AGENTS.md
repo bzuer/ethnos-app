@@ -226,3 +226,7 @@ Operational directive: at the end of each session or significant change, create 
 - Updated metadata text tokens in `public/css/styles.css` to `inline-block` with `max-width: 100%`, `min-width: 0`, and `overflow-wrap: anywhere` for stronger line breaking when needed.
 - Added flexible sizing for `.result-venue` (`flex: 1 1 24ch`) so long venue names can occupy remaining row width and wrap instead of forcing a single-line token.
 - Validation status for stronger metadata wrapping: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Metadata wrapping was stabilized to avoid visual fragmentation in result rows.
+- Removed the flexible growth rule from `.result-venue` and downgraded metadata token wrapping from `overflow-wrap: anywhere` to `overflow-wrap: break-word` in `public/css/styles.css`.
+- This preserves wrapping and hyphenation while preventing isolated metadata chunks and large spacing artifacts in mixed-token rows.
+- Validation status for metadata wrapping stabilization: `npm run lint` passed and `npm run build` passed.
