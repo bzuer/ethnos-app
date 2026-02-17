@@ -214,3 +214,7 @@ Operational directive: at the end of each session or significant change, create 
 - 2026-02-17: Text hyphenation was enabled for abstract/description/metadata classes.
 - Added a unified hyphenation rule for `.abstract`, `.description`, `.metadata`, `.result-abstract`, `.result-meta`, and related metadata text classes to improve wrapping and readability in long entries.
 - Validation status for hyphenation update: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Text hyphenation coverage was expanded to all major UI text blocks.
+- Replaced the narrow hyphenation selector in `public/css/styles.css` with a broader text-element rule covering headings, paragraphs, links, labels, table cells, titles, metadata rows, abstracts, and status messages.
+- Removed DOI-link overrides that forced normal wrapping so DOI text can follow the global hyphenation and wrap behavior.
+- Validation status for global hyphenation expansion: `npm run lint` passed and `npm run build` passed.

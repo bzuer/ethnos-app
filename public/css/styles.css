@@ -154,9 +154,34 @@ body::before {
     line-height: 1.4;
     margin-bottom: var(--spacing-sm);
 }
+:where(
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+li,
+dt,
+dd,
+figcaption,
+blockquote,
+td,
+th,
+label,
+legend,
+a,
+span,
+.title-primary,
+.page-title,
+.title-section,
+.item-subtitle,
 .abstract,
 .description,
 .metadata,
+.result-title,
+.result-link,
 .result-abstract,
 .result-meta,
 .field-value,
@@ -171,7 +196,11 @@ body::before {
 .result-type,
 .result-total,
 .result-cited,
-.result-doi {
+.result-doi,
+.pagination-info,
+.temporary-message,
+.footer
+) {
     -webkit-hyphens: auto;
     -ms-hyphens: auto;
     hyphens: auto;
@@ -1188,8 +1217,6 @@ a.action-btn {
 .result-doi a {
     color: inherit;
     text-decoration-color: var(--border-gray);
-    overflow-wrap: normal;
-    word-break: normal;
 }
 
 .search-controls {
@@ -1597,8 +1624,6 @@ section:last-of-type {
 .result-doi a {
     color: var(--primary-blue);
     text-decoration: none;
-    overflow-wrap: normal;
-    word-break: normal;
 }
 
 .result-doi a:hover {
