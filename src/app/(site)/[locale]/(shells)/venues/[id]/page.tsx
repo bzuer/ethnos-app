@@ -467,7 +467,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
-                        {' '}•{' '}
+                        <span className="meta-separator" aria-hidden="true">•</span>
                       </>
                     ) : null}
                     <span className="result-authors">
@@ -479,8 +479,8 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                         t('common.entities.authorUnknown')
                       )}
                     </span>
-                    {year ? <span className="result-year"> • {year}</span> : null}
-                    {type ? <span className="result-type"> • {type}</span> : null}
+                    {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
+                    {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
                   </p>
                   {hasListAction ? (
                     <p className="result-meta result-badges">

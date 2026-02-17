@@ -380,11 +380,11 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
-                        {' '}•{' '}
+                        <span className="meta-separator" aria-hidden="true">•</span>
                       </>
                     ) : null}
                     {type ? <span className="result-type">{type}</span> : null}
-                    {type ? ' • ' : null}
+                    {type ? <span className="meta-separator" aria-hidden="true">•</span> : null}
                     <span className="result-authors">{authorsArr.length > 0 ? (
                         authorsArr.slice(0, 2).map((a: any, idx: number) => (
                           <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
@@ -393,7 +393,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                         role
                       )}
                     </span>
-                    {year ? <> • <span className="result-year">{year}</span></> : null}
+                    {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
                   </p>
                   {hasListAction ? (
                     <p className="result-meta result-badges">

@@ -114,7 +114,6 @@ export default function SearchSphinxClient({ locale }: Props) {
             const abstractRaw = it.abstract || it.abstract_text || it.summary || it.description || '';
             const abstractShort = abstractRaw ? String(abstractRaw).replace(/\s+/g, ' ').slice(0, 450) + (String(abstractRaw).length > 450 ? '…' : '') : '';
             const openAccess = isWorkOpenAccess(it);
-            const lang = (it.language || it.lang || (Array.isArray(it.languages) ? it.languages[0] : '') || '').toString().toUpperCase();
             const doi = it.doi || (it.publication && it.publication.doi) || '';
             const relRaw = (it.relevance ?? it.score ?? it._score ?? it.rank);
             const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);
@@ -139,15 +138,14 @@ export default function SearchSphinxClient({ locale }: Props) {
                         removedMessage={t('common.messages.itemRemoved')}
                         showListBadge={false}
                       />
-                      {' '}•{' '}
+                      <span className="meta-separator" aria-hidden="true">•</span>
                     </>
                   ) : null}
                   <span className="result-authors">{authors}</span>
-                  {year ? <> • <span className="result-year">{year}</span></> : null}
-                  {type ? <> • <span className="result-type">{type}</span></> : null}
-                  {lang ? <> • <span className="result-language">{lang}</span></> : null}
-                  {rel ? <> • <span className="relevance-score">{rel}</span></> : null}
-                  {doi ? <> • <span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doi}</a></span></> : null}
+                  {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
+                  {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
+                  {rel ? <><span className="meta-separator" aria-hidden="true">•</span><span className="relevance-score">{rel}</span></> : null}
+                  {doi ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doi}</a></span></> : null}
                 </p>
                 {hasListAction ? (
                   <p className="result-meta result-badges">

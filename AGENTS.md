@@ -195,3 +195,7 @@ Operational directive: at the end of each session or significant change, create 
 - Open Access now renders at the start of `.result-meta` across work-list contexts, followed by bibliographic metadata.
 - Metadata row alignment was adjusted so badges and text share a consistent vertical baseline (`.result-meta` now centers inline items and `.result-meta .badge` uses middle alignment).
 - Validation status for OA start-position/alignment adjustment: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Metadata separators were standardized and language labels were removed from result-list rows.
+- Removed language display from work result metadata in search and Sphinx result lists.
+- Metadata delimiters are now rendered through a single `.meta-separator` element to avoid mixed glyph/font rendering and keep uniform spacing/alignment.
+- Validation status for language/separator normalization: `npm run lint` passed and `npm run build` passed.

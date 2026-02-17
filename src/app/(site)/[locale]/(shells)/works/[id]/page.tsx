@@ -519,11 +519,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
-                        {' '}•{' '}
+                        <span className="meta-separator" aria-hidden="true">•</span>
                       </>
                     ) : null}
                     <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
-                    {ryear ? <> • <span className="result-year">{ryear}</span></> : null}
+                    {ryear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{ryear}</span></> : null}
                   </p>
                   {rid ? (
                     <p className="result-meta result-badges">
@@ -579,11 +579,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
-                        {' '}•{' '}
+                        <span className="meta-separator" aria-hidden="true">•</span>
                       </>
                     ) : null}
                     <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
-                    {cyear ? <> • <span className="result-year">{cyear}</span></> : null}
+                    {cyear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{cyear}</span></> : null}
                   </p>
                   {cid ? (
                     <p className="result-meta result-badges">
