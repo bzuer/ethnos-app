@@ -181,3 +181,5 @@ Operational directive: at the end of each session or significant change, create 
 - 2026-02-17: Work-list badge labels were updated to custom locale wording and hover behavior was refined.
 - Locale labels set to `pt: Incluir na lista/Excluir da lista`, `en: Save to list/Drop from list`, `es: Poner en lista/Quitar de lista`.
 - Badge interaction now follows `gray + green hover` for non-listed works and `green + red hover` for listed works.
+- 2026-02-17: Work-list badge state labels were refined by locale for explicit in-list status.
+- Locale states updated to `en: Save to list / Already in list / Drop from list`, `pt: Incluir na lista / Já na lista / Excluir da lista`, `es: Poner en lista / Ya en lista / Quitar de lista`.
