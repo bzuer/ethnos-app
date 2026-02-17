@@ -1117,7 +1117,7 @@ a.action-btn {
     margin-top: var(--spacing-sm);
 }
 .result-item .result-badges + .result-abstract {
-    margin-top: var(--spacing-sm);
+    margin-top: calc(var(--spacing-xs) * 3);
 }
 .result-item .result-meta + .result-abstract {
     margin-top: var(--spacing-sm);

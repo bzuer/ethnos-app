@@ -204,3 +204,6 @@ Operational directive: at the end of each session or significant change, create 
 - Paragraph spacing hierarchy was tuned to `title -> metadata` (2 units), `metadata -> list action` (1 unit), and `list action -> abstract` (2 units).
 - Locale action labels were standardized for uniform length and wording in list states/actions (`en`, `es`, `pt`).
 - Validation status for spacing/alignment/labels refinement: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Work-list spacing hierarchy was adjusted to increase action-to-abstract separation.
+- Updated `.result-item .result-badges + .result-abstract` to `3` spacing units (`calc(var(--spacing-xs) * 3)`) while preserving `title -> metadata` (2) and `metadata -> action` (1).
+- Validation status for spacing increment: `npm run lint` passed and `npm run build` passed.
