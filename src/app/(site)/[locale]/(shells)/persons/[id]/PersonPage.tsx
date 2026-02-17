@@ -360,6 +360,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               const type = (pub.work_type || pub.type || '').toString().toUpperCase();
               const role = (pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase();
               const abstract = getWorkAbstractSnippet(pub);
+              const hasListAction = Boolean(pub?.id ?? pub?.work_id);
               return (
                 <li className="result-item" key={pub.id}>
                   <h3 className="result-title">
@@ -377,19 +378,38 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                       )}
                     </span>
                     {year ? <> • <span className="result-year">{year}</span></> : null}
+                    {openAccess ? (
+                      <>
+                        {' '}•{' '}
+                        <WorkMetaBadges
+                          work={pub}
+                          openAccess={openAccess}
+                          openAccessLabel={t('common.meta.openAccess')}
+                          addToListLabel={t('common.actions.addToList')}
+                          inListLabel={t('common.actions.inList')}
+                          removeFromListLabel={t('common.actions.removeFromList')}
+                          addedMessage={t('common.messages.added')}
+                          removedMessage={t('common.messages.itemRemoved')}
+                          showListBadge={false}
+                        />
+                      </>
+                    ) : null}
                   </p>
-                  <p className="result-meta result-badges">
-                    <WorkMetaBadges
-                      work={pub}
-                      openAccess={openAccess}
-                      openAccessLabel={t('common.meta.openAccess')}
-                      addToListLabel={t('common.actions.addToList')}
-                      inListLabel={t('common.actions.inList')}
-                      removeFromListLabel={t('common.actions.removeFromList')}
-                      addedMessage={t('common.messages.added')}
-                      removedMessage={t('common.messages.itemRemoved')}
-                    />
-                  </p>
+                  {hasListAction ? (
+                    <p className="result-meta result-badges">
+                      <WorkMetaBadges
+                        work={pub}
+                        openAccess={openAccess}
+                        openAccessLabel={t('common.meta.openAccess')}
+                        addToListLabel={t('common.actions.addToList')}
+                        inListLabel={t('common.actions.inList')}
+                        removeFromListLabel={t('common.actions.removeFromList')}
+                        addedMessage={t('common.messages.added')}
+                        removedMessage={t('common.messages.itemRemoved')}
+                        showOpenAccessBadge={false}
+                      />
+                    </p>
+                  ) : null}
                   {abstract ? <p className="result-abstract">{abstract}</p> : null}
                 </li>
               );

@@ -24,6 +24,7 @@ type Props = {
   removeFromListLabel: string;
   addedMessage: string;
   removedMessage: string;
+  showOpenAccessBadge?: boolean;
   showListBadge?: boolean;
 };
 
@@ -85,9 +86,10 @@ export default function WorkMetaBadges({
   removeFromListLabel,
   addedMessage,
   removedMessage,
+  showOpenAccessBadge = true,
   showListBadge = true
 }: Props) {
-  const openAccessHref = useMemo(() => (openAccess ? getWorkOpenAccessDoiUrl(work) : ''), [openAccess, work]);
+  const openAccessHref = useMemo(() => (openAccess && showOpenAccessBadge ? getWorkOpenAccessDoiUrl(work) : ''), [openAccess, showOpenAccessBadge, work]);
   const workId = useMemo(() => {
     const raw = work?.id ?? work?.work_id;
     if (raw === null || raw === undefined) return '';
@@ -135,13 +137,13 @@ export default function WorkMetaBadges({
     }
   }, [addedMessage, canToggleList, removedMessage, work, workId]);
 
-  const showOpenAccessBadge = Boolean(openAccess);
+  const showOpenAccess = Boolean(openAccess && showOpenAccessBadge);
   const showListToggleBadge = Boolean(canToggleList);
-  if (!showOpenAccessBadge && !showListToggleBadge) return null;
+  if (!showOpenAccess && !showListToggleBadge) return null;
 
   return (
     <>
-      {showOpenAccessBadge ? (
+      {showOpenAccess ? (
         openAccessHref ? (
           <a className="badge open-acess badge-link" href={openAccessHref} target="_blank" rel="noopener noreferrer">
             {openAccessLabel}

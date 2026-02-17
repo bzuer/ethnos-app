@@ -117,6 +117,7 @@ export default function SearchResultsClient({ locale }: Props) {
             const relRaw = (it.relevance ?? it.score ?? it._score ?? it.rank);
             const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);
             const rel = relNum && isFinite(relNum) ? relNum.toFixed(2) : '';
+            const hasListAction = Boolean(it?.id ?? it?.work_id);
             return (
               <li className="result-item" key={it.id}>
                 <h3 className="result-title">
@@ -129,19 +130,38 @@ export default function SearchResultsClient({ locale }: Props) {
                   {type ? <> • <span className="result-type">{type}</span></> : null}
                   {lang ? <> • <span className="result-language">{lang}</span></> : null}
                   {rel ? <> • <span className="relevance-score">{rel}</span></> : null}
+                  {openAccess ? (
+                    <>
+                      {' '}•{' '}
+                      <WorkMetaBadges
+                        work={it}
+                        openAccess={openAccess}
+                        openAccessLabel={t('common.meta.openAccess')}
+                        addToListLabel={t('common.actions.addToList')}
+                        inListLabel={t('common.actions.inList')}
+                        removeFromListLabel={t('common.actions.removeFromList')}
+                        addedMessage={t('common.messages.added')}
+                        removedMessage={t('common.messages.itemRemoved')}
+                        showListBadge={false}
+                      />
+                    </>
+                  ) : null}
                 </p>
-                <p className="result-meta result-badges">
-                  <WorkMetaBadges
-                    work={it}
-                    openAccess={openAccess}
-                    openAccessLabel={t('common.meta.openAccess')}
-                    addToListLabel={t('common.actions.addToList')}
-                    inListLabel={t('common.actions.inList')}
-                    removeFromListLabel={t('common.actions.removeFromList')}
-                    addedMessage={t('common.messages.added')}
-                    removedMessage={t('common.messages.itemRemoved')}
-                  />
-                </p>
+                {hasListAction ? (
+                  <p className="result-meta result-badges">
+                    <WorkMetaBadges
+                      work={it}
+                      openAccess={openAccess}
+                      openAccessLabel={t('common.meta.openAccess')}
+                      addToListLabel={t('common.actions.addToList')}
+                      inListLabel={t('common.actions.inList')}
+                      removeFromListLabel={t('common.actions.removeFromList')}
+                      addedMessage={t('common.messages.added')}
+                      removedMessage={t('common.messages.itemRemoved')}
+                      showOpenAccessBadge={false}
+                    />
+                  </p>
+                ) : null}
                 {abstractShort ? (<p className="result-abstract">{abstractShort}</p>) : null}
               </li>
             );

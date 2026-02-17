@@ -187,3 +187,7 @@ Operational directive: at the end of each session or significant change, create 
 - Result item rendering now follows `title -> details -> badges` across search results, Sphinx results, person works, venue publications, and work reference/cited-by lists.
 - `WorkMetaBadges` no longer injects separator bullets, and `.result-badges` spacing was added in `public/css/styles.css`.
 - Validation status for hierarchy adjustment: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Badge disposition was refined by action type semantics.
+- Open Access badge now remains in `.result-meta` as a metadata qualifier, while personal-list actions render in a dedicated action row below metadata and above abstract content.
+- `WorkMetaBadges` now supports independent rendering flags for Open Access and list actions (`showOpenAccessBadge`, `showListBadge`) to preserve the `title -> metadata -> action zone -> abstract` hierarchy.
+- Validation status for badge disposition refinement: `npm run lint` passed and `npm run build` passed.
