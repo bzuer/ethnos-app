@@ -114,3 +114,90 @@ export function getWorkOpenAccessDoiUrl(item: any) {
   if (!doi) return '';
   return `https://oadoi.org/${encodeURIComponent(doi)}`;
 }
+
+export const METADATA_TEXT_LIMITS = {
+  authors: 80,
+  venue: 80,
+  type: 32,
+  default: 80
+} as const;
+
+function normalizeText(value: any) {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+export function truncateMetadataText(value: any, maxChars: number = METADATA_TEXT_LIMITS.default) {
+  const text = normalizeText(value);
+  if (!text) return '';
+  if (!Number.isFinite(maxChars) || maxChars <= 0 || text.length <= maxChars) return text;
+  const slice = text.slice(0, maxChars).trimEnd();
+  const boundary = slice.lastIndexOf(' ');
+  if (boundary > Math.floor(maxChars * 0.6)) return `${slice.slice(0, boundary)}…`;
+  return `${slice}…`;
+}
+
+function pickAuthorName(entry: any) {
+  if (!entry) return '';
+  if (typeof entry === 'string') return normalizeText(entry);
+  return normalizeText(entry?.preferred_name || entry?.name || [entry?.given_names, entry?.family_name].filter(Boolean).join(' '));
+}
+
+function pickAuthorList(item: any) {
+  if (Array.isArray(item?.authors) && item.authors.length) return item.authors;
+  if (Array.isArray(item?.authors_preview) && item.authors_preview.length) return item.authors_preview;
+  return [];
+}
+
+function pickAuthorString(item: any) {
+  const fromAuthors = typeof item?.authors === 'string' ? item.authors : '';
+  const fromPreview = typeof item?.authors_preview === 'string' ? item.authors_preview : '';
+  const fromFormatted = item?.formatted_authors || item?.author_string || '';
+  return normalizeText(fromAuthors || fromPreview || fromFormatted);
+}
+
+function splitAuthorString(value: string) {
+  if (!value) return [];
+  if (value.includes(';')) return value.split(';').map((part) => normalizeText(part)).filter(Boolean);
+  if (value.includes('|')) return value.split('|').map((part) => normalizeText(part)).filter(Boolean);
+  return [value];
+}
+
+export function formatMetadataAuthors(item: any, fallback = '', maxChars: number = METADATA_TEXT_LIMITS.authors) {
+  const arr = pickAuthorList(item);
+  let names: string[] = [];
+  if (arr.length) names = arr.map((entry: any) => pickAuthorName(entry)).filter(Boolean);
+  if (!names.length) names = splitAuthorString(pickAuthorString(item));
+  if (!names.length) {
+    const fb = normalizeText(fallback);
+    return fb ? truncateMetadataText(fb, maxChars) : '';
+  }
+  const two = names.slice(0, 2).join(', ');
+  const countRaw = Number(item?.author_count);
+  const hasMore = Number.isFinite(countRaw) && countRaw > 2 ? true : names.length > 2;
+  const text = hasMore ? `${two} et al.` : two;
+  return truncateMetadataText(text, maxChars);
+}
+
+export function pickWorkVenue(item: any) {
+  return normalizeText(
+    item?.venue_name
+    || item?.venue?.name
+    || item?.journal
+    || item?.journal_name
+    || item?.journal_title
+    || item?.source
+    || item?.publication?.venue?.name
+    || item?.publication?.journal?.name
+    || ''
+  );
+}
+
+export function formatMetadataVenue(item: any, maxChars: number = METADATA_TEXT_LIMITS.venue) {
+  return truncateMetadataText(pickWorkVenue(item), maxChars);
+}
+
+export function formatMetadataType(value: any, maxChars: number = METADATA_TEXT_LIMITS.type) {
+  const normalized = normalizeText(value).toUpperCase();
+  return truncateMetadataText(normalized, maxChars);
+}

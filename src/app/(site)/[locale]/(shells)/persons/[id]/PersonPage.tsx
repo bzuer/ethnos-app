@@ -4,7 +4,7 @@ import LocaleLink from '@/components/common/LocaleLink';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { getPersonsWorks } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
-import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
 import { fetchJson } from '@/lib/api';
 import { localizedPath } from '@/i18n/paths';
 import { locales, type Locale } from '@/i18n/config';
@@ -355,10 +355,10 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
           {items.length > 0 ? (
             items.map((pub: any) => {
               const openAccess = isWorkOpenAccess(pub);
-              const authorsArr = Array.isArray(pub.authors) ? pub.authors : (Array.isArray(pub.authors_preview) ? pub.authors_preview : []);
+              const authors = formatMetadataAuthors(pub, '');
               const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
-              const type = (pub.work_type || pub.type || '').toString().toUpperCase();
-              const role = (pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase();
+              const type = formatMetadataType(pub.work_type || pub.type || '');
+              const role = truncateMetadataText((pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase(), 48);
               const abstract = getWorkAbstractSnippet(pub);
               const hasListAction = Boolean(pub?.id ?? pub?.work_id);
               return (
@@ -385,13 +385,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                     ) : null}
                     {type ? <span className="result-type">{type}</span> : null}
                     {type ? <span className="meta-separator" aria-hidden="true">•</span> : null}
-                    <span className="result-authors">{authorsArr.length > 0 ? (
-                        authorsArr.slice(0, 2).map((a: any, idx: number) => (
-                          <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
-                        ))
-                      ) : (
-                        role
-                      )}
+                    <span className="result-authors">{authors || role}
                     </span>
                     {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
                   </p>

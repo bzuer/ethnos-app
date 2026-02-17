@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname, useRouter } from '@/i18n/routing';
-import { isWorkOpenAccess } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
 
 type Props = { locale: string };
 
@@ -104,17 +104,13 @@ export default function SearchSphinxClient({ locale }: Props) {
         ) : null}
         <ul className="results-list">
           {state.items.map((it: any) => {
-            const authorsArr = Array.isArray(it.authors) ? it.authors : (Array.isArray(it.authors_preview) ? it.authors_preview : []);
-            let authors = authorsArr.slice(0, 2).map((a: any) => typeof a === 'string' ? a : (a?.name || a?.preferred_name)).filter(Boolean).join(', ');
-            if (!authors) authors = it.formatted_authors || it.author_string || '';
-            if (!authors) authors = t('common.entities.authorUnknown');
-            if (authors && authorsArr.length > 2 && it.author_count && it.author_count > 2) authors += ' et al.';
+            const authors = formatMetadataAuthors(it, t('common.entities.authorUnknown'));
             const year = it.publication_year || it.year || (it.publication && it.publication.year) || '';
-            const type = (it.work_type || it.type || '').toString().toUpperCase();
-            const abstractRaw = it.abstract || it.abstract_text || it.summary || it.description || '';
-            const abstractShort = abstractRaw ? String(abstractRaw).replace(/\s+/g, ' ').slice(0, 450) + (String(abstractRaw).length > 450 ? '…' : '') : '';
+            const type = formatMetadataType(it.work_type || it.type || '');
+            const abstractShort = getWorkAbstractSnippet(it);
             const openAccess = isWorkOpenAccess(it);
             const doi = it.doi || (it.publication && it.publication.doi) || '';
+            const doiText = truncateMetadataText(doi, 96);
             const relRaw = (it.relevance ?? it.score ?? it._score ?? it.rank);
             const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);
             const rel = relNum && isFinite(relNum) ? relNum.toFixed(2) : '';
@@ -145,7 +141,7 @@ export default function SearchSphinxClient({ locale }: Props) {
                   {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
                   {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
                   {rel ? <><span className="meta-separator" aria-hidden="true">•</span><span className="relevance-score">{rel}</span></> : null}
-                  {doi ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doi}</a></span></> : null}
+                  {doi ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doiText}</a></span></> : null}
                 </p>
                 {hasListAction ? (
                   <p className="result-meta result-badges">

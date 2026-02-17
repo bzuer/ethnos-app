@@ -4,6 +4,7 @@ import { getHomeRecentWorks, getHomeTopVenues } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
+import { formatMetadataAuthors } from '@/lib/works';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
@@ -46,8 +47,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
             </thead>
             <tbody>
               {recent.slice(0, 10).map((w: any) => {
-                const authorsArr = Array.isArray(w.authors_preview) ? w.authors_preview : [];
-                const authors = authorsArr.slice(0, 2).join(', ') + (w.author_count && w.author_count > 2 ? ' et al.' : '');
+                const authors = formatMetadataAuthors(w);
                 const year = w.publication_year || (w.publication && w.publication.year) || w.year || '';
                 return (
                   <tr key={w.id}>

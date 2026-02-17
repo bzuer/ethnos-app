@@ -2,7 +2,7 @@ import 'server-only';
 import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { fetchJson } from '@/lib/api';
-import { sanitizeWorkAbstract } from '@/lib/works';
+import { formatMetadataAuthors, sanitizeWorkAbstract } from '@/lib/works';
 
 const workIncludes = 'metrics,references,files,venue,authors';
 
@@ -258,25 +258,7 @@ export function buildCoins(work: any, locale: string, id: string) {
 }
 
 export function pickReferenceAuthors(item: any) {
-  const arr = Array.isArray(item?.authors) ? item.authors : (Array.isArray(item?.authors_preview) ? item.authors_preview : []);
-  if (arr.length) {
-    const base = arr.slice(0, 2).map((a: any) => {
-      if (!a) return '';
-      if (typeof a === 'string') return a;
-      const p = a.preferred_name || a.name;
-      const given = a.given_names;
-      const family = a.family_name;
-      return p || [given, family].filter(Boolean).join(' ');
-    }).filter(Boolean).join(', ');
-    if (base && arr.length > 2 && item?.author_count && item.author_count > 2) return `${base} et al.`;
-    return base;
-  }
-  const s = typeof item?.authors === 'string' ? item.authors : (typeof item?.authors_preview === 'string' ? item.authors_preview : (item?.formatted_authors || item?.author_string || ''));
-  if (!s) return '';
-  const parts = String(s).split(';').map((x) => x.trim()).filter(Boolean);
-  const firstTwo = parts.slice(0, 2).join(', ');
-  if (firstTwo && parts.length > 2 && item?.author_count && item.author_count > 2) return `${firstTwo} et al.`;
-  return firstTwo || s;
+  return formatMetadataAuthors(item);
 }
 
 export async function loadWork(id: string) {

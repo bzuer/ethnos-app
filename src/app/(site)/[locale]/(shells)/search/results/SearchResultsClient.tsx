@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname } from '@/i18n/routing';
-import { isWorkOpenAccess } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 
 type Props = { locale: string };
 
@@ -94,24 +94,11 @@ export default function SearchResultsClient({ locale }: Props) {
         ) : null}
         <ul className="results-list">
           {state.items.map((it: any) => {
-            const authorsArr = Array.isArray(it.authors) ? it.authors : (Array.isArray(it.authors_preview) ? it.authors_preview : []);
-            let authors = authorsArr.slice(0, 2).map((a: any) => typeof a === 'string' ? a : (a?.name || a?.preferred_name)).filter(Boolean).join(', ');
-            if (!authors) authors = it.formatted_authors || it.author_string || '';
-            if (!authors) authors = t('common.entities.authorUnknown');
-            if (authors && authorsArr.length > 2 && it.author_count && it.author_count > 2) authors += ' et al.';
+            const authors = formatMetadataAuthors(it, t('common.entities.authorUnknown'));
             const year = it.publication_year || it.year || (it.publication && it.publication.year) || '';
-            const type = (it.work_type || it.type || '').toString().toUpperCase();
-            const venue = it.venue_name
-              || it.venue?.name
-              || it.journal
-              || it.journal_name
-              || it.journal_title
-              || it.source
-              || it.publication?.venue?.name
-              || it.publication?.journal?.name
-              || '';
-            const abstractRaw = it.abstract || it.abstract_text || it.summary || it.description || '';
-            const abstractShort = abstractRaw ? String(abstractRaw).replace(/\s+/g, ' ').slice(0, 450) + (String(abstractRaw).length > 450 ? '…' : '') : '';
+            const type = formatMetadataType(it.work_type || it.type || '');
+            const venue = formatMetadataVenue(it);
+            const abstractShort = getWorkAbstractSnippet(it);
             const openAccess = isWorkOpenAccess(it);
             const relRaw = (it.relevance ?? it.score ?? it._score ?? it.rank);
             const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);

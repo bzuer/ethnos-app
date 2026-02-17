@@ -7,7 +7,7 @@ import type { Venue } from '@/lib/api';
 import { getVenueWorksPage } from '@/lib/endpoints';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
-import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
 
@@ -440,9 +440,9 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
         <ul className="results-list" id="venue-publications">
           {works.length > 0 ? (
             works.map((pub: any) => {
-              const authorsArr = Array.isArray(pub.authors) ? pub.authors : [];
+              const authors = formatMetadataAuthors(pub, t('common.entities.authorUnknown'));
               const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
-              const type = (pub.work_type || pub.type || '').toString().toUpperCase();
+              const type = formatMetadataType(pub.work_type || pub.type || '');
               const abstract = getWorkAbstractSnippet(pub);
               const openAccess = isWorkOpenAccess(pub);
               const hasListAction = Boolean(pub?.id ?? pub?.work_id);
@@ -470,15 +470,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                         <span className="meta-separator" aria-hidden="true">•</span>
                       </>
                     ) : null}
-                    <span className="result-authors">
-                      {authorsArr.length > 0 ? (
-                        authorsArr.slice(0, 2).map((a: any, idx: number) => (
-                          <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
-                        ))
-                      ) : (
-                        t('common.entities.authorUnknown')
-                      )}
-                    </span>
+                    <span className="result-authors">{authors}</span>
                     {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
                     {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
                   </p>

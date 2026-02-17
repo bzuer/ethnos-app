@@ -239,3 +239,8 @@ Operational directive: at the end of each session or significant change, create 
 - Applied technical-string wrapping rules for `.result-doi`, `.result-doi a`, `.result-link`, and `.md5-code` using `overflow-wrap`/`word-break` tuned for long identifiers and links.
 - Updated `.result-abstract` to `text-align: left` with hyphenation disabled for more stable paragraph spacing.
 - Validation status for hyphenation/wrapping realignment: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Metadata entities were normalized with explicit character limits across list views.
+- Added reusable metadata formatters in `src/lib/works.ts` (`formatMetadataAuthors`, `formatMetadataVenue`, `formatMetadataType`, `truncateMetadataText`) with centralized limits (`authors: 80`, `venue: 80`, `type: 32`).
+- Author rendering now consistently follows `first, second, et al.` logic with truncation applied when metadata strings exceed limits.
+- Applied the formatter layer to search results, Sphinx results, person works, venue publications, home recent updates, and work reference/cited-by author rendering.
+- Validation status for metadata-limit normalization: `npm run lint` passed and `npm run build` passed.
