@@ -234,3 +234,8 @@ Operational directive: at the end of each session or significant change, create 
 - Narrowed the metadata span selector in `public/css/styles.css` from descendant scope to direct-child scope so nested spans inside `.badge-list-toggle` are not overridden.
 - This restores the expected state behavior: only `In the list` at rest, `Remove item` only on hover/focus.
 - Validation status for badge-label fix: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Automatic hyphenation was disabled globally to prevent fragmented title/metadata wrapping.
+- Updated the global text `:where(...)` rule in `public/css/styles.css` from `hyphens: auto` to `hyphens: none` (including vendor-prefixed properties).
+- Applied technical-string wrapping rules for `.result-doi`, `.result-doi a`, `.result-link`, and `.md5-code` using `overflow-wrap`/`word-break` tuned for long identifiers and links.
+- Updated `.result-abstract` to `text-align: left` with hyphenation disabled for more stable paragraph spacing.
+- Validation status for hyphenation/wrapping realignment: `npm run lint` passed and `npm run build` passed.

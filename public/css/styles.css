@@ -201,9 +201,9 @@ span,
 .temporary-message,
 .footer
 ) {
-    -webkit-hyphens: auto;
-    -ms-hyphens: auto;
-    hyphens: auto;
+    -webkit-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
     overflow-wrap: break-word;
     word-break: normal;
 }
@@ -607,6 +607,10 @@ a.action-btn {
     text-transform: uppercase;
     font-size: 16px;
 }
+.result-link {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
 .result-link:hover,
 .action-link:hover,
 .table-link:hover {
@@ -642,12 +646,15 @@ a.action-btn {
 }
 .result-abstract {
     font-family: var(--sans);
-    text-align: justify;
+    text-align: left;
     font-size: 14px;
     color: var(--data-gray);
     line-height: 1.4;
     font-weight: 300;
     margin-bottom: var(--spacing-sm);
+    -webkit-hyphens: none;
+    -ms-hyphens: none;
+    hyphens: none;
 }
 }
 .error-message,
@@ -1221,13 +1228,15 @@ a.action-btn {
     min-width: 0;
     max-width: 100%;
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-all;
 }
 .result-doi a {
     color: inherit;
     text-decoration-color: var(--border-gray);
     white-space: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    word-break: break-all;
 }
 
 .search-controls {
@@ -1924,6 +1933,8 @@ section:last-of-type {
     background: var(--bg-light);
     padding: 2px 4px;
     border-radius: 3px;
+    overflow-wrap: anywhere;
+    word-break: break-all;
 }
 
 .hidden {
