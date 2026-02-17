@@ -154,6 +154,30 @@ body::before {
     line-height: 1.4;
     margin-bottom: var(--spacing-sm);
 }
+.abstract,
+.description,
+.metadata,
+.result-abstract,
+.result-meta,
+.field-value,
+.result-authors,
+.result-publisher,
+.result-venue,
+.result-country,
+.result-issn,
+.result-eissn,
+.result-year,
+.result-coverage,
+.result-type,
+.result-total,
+.result-cited,
+.result-doi {
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
 
 .form-label {
     font-family: var(--mono);

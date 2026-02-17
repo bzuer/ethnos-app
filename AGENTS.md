@@ -211,3 +211,6 @@ Operational directive: at the end of each session or significant change, create 
 - Replaced green in-list badge state with blue by mapping `--badge-in-list` to the theme blue palette in light/dark modes.
 - Item removal notifications now use the red/error channel in both result-list badge actions and personal-list table actions.
 - Validation status for color/notification normalization: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Text hyphenation was enabled for abstract/description/metadata classes.
+- Added a unified hyphenation rule for `.abstract`, `.description`, `.metadata`, `.result-abstract`, `.result-meta`, and related metadata text classes to improve wrapping and readability in long entries.
+- Validation status for hyphenation update: `npm run lint` passed and `npm run build` passed.
