@@ -150,7 +150,6 @@ export default function WorkMetaBadges({
           <span className="badge open-acess">{openAccessLabel}</span>
         )
       ) : null}
-      {showOpenAccessBadge && showListToggleBadge ? <span aria-hidden="true"> • </span> : null}
       {showListToggleBadge ? (
         <button
           type="button"
@@ -168,7 +167,6 @@ export default function WorkMetaBadges({
           )}
         </button>
       ) : null}
-      <span aria-hidden="true"> • </span>
     </>
   );
 }

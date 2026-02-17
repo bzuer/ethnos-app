@@ -183,3 +183,7 @@ Operational directive: at the end of each session or significant change, create 
 - Badge interaction now follows `gray + green hover` for non-listed works and `green + red hover` for listed works.
 - 2026-02-17: Work-list badge state labels were refined by locale for explicit in-list status.
 - Locale states updated to `en: Save to list / Already in list / Drop from list`, `pt: Incluir na lista / Já na lista / Excluir da lista`, `es: Poner en lista / Ya en lista / Quitar de lista`.
+- 2026-02-17: Work-list item layout was reorganized into explicit blocks for readability and hierarchy.
+- Result item rendering now follows `title -> details -> badges` across search results, Sphinx results, person works, venue publications, and work reference/cited-by lists.
+- `WorkMetaBadges` no longer injects separator bullets, and `.result-badges` spacing was added in `public/css/styles.css`.
+- Validation status for hierarchy adjustment: `npm run lint` passed and `npm run build` passed.

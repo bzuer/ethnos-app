@@ -506,6 +506,10 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     {rid ? (<LocaleLink className="result-link" href={`/works/${rid}`}>{rtitle}</LocaleLink>) : (<span className="field-value">{rtitle}</span>)}
                   </h3>
                   <p className="result-meta">
+                    <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
+                    {ryear ? <> • <span className="result-year">{ryear}</span></> : null}
+                  </p>
+                  <p className="result-meta result-badges">
                     <WorkMetaBadges
                       work={r}
                       openAccess={rOpen}
@@ -517,8 +521,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                       removedMessage={t('common.messages.itemRemoved')}
                       showListBadge={Boolean(rid)}
                     />
-                    <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
-                    {ryear ? <> • <span className="result-year">{ryear}</span></> : null}
                   </p>
                   {rabstract ? <p className="result-abstract">{rabstract}</p> : null}
                 </li>
@@ -545,6 +547,10 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     {cid ? (<LocaleLink className="result-link" href={`/works/${cid}`}>{ctitle}</LocaleLink>) : (<span className="field-value">{ctitle}</span>)}
                   </h3>
                   <p className="result-meta">
+                    <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
+                    {cyear ? <> • <span className="result-year">{cyear}</span></> : null}
+                  </p>
+                  <p className="result-meta result-badges">
                     <WorkMetaBadges
                       work={c}
                       openAccess={cOpen}
@@ -556,8 +562,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                       removedMessage={t('common.messages.itemRemoved')}
                       showListBadge={Boolean(cid)}
                     />
-                    <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
-                    {cyear ? <> • <span className="result-year">{cyear}</span></> : null}
                   </p>
                   {cabstract ? <p className="result-abstract">{cabstract}</p> : null}
                 </li>

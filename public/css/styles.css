@@ -1089,6 +1089,10 @@ a.action-btn {
 .result-meta span:not(.badge) {
     display: inline-block;
 }
+.result-badges {
+    margin-top: var(--spacing-xs);
+    gap: var(--spacing-sm);
+}
 .result-authors,
 .result-publisher,
 .result-venue,
