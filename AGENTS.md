@@ -218,3 +218,7 @@ Operational directive: at the end of each session or significant change, create 
 - Replaced the narrow hyphenation selector in `public/css/styles.css` with a broader text-element rule covering headings, paragraphs, links, labels, table cells, titles, metadata rows, abstracts, and status messages.
 - Removed DOI-link overrides that forced normal wrapping so DOI text can follow the global hyphenation and wrap behavior.
 - Validation status for global hyphenation expansion: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Metadata line-wrap behavior was corrected for result rows.
+- In `public/css/styles.css`, metadata tokens inside `.result-meta` now allow shrink/wrap (`min-width: 0` on children) and text tokens render as inline text with `white-space: normal`.
+- Updated `.result-authors`, `.result-publisher`, `.result-venue`, `.result-country`, `.result-issn`, `.result-eissn`, `.result-year`, `.result-coverage`, `.result-type`, `.result-total`, `.result-cited`, and `.result-doi` to text-flow display to prevent no-wrap behavior from `inline-flex`.
+- Validation status for metadata wrap correction: `npm run lint` passed and `npm run build` passed.

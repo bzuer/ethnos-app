@@ -1138,9 +1138,15 @@ a.action-btn {
     flex-wrap: wrap;
     gap: 4px;
     align-items: center;
+    min-width: 0;
 }
-.result-meta span:not(.badge) {
-    display: inline-block;
+.result-meta span:not(.badge):not(.meta-separator) {
+    display: inline;
+    white-space: normal;
+}
+.result-meta > * {
+    min-width: 0;
+    max-width: 100%;
 }
 .result-meta .badge {
     display: inline-flex;
@@ -1184,10 +1190,8 @@ a.action-btn {
     font-family: var(--sans);
     font-size: 14px;
     color: var(--data-gray);
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
+    display: inline;
+    white-space: normal;
 
 }
 .result-year,
@@ -1199,24 +1203,21 @@ a.action-btn {
     font-size: 14px;
     color: var(--data-gray);
     font-weight: 400;
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
+    display: inline;
+    white-space: normal;
 }
 .result-doi {
     font-family: var(--mono);
     font-size: 12px;
     line-height: 1.2;
     color: var(--border-gray);
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
+    display: inline;
+    white-space: normal;
 }
 .result-doi a {
     color: inherit;
     text-decoration-color: var(--border-gray);
+    white-space: normal;
 }
 
 .search-controls {
