@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
+import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { isWorkOpenAccess } from '@/lib/works';
 
@@ -124,11 +125,20 @@ export default function SearchSphinxClient({ locale }: Props) {
                   <LocaleLink className="result-link" href={`/works/${it.id}`}>{it.title || t('common.entities.titleUnavailable')}</LocaleLink>
                 </h3>
                 <p className="result-meta">
+                  <WorkMetaBadges
+                    work={it}
+                    openAccess={openAccess}
+                    openAccessLabel={t('common.meta.openAccess')}
+                    addToListLabel={t('common.actions.addToList')}
+                    inListLabel={t('common.actions.inList')}
+                    removeFromListLabel={t('common.actions.removeFromList')}
+                    addedMessage={t('common.messages.added')}
+                    removedMessage={t('common.messages.itemRemoved')}
+                  />
                   <span className="result-authors">{authors}</span>
                   {year ? <> • <span className="result-year">{year}</span></> : null}
                   {type ? <> • <span className="result-type">{type}</span></> : null}
                   {lang ? <> • <span className="result-language">{lang}</span></> : null}
-                  {openAccess ? <> • <span className="badge open-acess">{t('common.meta.openAccess')}</span></> : null}
                   {rel ? <> • <span className="relevance-score">{rel}</span></> : null}
                   {doi ? <> • <span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doi}</a></span></> : null}
                 </p>

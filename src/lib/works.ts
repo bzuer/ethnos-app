@@ -10,6 +10,29 @@ function resolveBoolean(value: any) {
   return undefined;
 }
 
+function pickDoiRaw(item: any) {
+  if (!item) return '';
+  const direct = item?.doi ?? item?.DOI;
+  if (direct) return direct;
+  const publication = item?.publication?.doi;
+  if (publication) return publication;
+  const identifiers = item?.identifiers?.doi ?? item?.ids?.doi;
+  if (identifiers) return identifiers;
+  return '';
+}
+
+function pickDoiValue(raw: any): string {
+  if (!raw) return '';
+  if (Array.isArray(raw)) {
+    const first = raw.find((entry) => entry !== null && entry !== undefined && String(entry).trim() !== '');
+    return pickDoiValue(first);
+  }
+  if (typeof raw === 'object') {
+    return pickDoiValue(raw?.doi ?? raw?.id ?? raw?.value ?? raw?.identifier ?? '');
+  }
+  return String(raw).trim();
+}
+
 const stripAbstractNoise = (text: string) => {
   const cleaned = text
     .replace(/<[^>]*>/g, ' ')
@@ -77,4 +100,17 @@ export function isWorkOpenAccess(item: any) {
     if (normalized && !['', 'closed', 'all-rights-reserved', 'unknown'].includes(normalized)) return true;
   }
   return false;
+}
+
+export function getWorkDoi(item: any) {
+  const raw = pickDoiRaw(item);
+  const doi = pickDoiValue(raw);
+  if (!doi) return '';
+  return doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
+}
+
+export function getWorkOpenAccessDoiUrl(item: any) {
+  const doi = getWorkDoi(item);
+  if (!doi) return '';
+  return `https://oadoi.org/${encodeURIComponent(doi)}`;
 }

@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/routing';
 import LocaleLink from '@/components/common/LocaleLink';
+import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { getPersonsWorks } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
@@ -365,9 +366,18 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                     <LocaleLink href={`/works/${pub.id}`} className="result-link">{pub.title && pub.title.length > 200 ? `${pub.title.slice(0, 200)}…` : (pub.title || t('common.entities.titleUnavailable'))}</LocaleLink>
                   </h3>
                   <p className="result-meta">
-                  {openAccess ? <> <span className="badge open-acess">{t('common.meta.openAccess')}</span> • </> : null }
-                    {type ? <span className="result-type"> {type}</span> : null}
-                    <span className="result-authors"> • {authorsArr.length > 0 ? (
+                    <WorkMetaBadges
+                      work={pub}
+                      openAccess={openAccess}
+                      openAccessLabel={t('common.meta.openAccess')}
+                      addToListLabel={t('common.actions.addToList')}
+                      inListLabel={t('common.actions.inList')}
+                      removeFromListLabel={t('common.actions.removeFromList')}
+                      addedMessage={t('common.messages.added')}
+                      removedMessage={t('common.messages.itemRemoved')}
+                    />
+                    {type ? <><span className="result-type">{type}</span> • </> : null}
+                    <span className="result-authors">{authorsArr.length > 0 ? (
                         authorsArr.slice(0, 2).map((a: any, idx: number) => (
                           <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
                         ))
@@ -375,7 +385,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                         role
                       )}
                     </span>
-                    {year ? <span className="result-year"> • {year}</span> : null}
+                    {year ? <> • <span className="result-year">{year}</span></> : null}
                   </p>
                   {abstract ? <p className="result-abstract">{abstract}</p> : null}
                 </li>

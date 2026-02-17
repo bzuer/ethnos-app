@@ -9,6 +9,8 @@
     --primary-red: #8c2029;
     --primary-blue: #20298C;
     --primary-yellow: #c6c43a;
+    --badge-neutral: #6f7078;
+    --badge-in-list: #2f7d32;
     --sans: "system-ui", "apple-system", "linkMacSystemFont", "Segoe UI", "Roboto", "Noto Sans", "Ubuntu", "Cantarell", "Helvetica Neue", "Arial", sans-serif;
     --mono: "SF Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "DejaVu Sans Mono","Courier New", monospace;
     --spacing-xs: 4px;
@@ -37,6 +39,8 @@
     --primary-red: #f07178;
     --primary-blue: #82aaff;
     --primary-yellow: #ffcc66;
+    --badge-neutral: #888997;
+    --badge-in-list: #44a54a;
     --sans: "system-ui", "apple-system", "linkMacSystemFont", "Segoe UI", "Roboto", "Noto Sans", "Ubuntu", "Cantarell", "Helvetica Neue", "Arial", sans-serif;
     --mono: "SF Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
     --spacing-xs: 4px;
@@ -1726,6 +1730,48 @@ section:last-of-type {
 .badge.open-acess {
     background: var(--primary-yellow);
     color: var(--bg-light);
+}
+
+.badge-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.badge-link:hover,
+.badge-link:focus-visible {
+    color: var(--bg-light);
+    opacity: 0.9;
+}
+
+.badge-list-toggle {
+    border: 0;
+    background: var(--badge-neutral);
+    color: var(--document-white);
+    cursor: pointer;
+}
+
+.badge-list-toggle.in-list {
+    background: var(--badge-in-list);
+    color: var(--document-white);
+}
+
+.badge-list-toggle.in-list .badge-list-label-hover {
+    display: none;
+}
+
+.badge-list-toggle.in-list:hover,
+.badge-list-toggle.in-list:focus-visible {
+    background: var(--primary-red);
+}
+
+.badge-list-toggle.in-list:hover .badge-list-label,
+.badge-list-toggle.in-list:focus-visible .badge-list-label {
+    display: none;
+}
+
+.badge-list-toggle.in-list:hover .badge-list-label-hover,
+.badge-list-toggle.in-list:focus-visible .badge-list-label-hover {
+    display: inline;
 }
 
 .search-input-wrapper {

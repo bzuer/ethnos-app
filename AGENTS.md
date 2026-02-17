@@ -1,5 +1,8 @@
 # Repository Guidelines
 
+Operational directive: keep absolute cleanliness, technical clarity, hierarchy, and standardization. Do not version generated artifacts, logs, backups, or dumps. Remove out-of-scope content.
+Operational directive: at the end of each session or significant change, create a commit summarizing the work.
+
 ## Language and Clean Code
 - Keep the entire project in technical English: pages, metadata, documentation, UI text, and CSS/SSOT descriptions.
 - Localized content is allowed only in locale-scoped assets: `messages/{locale}.json` for UI strings and `docs/**` files explicitly labeled for that language in the filename and content.
@@ -168,3 +171,10 @@
 - Added locale fallback route `src/app/(site)/[locale]/[...rest]/page.tsx` to trigger localized not-found flow within locale layout.
 - Validation status for locale SSR refactor: `npm run lint` passed, `npm run build` passed, and SSG shells remained static for home/search/venues.
 - Runtime checks executed on dev `:1210` and production `next start` (`:4010`) confirmed locale rewrite headers and `html lang` SSR for `/`, `/pt`, `/es`.
+- 2026-02-17: Work-list badge interactions were extended across result-list pages.
+- Added reusable client component `src/components/common/WorkMetaBadges.tsx` to render clickable Open Access badge and personal-list toggle badge in search, Sphinx, person works, venue publications, and work references/cited-by lists.
+- Open Access badge now opens `https://oadoi.org/{doi}` in a new tab when DOI is available, preserving existing badge styling.
+- Added list-toggle badge states with existing badge styling: neutral `Add to list`, green `In list`, and red hover state showing `Remove from list`.
+- Added i18n keys `common.actions.inList` and `common.actions.removeFromList` in `messages/en.json`, `messages/pt.json`, and `messages/es.json`.
+- Added helper exports `getWorkDoi` and `getWorkOpenAccessDoiUrl` in `src/lib/works.ts`.
+- Validation status for badge feature: `npm run lint` passed and `npm run build` passed.

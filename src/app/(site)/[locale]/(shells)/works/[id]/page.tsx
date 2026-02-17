@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
+import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import ClientActions from './work-actions';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
@@ -505,9 +506,19 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     {rid ? (<LocaleLink className="result-link" href={`/works/${rid}`}>{rtitle}</LocaleLink>) : (<span className="field-value">{rtitle}</span>)}
                   </h3>
                   <p className="result-meta">
+                    <WorkMetaBadges
+                      work={r}
+                      openAccess={rOpen}
+                      openAccessLabel={t('common.meta.openAccess')}
+                      addToListLabel={t('common.actions.addToList')}
+                      inListLabel={t('common.actions.inList')}
+                      removeFromListLabel={t('common.actions.removeFromList')}
+                      addedMessage={t('common.messages.added')}
+                      removedMessage={t('common.messages.itemRemoved')}
+                      showListBadge={Boolean(rid)}
+                    />
                     <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
                     {ryear ? <> • <span className="result-year">{ryear}</span></> : null}
-                    {rOpen ? <> • <span className="badge open-acess">{t('common.meta.openAccess')}</span></> : null}
                   </p>
                   {rabstract ? <p className="result-abstract">{rabstract}</p> : null}
                 </li>
@@ -534,9 +545,19 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     {cid ? (<LocaleLink className="result-link" href={`/works/${cid}`}>{ctitle}</LocaleLink>) : (<span className="field-value">{ctitle}</span>)}
                   </h3>
                   <p className="result-meta">
+                    <WorkMetaBadges
+                      work={c}
+                      openAccess={cOpen}
+                      openAccessLabel={t('common.meta.openAccess')}
+                      addToListLabel={t('common.actions.addToList')}
+                      inListLabel={t('common.actions.inList')}
+                      removeFromListLabel={t('common.actions.removeFromList')}
+                      addedMessage={t('common.messages.added')}
+                      removedMessage={t('common.messages.itemRemoved')}
+                      showListBadge={Boolean(cid)}
+                    />
                     <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
                     {cyear ? <> • <span className="result-year">{cyear}</span></> : null}
-                    {cOpen ? <> • <span className="badge open-acess">{t('common.meta.openAccess')}</span></> : null}
                   </p>
                   {cabstract ? <p className="result-abstract">{cabstract}</p> : null}
                 </li>

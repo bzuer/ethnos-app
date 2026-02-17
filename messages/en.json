@@ -35,6 +35,8 @@
       "next": "Next",
       "goHome": "Go to homepage",
       "addToList": "Add to list",
+      "inList": "In list",
+      "removeFromList": "Remove from list",
       "openDoi": "Open DOI",
       "openSciHub": "Sci-Hub",
       "openBestOa": "Open Access",

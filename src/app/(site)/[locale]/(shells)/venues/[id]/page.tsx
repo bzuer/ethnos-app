@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/routing';
 import LocaleLink from '@/components/common/LocaleLink';
+import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
 import { getVenueWorksPage } from '@/lib/endpoints';
@@ -452,7 +453,16 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                     </LocaleLink>
                   </h3>
                   <p className="result-meta">
-                   {openAccess ? <> <span className="badge open-acess">{t('common.meta.openAccess')}</span> • </> : null }
+                    <WorkMetaBadges
+                      work={pub}
+                      openAccess={openAccess}
+                      openAccessLabel={t('common.meta.openAccess')}
+                      addToListLabel={t('common.actions.addToList')}
+                      inListLabel={t('common.actions.inList')}
+                      removeFromListLabel={t('common.actions.removeFromList')}
+                      addedMessage={t('common.messages.added')}
+                      removedMessage={t('common.messages.itemRemoved')}
+                    />
                     <span className="result-authors">
                       {authorsArr.length > 0 ? (
                         authorsArr.slice(0, 2).map((a: any, idx: number) => (

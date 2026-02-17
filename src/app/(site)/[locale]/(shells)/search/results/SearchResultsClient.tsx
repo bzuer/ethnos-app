@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
+import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname } from '@/i18n/routing';
 import { isWorkOpenAccess } from '@/lib/works';
 
@@ -122,7 +123,16 @@ export default function SearchResultsClient({ locale }: Props) {
                   <LocaleLink className="result-link" href={`/works/${it.id}`}>{it.title || t('common.entities.titleUnavailable')}</LocaleLink>
                 </h3>
                 <p className="result-meta">
-                  {openAccess ? <> <span className="badge open-acess">{t('common.meta.openAccess')}</span> • </> : null}
+                  <WorkMetaBadges
+                    work={it}
+                    openAccess={openAccess}
+                    openAccessLabel={t('common.meta.openAccess')}
+                    addToListLabel={t('common.actions.addToList')}
+                    inListLabel={t('common.actions.inList')}
+                    removeFromListLabel={t('common.actions.removeFromList')}
+                    addedMessage={t('common.messages.added')}
+                    removedMessage={t('common.messages.itemRemoved')}
+                  />
                   <span className="result-authors">{authors}</span>
                   {year ? <> • <span className="result-year">{year}</span></> : null}
                   {venue ? <> • <span className="result-venue">{venue}</span></> : null}
