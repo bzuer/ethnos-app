@@ -1750,6 +1750,11 @@ section:last-of-type {
     cursor: pointer;
 }
 
+.badge-list-toggle:hover,
+.badge-list-toggle:focus-visible {
+    background: var(--badge-in-list);
+}
+
 .badge-list-toggle.in-list {
     background: var(--badge-in-list);
     color: var(--document-white);

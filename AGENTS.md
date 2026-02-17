@@ -178,3 +178,6 @@ Operational directive: at the end of each session or significant change, create 
 - Added i18n keys `common.actions.inList` and `common.actions.removeFromList` in `messages/en.json`, `messages/pt.json`, and `messages/es.json`.
 - Added helper exports `getWorkDoi` and `getWorkOpenAccessDoiUrl` in `src/lib/works.ts`.
 - Validation status for badge feature: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Work-list badge labels were updated to custom locale wording and hover behavior was refined.
+- Locale labels set to `pt: Incluir na lista/Excluir da lista`, `en: Save to list/Drop from list`, `es: Poner en lista/Quitar de lista`.
+- Badge interaction now follows `gray + green hover` for non-listed works and `green + red hover` for listed works.
