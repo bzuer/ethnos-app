@@ -207,3 +207,7 @@ Operational directive: at the end of each session or significant change, create 
 - 2026-02-17: Work-list spacing hierarchy was adjusted to increase action-to-abstract separation.
 - Updated `.result-item .result-badges + .result-abstract` to `3` spacing units (`calc(var(--spacing-xs) * 3)`) while preserving `title -> metadata` (2) and `metadata -> action` (1).
 - Validation status for spacing increment: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: List-action color palette and removal notices were normalized.
+- Replaced green in-list badge state with blue by mapping `--badge-in-list` to the theme blue palette in light/dark modes.
+- Item removal notifications now use the red/error channel in both result-list badge actions and personal-list table actions.
+- Validation status for color/notification normalization: `npm run lint` passed and `npm run build` passed.

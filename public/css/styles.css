@@ -10,7 +10,7 @@
     --primary-blue: #20298C;
     --primary-yellow: #c6c43a;
     --badge-neutral: #6f7078;
-    --badge-in-list: #2f7d32;
+    --badge-in-list: #20298C;
     --sans: "system-ui", "apple-system", "linkMacSystemFont", "Segoe UI", "Roboto", "Noto Sans", "Ubuntu", "Cantarell", "Helvetica Neue", "Arial", sans-serif;
     --mono: "SF Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "DejaVu Sans Mono","Courier New", monospace;
     --spacing-xs: 4px;
@@ -40,7 +40,7 @@
     --primary-blue: #82aaff;
     --primary-yellow: #ffcc66;
     --badge-neutral: #888997;
-    --badge-in-list: #44a54a;
+    --badge-in-list: #82aaff;
     --sans: "system-ui", "apple-system", "linkMacSystemFont", "Segoe UI", "Roboto", "Noto Sans", "Ubuntu", "Cantarell", "Helvetica Neue", "Arial", sans-serif;
     --mono: "SF Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
     --spacing-xs: 4px;

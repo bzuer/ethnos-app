@@ -356,7 +356,7 @@ export default function ListPageClient() {
     writeList(list);
     setItems(list);
     updateHeaderCounter();
-    showNotification(t('common.messages.itemRemoved'), 'info');
+    showNotification(t('common.messages.itemRemoved'), 'error');
   };
 
   const onClear = () => {

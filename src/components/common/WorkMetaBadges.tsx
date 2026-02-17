@@ -125,7 +125,7 @@ export default function WorkMetaBadges({
       if (writeList(next)) {
         updateHeaderCounter();
         dispatchListUpdatedEvent();
-        showNotification(removedMessage, 'info');
+        showNotification(removedMessage, 'error');
       }
       return;
     }
