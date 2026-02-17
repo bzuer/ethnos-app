@@ -367,20 +367,8 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                     <LocaleLink href={`/works/${pub.id}`} className="result-link">{pub.title && pub.title.length > 200 ? `${pub.title.slice(0, 200)}…` : (pub.title || t('common.entities.titleUnavailable'))}</LocaleLink>
                   </h3>
                   <p className="result-meta">
-                    {type ? <span className="result-type">{type}</span> : null}
-                    {type ? ' • ' : null}
-                    <span className="result-authors">{authorsArr.length > 0 ? (
-                        authorsArr.slice(0, 2).map((a: any, idx: number) => (
-                          <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
-                        ))
-                      ) : (
-                        role
-                      )}
-                    </span>
-                    {year ? <> • <span className="result-year">{year}</span></> : null}
                     {openAccess ? (
                       <>
-                        {' '}•{' '}
                         <WorkMetaBadges
                           work={pub}
                           openAccess={openAccess}
@@ -392,8 +380,20 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
+                        {' '}•{' '}
                       </>
                     ) : null}
+                    {type ? <span className="result-type">{type}</span> : null}
+                    {type ? ' • ' : null}
+                    <span className="result-authors">{authorsArr.length > 0 ? (
+                        authorsArr.slice(0, 2).map((a: any, idx: number) => (
+                          <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
+                        ))
+                      ) : (
+                        role
+                      )}
+                    </span>
+                    {year ? <> • <span className="result-year">{year}</span></> : null}
                   </p>
                   {hasListAction ? (
                     <p className="result-meta result-badges">

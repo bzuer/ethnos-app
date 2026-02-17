@@ -191,3 +191,7 @@ Operational directive: at the end of each session or significant change, create 
 - Open Access badge now remains in `.result-meta` as a metadata qualifier, while personal-list actions render in a dedicated action row below metadata and above abstract content.
 - `WorkMetaBadges` now supports independent rendering flags for Open Access and list actions (`showOpenAccessBadge`, `showListBadge`) to preserve the `title -> metadata -> action zone -> abstract` hierarchy.
 - Validation status for badge disposition refinement: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Open Access badge positioning and alignment were refined in metadata rows.
+- Open Access now renders at the start of `.result-meta` across work-list contexts, followed by bibliographic metadata.
+- Metadata row alignment was adjusted so badges and text share a consistent vertical baseline (`.result-meta` now centers inline items and `.result-meta .badge` uses middle alignment).
+- Validation status for OA start-position/alignment adjustment: `npm run lint` passed and `npm run build` passed.

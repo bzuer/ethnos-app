@@ -1084,10 +1084,13 @@ a.action-btn {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    align-items: baseline;
+    align-items: center;
 }
 .result-meta span:not(.badge) {
     display: inline-block;
+}
+.result-meta .badge {
+    vertical-align: middle;
 }
 .result-badges {
     margin-top: var(--spacing-xs);

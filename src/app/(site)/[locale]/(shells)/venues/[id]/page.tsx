@@ -454,20 +454,8 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                     </LocaleLink>
                   </h3>
                   <p className="result-meta">
-                    <span className="result-authors">
-                      {authorsArr.length > 0 ? (
-                        authorsArr.slice(0, 2).map((a: any, idx: number) => (
-                          <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
-                        ))
-                      ) : (
-                        t('common.entities.authorUnknown')
-                      )}
-                    </span>
-                    {year ? <span className="result-year"> • {year}</span> : null}
-                    {type ? <span className="result-type"> • {type}</span> : null}
                     {openAccess ? (
                       <>
-                        {' '}•{' '}
                         <WorkMetaBadges
                           work={pub}
                           openAccess={openAccess}
@@ -479,8 +467,20 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
+                        {' '}•{' '}
                       </>
                     ) : null}
+                    <span className="result-authors">
+                      {authorsArr.length > 0 ? (
+                        authorsArr.slice(0, 2).map((a: any, idx: number) => (
+                          <span key={idx}>{typeof a === 'string' ? a : (a?.preferred_name || a?.name)}{idx < Math.min(authorsArr.length, 2) - 1 ? ', ' : ''}</span>
+                        ))
+                      ) : (
+                        t('common.entities.authorUnknown')
+                      )}
+                    </span>
+                    {year ? <span className="result-year"> • {year}</span> : null}
+                    {type ? <span className="result-type"> • {type}</span> : null}
                   </p>
                   {hasListAction ? (
                     <p className="result-meta result-badges">

@@ -126,15 +126,8 @@ export default function SearchSphinxClient({ locale }: Props) {
                   <LocaleLink className="result-link" href={`/works/${it.id}`}>{it.title || t('common.entities.titleUnavailable')}</LocaleLink>
                 </h3>
                 <p className="result-meta">
-                  <span className="result-authors">{authors}</span>
-                  {year ? <> • <span className="result-year">{year}</span></> : null}
-                  {type ? <> • <span className="result-type">{type}</span></> : null}
-                  {lang ? <> • <span className="result-language">{lang}</span></> : null}
-                  {rel ? <> • <span className="relevance-score">{rel}</span></> : null}
-                  {doi ? <> • <span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doi}</a></span></> : null}
                   {openAccess ? (
                     <>
-                      {' '}•{' '}
                       <WorkMetaBadges
                         work={it}
                         openAccess={openAccess}
@@ -146,8 +139,15 @@ export default function SearchSphinxClient({ locale }: Props) {
                         removedMessage={t('common.messages.itemRemoved')}
                         showListBadge={false}
                       />
+                      {' '}•{' '}
                     </>
                   ) : null}
+                  <span className="result-authors">{authors}</span>
+                  {year ? <> • <span className="result-year">{year}</span></> : null}
+                  {type ? <> • <span className="result-type">{type}</span></> : null}
+                  {lang ? <> • <span className="result-language">{lang}</span></> : null}
+                  {rel ? <> • <span className="relevance-score">{rel}</span></> : null}
+                  {doi ? <> • <span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doi}</a></span></> : null}
                 </p>
                 {hasListAction ? (
                   <p className="result-meta result-badges">
