@@ -1190,8 +1190,11 @@ a.action-btn {
     font-family: var(--sans);
     font-size: 14px;
     color: var(--data-gray);
-    display: inline;
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
     white-space: normal;
+    overflow-wrap: anywhere;
 
 }
 .result-year,
@@ -1203,21 +1206,31 @@ a.action-btn {
     font-size: 14px;
     color: var(--data-gray);
     font-weight: 400;
-    display: inline;
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
     white-space: normal;
+    overflow-wrap: anywhere;
 }
 .result-doi {
     font-family: var(--mono);
     font-size: 12px;
     line-height: 1.2;
     color: var(--border-gray);
-    display: inline;
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
     white-space: normal;
+    overflow-wrap: anywhere;
 }
 .result-doi a {
     color: inherit;
     text-decoration-color: var(--border-gray);
     white-space: normal;
+    overflow-wrap: anywhere;
+}
+.result-venue {
+    flex: 1 1 24ch;
 }
 
 .search-controls {

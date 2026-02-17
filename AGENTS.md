@@ -222,3 +222,7 @@ Operational directive: at the end of each session or significant change, create 
 - In `public/css/styles.css`, metadata tokens inside `.result-meta` now allow shrink/wrap (`min-width: 0` on children) and text tokens render as inline text with `white-space: normal`.
 - Updated `.result-authors`, `.result-publisher`, `.result-venue`, `.result-country`, `.result-issn`, `.result-eissn`, `.result-year`, `.result-coverage`, `.result-type`, `.result-total`, `.result-cited`, and `.result-doi` to text-flow display to prevent no-wrap behavior from `inline-flex`.
 - Validation status for metadata wrap correction: `npm run lint` passed and `npm run build` passed.
+- 2026-02-17: Metadata wrapping strength was increased for long venue strings in result lists.
+- Updated metadata text tokens in `public/css/styles.css` to `inline-block` with `max-width: 100%`, `min-width: 0`, and `overflow-wrap: anywhere` for stronger line breaking when needed.
+- Added flexible sizing for `.result-venue` (`flex: 1 1 24ch`) so long venue names can occupy remaining row width and wrap instead of forcing a single-line token.
+- Validation status for stronger metadata wrapping: `npm run lint` passed and `npm run build` passed.
