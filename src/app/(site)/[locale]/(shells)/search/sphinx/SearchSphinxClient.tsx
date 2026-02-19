@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname, useRouter } from '@/i18n/routing';
-import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
 
 type Props = { locale: string };
 
@@ -106,7 +106,6 @@ export default function SearchSphinxClient({ locale }: Props) {
           {state.items.map((it: any) => {
             const authors = formatMetadataAuthors(it, t('common.entities.authorUnknown'));
             const year = it.publication_year || it.year || (it.publication && it.publication.year) || '';
-            const venue = formatMetadataVenue(it);
             const type = formatMetadataType(it.work_type || it.type || '');
             const abstractShort = getWorkAbstractSnippet(it);
             const openAccess = isWorkOpenAccess(it);
@@ -140,7 +139,6 @@ export default function SearchSphinxClient({ locale }: Props) {
                   ) : null}
                   <span className="result-authors">{authors}</span>
                   {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
-                  {venue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{venue}</span></> : null}
                   {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
                   {rel ? <><span className="meta-separator" aria-hidden="true">•</span><span className="relevance-score">{rel}</span></> : null}
                   {doi ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-doi"><a href={`https://doi.org/${encodeURIComponent(String(doi))}`} target="_blank" rel="noopener noreferrer">{doiText}</a></span></> : null}

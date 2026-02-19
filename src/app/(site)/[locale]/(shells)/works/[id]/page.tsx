@@ -5,7 +5,7 @@ import ClientActions from './work-actions';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
-import { formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, sanitizeWorkAbstract } from '@/lib/works';
+import { getWorkAbstractSnippet, isWorkOpenAccess, sanitizeWorkAbstract } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
 import { redirect } from '@/i18n/routing';
 import { buildCoins, buildCitationMeta, loadWork, pickReferenceAuthors } from './work-detail';
@@ -498,7 +498,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               const rtitle = r?.title || r?.work_title || t('common.entities.titleUnavailable');
               const rauth = pickReferenceAuthors(r);
               const ryear = r?.publication_year || r?.year || '';
-              const rvenue = formatMetadataVenue(r);
               const rabstract = getWorkAbstractSnippet(r);
               const rOpen = isWorkOpenAccess(r);
               return (
@@ -525,7 +524,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     ) : null}
                     <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
                     {ryear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{ryear}</span></> : null}
-                    {rvenue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{rvenue}</span></> : null}
                   </p>
                   {rid ? (
                     <p className="result-meta result-badges">
@@ -560,7 +558,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               const ctitle = c?.title || c?.work_title || t('common.entities.titleUnavailable');
               const cauth = pickReferenceAuthors(c);
               const cyear = c?.publication_year || c?.year || '';
-              const cvenue = formatMetadataVenue(c);
               const cabstract = getWorkAbstractSnippet(c);
               const cOpen = isWorkOpenAccess(c);
               return (
@@ -587,7 +584,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     ) : null}
                     <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
                     {cyear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{cyear}</span></> : null}
-                    {cvenue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{cvenue}</span></> : null}
                   </p>
                   {cid ? (
                     <p className="result-meta result-badges">

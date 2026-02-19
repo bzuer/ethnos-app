@@ -250,3 +250,8 @@ Operational directive: at the end of each session or significant change, create 
 - Extended work-list metadata rows to include formatted venue names in Sphinx results, person works, and work detail references/cited-by sections.
 - Updated venue typing in `src/lib/api.ts` to include `abbreviated_name` and `summary_snapshot.abbreviated_name`.
 - Validation status for abbreviated-venue adoption: `npm run lint` passed and `npm run build` passed.
+- 2026-02-19: Venue-name scope was refined by page type.
+- Restored full journal names for venues-facing pages and detail contexts, including home top venues (`src/app/(site)/[locale]/(shells)/page.tsx`) and venues list (`src/app/(site)/[locale]/(shells)/venues/VenuesList.tsx`).
+- Kept abbreviated venue rendering only in work-list contexts requested: search results (`src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx`) and person works (`src/app/(site)/[locale]/(shells)/persons/[id]/PersonPage.tsx`).
+- Removed abbreviated-venue insertion from Sphinx results and work detail references/cited-by sections to preserve full-name behavior in non-requested contexts.
+- Validation status for scope refinement: `npm run lint` passed and `npm run build` passed.

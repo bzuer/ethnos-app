@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import { formatNumber } from '@/lib/format';
 import { extractVenueListState, VenueListState } from '@/lib/venues';
 import { usePathname } from '@/i18n/routing';
-import { pickVenueDisplayName } from '@/lib/works';
 
 interface Props {
   initialData: any;
@@ -139,7 +138,7 @@ export default function VenuesList({ initialData, initialPage = 1, initialLimit 
             return (
               <li className="result-item" key={v.id}>
                 <h3 className="result-title">
-                  <LocaleLink className="result-link" href={`/venues/${v.id}`}>{pickVenueDisplayName(v) || tc('entities.nameUnavailable')}</LocaleLink>
+                  <LocaleLink className="result-link" href={`/venues/${v.id}`}>{v.name || tc('entities.nameUnavailable')}</LocaleLink>
                 </h3>
                 {metaSegments.length > 0 ? (
                   <p className="result-meta">
