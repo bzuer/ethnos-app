@@ -4,7 +4,7 @@ import { getHomeRecentWorks, getHomeTopVenues } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
-import { formatMetadataAuthors } from '@/lib/works';
+import { formatMetadataAuthors, pickVenueDisplayName } from '@/lib/works';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
@@ -80,7 +80,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
             <tbody>
               {venues.slice(0, 25).map((v: any) => (
                 <tr key={v.id}>
-                  <td className="field-value"><LocaleLink className="action-link table-link" href={`/venues/${v.id}`}>{v.name || t('common.entities.nameUnavailable')}</LocaleLink></td>
+                  <td className="field-value"><LocaleLink className="action-link table-link" href={`/venues/${v.id}`}>{pickVenueDisplayName(v) || t('common.entities.nameUnavailable')}</LocaleLink></td>
                   <td className="field-value">{(v.publisher && v.publisher.name) || t('common.entities.publisherUnknown')}</td>
                   <td className="field-value">{v.coverage_start_year && v.coverage_end_year ? `${v.coverage_start_year}-${v.coverage_end_year}` : '-'}</td>
                 </tr>

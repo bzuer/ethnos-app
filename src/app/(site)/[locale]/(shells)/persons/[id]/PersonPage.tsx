@@ -4,7 +4,7 @@ import LocaleLink from '@/components/common/LocaleLink';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { getPersonsWorks } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
-import { formatMetadataAuthors, formatMetadataType, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
 import { fetchJson } from '@/lib/api';
 import { localizedPath } from '@/i18n/paths';
 import { locales, type Locale } from '@/i18n/config';
@@ -357,6 +357,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               const openAccess = isWorkOpenAccess(pub);
               const authors = formatMetadataAuthors(pub, '');
               const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
+              const venue = formatMetadataVenue(pub);
               const type = formatMetadataType(pub.work_type || pub.type || '');
               const role = truncateMetadataText((pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase(), 48);
               const abstract = getWorkAbstractSnippet(pub);
@@ -388,6 +389,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                     <span className="result-authors">{authors || role}
                     </span>
                     {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
+                    {venue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{venue}</span></> : null}
                   </p>
                   {hasListAction ? (
                     <p className="result-meta result-badges">

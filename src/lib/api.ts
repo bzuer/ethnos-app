@@ -64,6 +64,7 @@ function wait(ms: number) {
 export interface Venue {
   id: string | number;
   name?: string;
+  abbreviated_name?: string;
   type?: string;
   issn?: string;
   eissn?: string;
@@ -78,6 +79,8 @@ export interface Venue {
   snip?: number | string | null;
   citescore?: number | string | null;
   summary_snapshot?: {
+    name?: string;
+    abbreviated_name?: string;
     summary?: string;
     description?: string;
     focus?: string;

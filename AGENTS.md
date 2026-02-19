@@ -244,3 +244,9 @@ Operational directive: at the end of each session or significant change, create 
 - Author rendering now consistently follows `first, second, et al.` logic with truncation applied when metadata strings exceed limits.
 - Applied the formatter layer to search results, Sphinx results, person works, venue publications, home recent updates, and work reference/cited-by author rendering.
 - Validation status for metadata-limit normalization: `npm run lint` passed and `npm run build` passed.
+- 2026-02-19: Venue display names were updated to prioritize abbreviated journal names from venue payloads.
+- Added `pickVenueDisplayName` in `src/lib/works.ts` and updated `pickWorkVenue` to prefer abbreviated fields (`abbreviated_name`, journal abbreviation variants) before full names, with fallback compatibility.
+- Applied abbreviated venue rendering in home top venues (`src/app/(site)/[locale]/(shells)/page.tsx`) and venues list results (`src/app/(site)/[locale]/(shells)/venues/VenuesList.tsx`).
+- Extended work-list metadata rows to include formatted venue names in Sphinx results, person works, and work detail references/cited-by sections.
+- Updated venue typing in `src/lib/api.ts` to include `abbreviated_name` and `summary_snapshot.abbreviated_name`.
+- Validation status for abbreviated-venue adoption: `npm run lint` passed and `npm run build` passed.

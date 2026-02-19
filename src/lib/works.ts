@@ -127,6 +127,21 @@ function normalizeText(value: any) {
   return String(value).replace(/\s+/g, ' ').trim();
 }
 
+export function pickVenueDisplayName(item: any) {
+  if (!item) return '';
+  return normalizeText(
+    item?.abbreviated_name
+    || item?.abbreviatedName
+    || item?.summary_snapshot?.abbreviated_name
+    || item?.journal_abbreviated_name
+    || item?.journal_abbreviation
+    || item?.short_name
+    || item?.name
+    || item?.summary_snapshot?.name
+    || ''
+  );
+}
+
 export function truncateMetadataText(value: any, maxChars: number = METADATA_TEXT_LIMITS.default) {
   const text = normalizeText(value);
   if (!text) return '';
@@ -180,13 +195,25 @@ export function formatMetadataAuthors(item: any, fallback = '', maxChars: number
 }
 
 export function pickWorkVenue(item: any) {
+  const publication = item?.publication || {};
   return normalizeText(
-    item?.venue_name
-    || item?.venue?.name
+    item?.venue_abbreviated_name
+    || item?.venue_abbreviation
+    || item?.journal_abbreviated_name
+    || item?.journal_abbreviation
+    || pickVenueDisplayName(item?.venue)
+    || pickVenueDisplayName(item?.publication?.venue)
+    || pickVenueDisplayName(item?.publication?.journal)
+    || publication?.journal_abbreviated_name
+    || publication?.journal_abbreviation
+    || item?.venue_name
     || item?.journal
     || item?.journal_name
     || item?.journal_title
     || item?.source
+    || publication?.journal
+    || publication?.source
+    || item?.venue?.name
     || item?.publication?.venue?.name
     || item?.publication?.journal?.name
     || ''
