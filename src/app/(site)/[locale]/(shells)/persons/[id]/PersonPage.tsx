@@ -357,7 +357,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               const openAccess = isWorkOpenAccess(pub);
               const authors = formatMetadataAuthors(pub, '');
               const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
-              const venue = formatMetadataVenue(pub);
+              const venue = formatMetadataVenue(pub, 50);
               const type = formatMetadataType(pub.work_type || pub.type || '');
               const role = truncateMetadataText((pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase(), 48);
               const abstract = getWorkAbstractSnippet(pub);

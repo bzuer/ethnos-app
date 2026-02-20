@@ -97,7 +97,7 @@ export default function SearchResultsClient({ locale }: Props) {
             const authors = formatMetadataAuthors(it, t('common.entities.authorUnknown'));
             const year = it.publication_year || it.year || (it.publication && it.publication.year) || '';
             const type = formatMetadataType(it.work_type || it.type || '');
-            const venue = formatMetadataVenue(it);
+            const venue = formatMetadataVenue(it, 50);
             const abstractShort = getWorkAbstractSnippet(it);
             const openAccess = isWorkOpenAccess(it);
             const relRaw = (it.relevance ?? it.score ?? it._score ?? it.rank);

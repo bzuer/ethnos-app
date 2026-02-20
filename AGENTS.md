@@ -255,3 +255,9 @@ Operational directive: at the end of each session or significant change, create 
 - Kept abbreviated venue rendering only in work-list contexts requested: search results (`src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx`) and person works (`src/app/(site)/[locale]/(shells)/persons/[id]/PersonPage.tsx`).
 - Removed abbreviated-venue insertion from Sphinx results and work detail references/cited-by sections to preserve full-name behavior in non-requested contexts.
 - Validation status for scope refinement: `npm run lint` passed and `npm run build` passed.
+- 2026-02-20: Venue metadata labels were constrained to a 50-character limit in target result-list contexts.
+- Applied `formatMetadataVenue(item, 50)` in search results (`src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx`) and person works (`src/app/(site)/[locale]/(shells)/persons/[id]/PersonPage.tsx`).
+- Added venue metadata rendering with the same 50-character cap in work detail references and cited-by sections (`src/app/(site)/[locale]/(shells)/works/[id]/page.tsx`) under `references-block` and `citations-block`.
+- Retained existing venue-name source behavior and removed session-only abbreviation-enrichment adjustments to keep scope limited to truncation.
+- Validation status for venue-length normalization: `npm run lint` passed and `npm run build` passed.
+- Runtime checks on `http://localhost:1210/pt/search/results?q=&scope=works&limit=20`, `http://localhost:1210/pt/persons/3753309`, and `http://localhost:1210/pt/works/4620649` confirmed venue rendering with list-context truncation.
