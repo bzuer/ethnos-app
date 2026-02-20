@@ -498,7 +498,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               const rtitle = r?.title || r?.work_title || t('common.entities.titleUnavailable');
               const rauth = pickReferenceAuthors(r);
               const ryear = r?.publication_year || r?.year || '';
-              const rvenue = formatMetadataVenue(r, 50);
+              const rvenue = formatMetadataVenue(r, 35);
               const rabstract = getWorkAbstractSnippet(r);
               const rOpen = isWorkOpenAccess(r);
               return (
@@ -560,7 +560,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               const ctitle = c?.title || c?.work_title || t('common.entities.titleUnavailable');
               const cauth = pickReferenceAuthors(c);
               const cyear = c?.publication_year || c?.year || '';
-              const cvenue = formatMetadataVenue(c, 50);
+              const cvenue = formatMetadataVenue(c, 35);
               const cabstract = getWorkAbstractSnippet(c);
               const cOpen = isWorkOpenAccess(c);
               return (

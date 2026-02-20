@@ -266,3 +266,6 @@ Operational directive: at the end of each session or significant change, create 
 - Existing 50-character truncation for target result-list contexts was preserved.
 - Runtime check on `http://localhost:1210/search/results?q=&scope=works&limit=20` now renders venues as full names truncated with ellipsis instead of abbreviated labels.
 - Validation status for venue-priority correction: `npm run lint` passed.
+- 2026-02-20: Venue truncation limit in target result-list contexts was reduced from 50 to 35 characters.
+- Updated `formatMetadataVenue(..., 35)` in search results (`src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx`), person works (`src/app/(site)/[locale]/(shells)/persons/[id]/PersonPage.tsx`), and work detail references/cited-by sections (`src/app/(site)/[locale]/(shells)/works/[id]/page.tsx`).
+- Validation status for tighter venue-length cap: `npm run lint` passed and `npm run build` passed.
