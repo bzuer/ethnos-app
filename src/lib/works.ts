@@ -197,16 +197,7 @@ export function formatMetadataAuthors(item: any, fallback = '', maxChars: number
 export function pickWorkVenue(item: any) {
   const publication = item?.publication || {};
   return normalizeText(
-    item?.venue_abbreviated_name
-    || item?.venue_abbreviation
-    || item?.journal_abbreviated_name
-    || item?.journal_abbreviation
-    || pickVenueDisplayName(item?.venue)
-    || pickVenueDisplayName(item?.publication?.venue)
-    || pickVenueDisplayName(item?.publication?.journal)
-    || publication?.journal_abbreviated_name
-    || publication?.journal_abbreviation
-    || item?.venue_name
+    item?.venue_name
     || item?.journal
     || item?.journal_name
     || item?.journal_title
@@ -216,6 +207,15 @@ export function pickWorkVenue(item: any) {
     || item?.venue?.name
     || item?.publication?.venue?.name
     || item?.publication?.journal?.name
+    || item?.venue_abbreviated_name
+    || item?.venue_abbreviation
+    || item?.journal_abbreviated_name
+    || item?.journal_abbreviation
+    || pickVenueDisplayName(item?.venue)
+    || pickVenueDisplayName(item?.publication?.venue)
+    || pickVenueDisplayName(item?.publication?.journal)
+    || publication?.journal_abbreviated_name
+    || publication?.journal_abbreviation
     || ''
   );
 }

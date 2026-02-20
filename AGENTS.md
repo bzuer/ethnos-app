@@ -261,3 +261,8 @@ Operational directive: at the end of each session or significant change, create 
 - Retained existing venue-name source behavior and removed session-only abbreviation-enrichment adjustments to keep scope limited to truncation.
 - Validation status for venue-length normalization: `npm run lint` passed and `npm run build` passed.
 - Runtime checks on `http://localhost:1210/pt/search/results?q=&scope=works&limit=20`, `http://localhost:1210/pt/persons/3753309`, and `http://localhost:1210/pt/works/4620649` confirmed venue rendering with list-context truncation.
+- 2026-02-20: Venue source priority in metadata rendering was corrected to favor full journal names over abbreviations.
+- Updated `pickWorkVenue` in `src/lib/works.ts` to resolve full-name fields first and only fallback to abbreviated fields when full names are unavailable.
+- Existing 50-character truncation for target result-list contexts was preserved.
+- Runtime check on `http://localhost:1210/search/results?q=&scope=works&limit=20` now renders venues as full names truncated with ellipsis instead of abbreviated labels.
+- Validation status for venue-priority correction: `npm run lint` passed.
