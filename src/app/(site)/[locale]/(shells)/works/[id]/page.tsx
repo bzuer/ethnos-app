@@ -524,8 +524,8 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                       </>
                     ) : null}
                     <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
-                    {ryear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{ryear}</span></> : null}
                     {rvenue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{rvenue}</span></> : null}
+                    {ryear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{ryear}</span></> : null}
                   </p>
                   {rid ? (
                     <p className="result-meta result-badges">
@@ -586,8 +586,8 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                       </>
                     ) : null}
                     <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
-                    {cyear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{cyear}</span></> : null}
                     {cvenue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{cvenue}</span></> : null}
+                    {cyear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{cyear}</span></> : null}
                   </p>
                   {cid ? (
                     <p className="result-meta result-badges">

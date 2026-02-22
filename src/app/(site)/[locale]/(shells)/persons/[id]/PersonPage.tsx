@@ -356,9 +356,9 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
             items.map((pub: any) => {
               const openAccess = isWorkOpenAccess(pub);
               const authors = formatMetadataAuthors(pub, '');
-              const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
               const venue = formatMetadataVenue(pub, 35);
               const type = formatMetadataType(pub.work_type || pub.type || '');
+              const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
               const role = truncateMetadataText((pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase(), 48);
               const abstract = getWorkAbstractSnippet(pub);
               const hasListAction = Boolean(pub?.id ?? pub?.work_id);
@@ -381,15 +381,13 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                           removedMessage={t('common.messages.itemRemoved')}
                           showListBadge={false}
                         />
-                        <span className="meta-separator" aria-hidden="true">•</span>
                       </>
                     ) : null}
-                    {type ? <span className="result-type">{type}</span> : null}
+                    <span className="result-authors">{authors || role} </span>
                     {type ? <span className="meta-separator" aria-hidden="true">•</span> : null}
-                    <span className="result-authors">{authors || role}
-                    </span>
-                    {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
+                    {type ? <span className="result-type">{type}</span> : null}
                     {venue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{venue}</span></> : null}
+                    {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
                   </p>
                   {hasListAction ? (
                     <p className="result-meta result-badges">
