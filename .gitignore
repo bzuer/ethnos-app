@@ -22,3 +22,5 @@ tsconfig.tsbuildinfo
 workspaces.json
 yarn-error.log*
 .idea/
+*.log
+log.*
