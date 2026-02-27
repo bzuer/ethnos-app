@@ -8,7 +8,7 @@ Operational directive: at the end of each session or significant change, create 
 - Localized content is allowed only in locale-scoped assets: `messages/{locale}.json` for UI strings and `docs/**` files explicitly labeled for that language in the filename and content.
 - Source code and scripts must be clean: do not add comments or annotations. When modifying files, remove any comments in the edited sections.
 - Keep SSOT CSS tokens and classes without renaming. No inline CSS or JS.
-- Use consistent English naming for components, props, variables, tests, commits, and PRs.
+- Use consistent English naming for components, props, variables, tests, commits, and PRs.-=
 
 ## Scope and Goals
 - Port Flask/Jinja screens to Next.js while preserving visual design, semantics, and interactions.

@@ -23,4 +23,4 @@ workspaces.json
 yarn-error.log*
 .idea/
 *.log
-log.*
+LOG.*
