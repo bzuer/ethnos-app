@@ -8,7 +8,7 @@ const intlMiddleware = createMiddleware({
   localePrefix
 });
 
-export default function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (shouldBypassIntl(pathname)) return NextResponse.next();
   const prefixed = hasLocalePrefix(pathname);

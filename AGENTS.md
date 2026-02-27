@@ -134,14 +134,14 @@ Operational directive: at the end of each session or significant change, create 
 
 ## Internationalization
 - Default locale is English; `pt` and `es` must mirror structure and meaning for every UI label, heading, and metadata entry.
-- Use `next-intl` with `src/i18n/{config,metadata,request,routing}.ts`, keep the locale-aware middleware at `src/middleware.ts`, and store messages in `/messages/{locale}.json`.
+- Use `next-intl` with `src/i18n/{config,metadata,request,routing}.ts`, keep the locale-aware proxy at `src/proxy.ts`, and store messages in `/messages/{locale}.json`.
 - App Router pages live in `src/app/(site)/[locale]/**` so `/` is English and `/pt`, `/es` are localized variants.
 - Static rendering is required per locale, and locale-specific shells must be generated at build time. Locale targeting does not make a page dynamic.
 - Home, Search, and Venues stay fully static with `dynamic = 'force-static'` and no `revalidate`.
-- Avoid request-bound APIs in static shells and layouts. Locale resolution must be handled by middleware and static params, not by `headers()` or `cookies()` in server components for these routes.
+- Avoid request-bound APIs in static shells and layouts. Locale resolution must be handled by the proxy and static params, not by `headers()` or `cookies()` in server components for these routes.
 - Navigation helpers must come from `@/i18n/routing`.
 - Every localized page calls `buildPageMetadata` with the matching message key.
-- Middleware resolves the active locale from the `NEXT_LOCALE` cookie or the `Accept-Language` header before rewriting to the locale-prefixed path.
+- Proxy resolves the active locale from the `NEXT_LOCALE` cookie or the `Accept-Language` header before rewriting to the locale-prefixed path.
 
 ## Maintenance Log
 - 2026-02-16: Stage 1 executed and validated.
@@ -167,7 +167,7 @@ Operational directive: at the end of each session or significant change, create 
 - Validation status for next steps: `npm run lint` passed and `npm run build` passed; root `/sitemap.xml` now outputs as static route.
 - 2026-02-16: Locale/SSR refactor completed for definitive `html lang` by locale without breaking SSG shells.
 - Locale root moved to `src/app/(site)/[locale]/layout.tsx` with SSR `<html lang={locale}>` and locale-scoped head/body.
-- Middleware moved to `src/middleware.ts` and continues locale resolution via `NEXT_LOCALE`/`Accept-Language` before rewrite.
+- Proxy moved to `src/proxy.ts` and continues locale resolution via `NEXT_LOCALE`/`Accept-Language` before rewrite.
 - Added locale fallback route `src/app/(site)/[locale]/[...rest]/page.tsx` to trigger localized not-found flow within locale layout.
 - Validation status for locale SSR refactor: `npm run lint` passed, `npm run build` passed, and SSG shells remained static for home/search/venues.
 - Runtime checks executed on dev `:1210` and production `next start` (`:4010`) confirmed locale rewrite headers and `html lang` SSR for `/`, `/pt`, `/es`.
@@ -269,3 +269,6 @@ Operational directive: at the end of each session or significant change, create 
 - 2026-02-20: Venue truncation limit in target result-list contexts was reduced from 50 to 35 characters.
 - Updated `formatMetadataVenue(..., 35)` in search results (`src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx`), person works (`src/app/(site)/[locale]/(shells)/persons/[id]/PersonPage.tsx`), and work detail references/cited-by sections (`src/app/(site)/[locale]/(shells)/works/[id]/page.tsx`).
 - Validation status for tighter venue-length cap: `npm run lint` passed and `npm run build` passed.
+- 2026-02-27: Next.js middleware deprecation warning was resolved by migrating to the proxy convention.
+- Renamed locale entrypoint from `src/middleware.ts` to `src/proxy.ts` and updated the exported handler to `proxy`.
+- Updated Internationalization guidance and maintenance references to the proxy terminology and path.
