@@ -1,0 +1,18 @@
+[Unit]
+Description=Ethnos Next Frontend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/app
+EnvironmentFile=-/etc/next-frontend.env
+EnvironmentFile=-%h/app/config/env/next-frontend.env
+Environment=NODE_ENV=production
+Environment=PORT=1212
+ExecStart=/usr/bin/env bash -lc 'cd "%h/app" && exec ./scripts/manage.sh start_foreground'
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

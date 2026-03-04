@@ -6,6 +6,7 @@ CMD="${1:-}"
 DEV_PORT="${DEV_PORT:-1210}"
 PROD_PORT="${PROD_PORT:-1212}"
 NEXT_BIN="$ROOT_DIR/node_modules/.bin/next"
+ENV_FILE="${ENV_FILE:-}"
 PID_FILE="${PID_FILE:-/tmp/ethnos-next.pid}"
 LOG_FILE="${LOG_FILE:-/tmp/ethnos-next.log}"
 DAEMON_READY_TIMEOUT="${DAEMON_READY_TIMEOUT:-10}"
@@ -23,10 +24,30 @@ port_listening() {
   return 1
 }
 
-load_env() {
-  if [ -f /etc/next-frontend.env ]; then
-    . /etc/next-frontend.env
+load_env_file() {
+  local FILE_PATH="$1"
+  if [ ! -f "$FILE_PATH" ]; then
+    return 1
   fi
+  set -a
+  . "$FILE_PATH"
+  set +a
+  return 0
+}
+
+load_env() {
+  if [ -n "$ENV_FILE" ]; then
+    if ! load_env_file "$ENV_FILE"; then
+      echo "Environment file not found: $ENV_FILE" >&2
+      exit 1
+    fi
+    return
+  fi
+  load_env_file /etc/next-frontend.env && return
+  load_env_file "$ROOT_DIR/config/env/next-frontend.env" && return
+  load_env_file "$ROOT_DIR/.env.local" && return
+  load_env_file "$ROOT_DIR/.env" && return
+  return 0
 }
 
 systemd_restart() {
@@ -126,6 +147,18 @@ start() {
   fi
 }
 
+start_foreground() {
+  ensure_node
+  load_env
+  export NODE_ENV=production
+  export PORT="${PORT:-$PROD_PORT}"
+  if [ ! -x "$NEXT_BIN" ]; then
+    echo "Missing Next binary at $NEXT_BIN. Run npm install." >&2
+    exit 1
+  fi
+  exec "$NEXT_BIN" start -p "$PORT"
+}
+
 stop() {
   local PID
   if [ -f "$PID_FILE" ]; then
@@ -136,12 +169,6 @@ stop() {
       sleep 1
     fi
     rm -f "$PID_FILE"
-  fi
-  local NEXT_PIDS
-  NEXT_PIDS="$(pgrep -f 'next-server' || true)"
-  if [ -n "$NEXT_PIDS" ]; then
-    echo "Stopping lingering next-server processes: $NEXT_PIDS"
-    kill $NEXT_PIDS 2>/dev/null || true
   fi
   local P="${PORT:-$PROD_PORT}"
   local PIDS
@@ -203,11 +230,11 @@ deploy() {
 }
 
 usage() {
-  echo "Usage: $0 {css|dev|build|start|stop|restart|clean|cache_clean|check|deps|deploy}"
+  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy}"
 }
 
 case "$CMD" in
-  css|dev|build|start|stop|restart|clean|cache_clean|check|deps|deploy)
+  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy)
     "$CMD"
     ;;
   *)

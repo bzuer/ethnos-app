@@ -8,7 +8,7 @@ Operational directive: at the end of each session or significant change, create 
 - Localized content is allowed only in locale-scoped assets: `messages/{locale}.json` for UI strings and `docs/**` files explicitly labeled for that language in the filename and content.
 - Source code and scripts must be clean: do not add comments or annotations. When modifying files, remove any comments in the edited sections.
 - Keep SSOT CSS tokens and classes without renaming. No inline CSS or JS.
-- Use consistent English naming for components, props, variables, tests, commits, and PRs.-=
+- Use consistent English naming for components, props, variables, tests, commits, and PRs.
 
 ## Scope and Goals
 - Port Flask/Jinja screens to Next.js while preserving visual design, semantics, and interactions.
@@ -18,6 +18,8 @@ Operational directive: at the end of each session or significant change, create 
 
 ## Project Layout
 - App: `src/app/**`, `src/components/**`, `src/lib/**`, `public/**`.
+- Runtime scripts: `scripts/**` and lightweight wrappers in `bin/**`.
+- Runtime env templates: `config/env/**` and `.env.example`.
 - Global CSS: `public/css/styles.css` aligned with `docs/html-css/static/css/styles.dev.css`.
 - SSOT references: `docs/html-css/**` (templates/CSS) and `docs/tsx/**` (reference TSX).
 - Design guide: `docs/guides/DESIGN_GUIDE.md`.
@@ -37,9 +39,10 @@ Operational directive: at the end of each session or significant change, create 
  - Search results uses vitrine when `q=*` or when search is empty.
 
 ## Commands and Ports
-- Dev (1210): `./bin/dev` loads `/etc/next-frontend.env` and serves `http://localhost:1210`.
+- Dev (1210): `./bin/dev` or `npm run dev` serves `http://localhost:1210`.
 - Build: `npm run build`.
 - Prod (1212): `./bin/start` or `scripts/manage.sh start` runs the daemon on `:1212`.
+- Foreground prod: `scripts/manage.sh start_foreground` (for service managers).
 - Daemon control: `scripts/manage.sh start|stop|restart` with logs at `/tmp/ethnos-next.log`.
 - Static preview: `python3 -m http.server -d docs/html-css 8080` then open `templates/pages/home.html`.
 - Deploy: `scripts/manage.sh deploy` runs clean, deps install, CSS build, prod build, and daemon restart.
@@ -82,7 +85,9 @@ Operational directive: at the end of each session or significant change, create 
 - Always commit at the end of a session or after major changes.
 
 ## Configuration and Security
-- Env source: `/etc/next-frontend.env` with `NODE_ENV=production`, `ETHNOS_UPSTREAM_API`, `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`, `NEXT_PUBLIC_DEV_API`.
+- Env source precedence in `scripts/manage.sh`: `ENV_FILE` -> `/etc/next-frontend.env` -> `config/env/next-frontend.env` -> `.env.local` -> `.env`.
+- Keep templates aligned in `.env.example` and `config/env/next-frontend.env.example`.
+- Core variables: `NODE_ENV=production`, `ETHNOS_UPSTREAM_API`, `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`, `NEXT_PUBLIC_DEV_API`.
 - Server-side requests add `x-access-key` from `ETHNOS_API_KEY`; never expose secrets to the client.
 - Never commit secrets. Sanitize data before inserting into the DOM.
 - API proxy rate limit returns 429 for suspicious traffic; optional env overrides: `ETHNOS_RATE_LIMIT_WINDOW_MS`, `ETHNOS_RATE_LIMIT_MAX`, `ETHNOS_RATE_LIMIT_SUSPICIOUS_MAX`.
@@ -110,7 +115,10 @@ Operational directive: at the end of each session or significant change, create 
 
 ## Production Daemon
 - `scripts/manage.sh start|stop|restart` runs a background daemon on port 1212 using `/tmp/ethnos-next.pid`.
-- Systemd unit: `scripts/ethnos-next.service`; set `SYSTEMD_SERVICE=ethnos-next.service` for `scripts/manage.sh restart` and `scripts/manage.sh deploy`.
+- Linux `systemd` template: `scripts/systemd/ethnos-next.service` using `scripts/manage.sh start_foreground`.
+- macOS `launchd` template: `scripts/launchd/ethnos-next.plist` using `scripts/manage.sh start_foreground`.
+- Service templates assume checkout path `~/app`; adjust paths when repository location differs.
+- Set `SYSTEMD_SERVICE=ethnos-next.service` for `scripts/manage.sh restart` and `scripts/manage.sh deploy` when using systemd.
 - Optional: `SYSTEMD_ARGS=--user` when running in user scope.
 - `scripts/manage.sh deploy` is the only deploy pipeline and restarts the service after builds.
 - Remove legacy pm2 or alternate managers before deploying.

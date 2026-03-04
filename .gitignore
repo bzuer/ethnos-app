@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+config/env/next-frontend.env
 .next/
 .node/
 .tmp-sitemap/
