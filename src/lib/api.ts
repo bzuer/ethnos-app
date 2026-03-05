@@ -1,14 +1,7 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-const DEFAULT_LOCAL_API_BASE = process.env.NEXT_PUBLIC_DEV_API || 'http://127.0.0.1:1211';
-
-const API_BASE =
-  process.env.ETHNOS_UPSTREAM_API ||
-  process.env.NEXT_PUBLIC_DEV_API ||
-  process.env.BACKEND_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE ||
-  DEFAULT_LOCAL_API_BASE;
+const DEFAULT_LOCAL_API_BASE = 'http://127.0.0.1:1211';
+const API_BASE = DEFAULT_LOCAL_API_BASE;
 
 export async function fetchJson<T>(path: string, init?: RequestInit & { timeoutMs?: number; retries?: number; method?: HttpMethod }) {
   const attempts = Math.max(1, init?.retries ?? 2);

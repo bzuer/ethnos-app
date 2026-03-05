@@ -1,16 +1,10 @@
-const DEFAULT_LOCAL_API_BASE = process.env.NEXT_PUBLIC_DEV_API || 'http://127.0.0.1:1211';
-const RATE_LIMIT_WINDOW_MS = Number(process.env.ETHNOS_RATE_LIMIT_WINDOW_MS || 60000);
-const RATE_LIMIT_MAX = Number(process.env.ETHNOS_RATE_LIMIT_MAX || 1200);
-const RATE_LIMIT_SUSPICIOUS_MAX = Number(process.env.ETHNOS_RATE_LIMIT_SUSPICIOUS_MAX || 120);
+const DEFAULT_LOCAL_API_BASE = 'http://127.0.0.1:1211';
+const RATE_LIMIT_WINDOW_MS = 60000;
+const RATE_LIMIT_MAX = 1200;
+const RATE_LIMIT_SUSPICIOUS_MAX = 120;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
-const API_BASE =
-  process.env.ETHNOS_UPSTREAM_API ||
-  process.env.NEXT_PUBLIC_DEV_API ||
-  process.env.BACKEND_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE ||
-  DEFAULT_LOCAL_API_BASE;
+const API_BASE = DEFAULT_LOCAL_API_BASE;
 
 function normalize(base: string, path: string) {
   if (/^https?:\/\//i.test(path)) return path;

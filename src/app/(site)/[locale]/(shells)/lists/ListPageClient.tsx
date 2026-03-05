@@ -12,13 +12,6 @@ type Work = any;
 const STORAGE_KEY = 'ethnos_app_personal_list';
 
 function getApiBase() {
-  if (typeof process !== 'undefined' && process.env) {
-    const base =
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      process.env.NEXT_PUBLIC_API_BASE ||
-      process.env.NEXT_PUBLIC_DEV_API;
-    if (base) return String(base);
-  }
   if (typeof window !== 'undefined') {
     try {
       const u = new URL(window.location.href);

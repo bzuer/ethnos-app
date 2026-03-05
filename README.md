@@ -43,10 +43,10 @@ Next.js (App Router) frontend for Ethnos App. This project ports Flask/Jinja scr
 ## Environment and API
 - Environment resolution order in `scripts/manage.sh`: `ENV_FILE` -> `/etc/next-frontend.env` -> `config/env/next-frontend.env` -> `.env.local` -> `.env`.
 - Environment templates: `.env.example` and `config/env/next-frontend.env.example`.
-- Typical entries: `NODE_ENV=production`, `ETHNOS_UPSTREAM_API`, `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`, `NEXT_PUBLIC_DEV_API`.
+- Environment should contain only secrets/keys: `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`.
 - Server-side requests add `x-access-key` from `ETHNOS_API_KEY`.
 - Client-side data access uses `/api/**` proxy to avoid exposing secrets.
-- Default upstream fallback is `http://127.0.0.1:3000` when no overrides exist.
+- Upstream API target is defined in code as `http://127.0.0.1:1211`.
 
 ## Commands
 - Install: `npm install`
