@@ -106,7 +106,7 @@ start() {
   ensure_node
   load_env
   export NODE_ENV=production
-  export PORT="${PORT:-$PROD_PORT}"
+  export PORT="$PROD_PORT"
   if [ -f "$PID_FILE" ]; then
     local PID
     PID="$(cat "$PID_FILE" 2>/dev/null || true)"
@@ -151,7 +151,7 @@ start_foreground() {
   ensure_node
   load_env
   export NODE_ENV=production
-  export PORT="${PORT:-$PROD_PORT}"
+  export PORT="$PROD_PORT"
   if [ ! -x "$NEXT_BIN" ]; then
     echo "Missing Next binary at $NEXT_BIN. Run npm install." >&2
     exit 1
@@ -170,7 +170,7 @@ stop() {
     fi
     rm -f "$PID_FILE"
   fi
-  local P="${PORT:-$PROD_PORT}"
+  local P="$PROD_PORT"
   local PIDS
   PIDS="$(lsof -t -i TCP:$P -s TCP:LISTEN 2>/dev/null || true)"
   if [ -z "${PIDS:-}" ]; then
