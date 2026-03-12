@@ -8,7 +8,6 @@ import ScrollTools from '@/components/common/ScrollTools';
 import { locales, type Locale } from '@/i18n/config';
 import { buildLanguageAlternates, metadataBase, openGraphLocales } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
-import '@/styles/globals.css';
 
 type NavLinks = {
   home: string;

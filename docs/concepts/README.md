@@ -1,6 +1,6 @@
 ### Conceitos de Design — ethnos_app
 
-Objetivo: fixar os conceitos que orientam o design do frontend, garantindo consistência, legibilidade e segurança. Este diretório consolida regras prescritivas que complementam o guia em `docs/examples/DESIGN_GUIDE.md`.
+Objetivo: fixar os conceitos que orientam o design do frontend, garantindo consistência, legibilidade e segurança. Este diretório consolida regras prescritivas que complementam o guia em `docs/guides/DESIGN_GUIDE.md`.
 
 - 01_design_system.md — tokens, paleta e semântica de cores
 - 02_layout_and_grid.md — layout, espaçamento e grades
