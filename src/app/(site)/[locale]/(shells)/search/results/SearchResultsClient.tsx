@@ -81,13 +81,18 @@ export default function SearchResultsClient({ locale }: Props) {
     ? `${pathname}?${new URLSearchParams({ ...params, page: String(state.pageNum + 1) }).toString()}`
     : undefined;
 
-  const showNoResults = !loading && !loadError && state.items.length === 0 && (query || Object.keys(params).length > 1);
+  const showNoResults = !loading && !loadError && state.items.length === 0 && (query || hasFilters(params) || Object.keys(params).length > 1);
 
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('results.title')}</h1>
-      {query && query !== '*' ? (<p className="search-summary">{t('results.summary', { query })}</p>) : null}
+      {query && query !== '*' ? (
+        <p className="search-summary">{t('results.summary', { query })}</p>
+      ) : hasFilters(params) ? (
+        <p className="search-summary">{t('results.browsing')}</p>
+      ) : null}
       {!loading && state.totalCount > 0 ? (<p className="search-stats">{t('results.totalCount', { count: state.totalCount })}{state.totalPages && state.totalPages > 1 ? ` · ${t('results.pageInfo', { page: state.pageNum })}` : ''}</p>) : null}
+      <ActiveFilters params={params} t={t} />
       <section aria-labelledby="results-list">
         <h2 className="title-section" id="results-list">{t('results.itemsHeading')}</h2>
         {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>) : null}
@@ -193,6 +198,46 @@ export default function SearchResultsClient({ locale }: Props) {
   );
 }
 
+const FILTER_KEYS = ['work_type', 'type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'];
+
+const FILTER_LABEL_MAP: Record<string, string> = {
+  work_type: 'common.labels.type',
+  type: 'common.labels.type',
+  author: 'common.labels.author',
+  venue: 'common.labels.venue',
+  subject: 'common.labels.subject',
+  year_from: 'common.labels.yearFrom',
+  year_to: 'common.labels.yearTo',
+  language: 'common.labels.language',
+  peer_reviewed: 'common.labels.peerReviewed',
+  open_access: 'common.labels.openAccess',
+};
+
+function hasFilters(params: Record<string, string>) {
+  return FILTER_KEYS.some(k => params[k] && params[k] !== '');
+}
+
+function ActiveFilters({ params, t }: { params: Record<string, string>; t: (key: string) => string }) {
+  const active = FILTER_KEYS.filter(k => params[k] && params[k] !== '');
+  if (active.length === 0) return null;
+  const seen = new Set<string>();
+  return (
+    <p className="search-stats">
+      {t('results.activeFilters')}{' '}
+      {active.map(k => {
+        const labelKey = FILTER_LABEL_MAP[k] || k;
+        if (seen.has(labelKey)) return null;
+        seen.add(labelKey);
+        return (
+          <span key={k} className="suggestion-type suggestion-type-title filter-tag">
+            {t(labelKey)}: {params[k]}
+          </span>
+        );
+      })}
+    </p>
+  );
+}
+
 async function fetchResults(params: Record<string, string>, page: string, limit: string, scope: string, signal: AbortSignal) {
   const base = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
@@ -209,18 +254,15 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
     return await res.json();
   }
 
-  if (scope === 'persons' && qv && qv !== '*') {
+  if (scope === 'persons') {
+    if (!qv || qv === '*') {
+      const qs = new URLSearchParams({ page, limit });
+      const res = await fetch(`/api/search/persons?${qs.toString()}`, { signal, headers: { accept: 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
     const qs = new URLSearchParams({ q: qv, page, limit });
     const res = await fetch(`/api/search/persons?${qs.toString()}`, { signal, headers: { accept: 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  }
-
-  if (!qv || qv === '*') {
-    const vitrineParams = new URLSearchParams();
-    vitrineParams.set('page', page);
-    vitrineParams.set('limit', limit);
-    const res = await fetch(`/api/works/showcase?${vitrineParams.toString()}`, { signal, headers: { accept: 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
@@ -231,6 +273,36 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
     qs.set('type', String(qs.get('work_type')));
     qs.delete('work_type');
   }
+
+  if (!qv || qv === '*') {
+    qs.delete('q');
+    const vitrineParams = new URLSearchParams();
+    vitrineParams.set('page', page);
+    vitrineParams.set('limit', limit);
+    FILTER_KEYS.forEach(k => {
+      const v = qs.get(k === 'work_type' ? 'type' : k);
+      if (v) {
+        const paramName = k === 'venue' ? 'venue_name' : (k === 'work_type' ? 'type' : k);
+        vitrineParams.set(paramName, v);
+      }
+    });
+    const tryPaths: string[] = [];
+    tryPaths.push(`/api/search/works?${qs.toString()}`);
+    tryPaths.push(`/api/works/showcase?${vitrineParams.toString()}`);
+    let lastError: unknown;
+    for (const path of tryPaths) {
+      try {
+        const res = await fetch(path, { signal, headers: { accept: 'application/json' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        lastError = err;
+        continue;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('Search failed');
+  }
+
   const tryPaths: string[] = [];
   tryPaths.push(`/api/search/works?${qs.toString()}`);
   tryPaths.push(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);

@@ -168,12 +168,22 @@
     "quick": "Quick Search",
     "advanced": "Advanced Search",
     "queryLegend": "Query",
-    "parametersLegend": "Parameters"
+    "parametersLegend": "Parameters",
+    "filtersLegend": "Filters",
+    "textLegend": "Text Search",
+    "tipsHeading": "Tips",
+    "tipPhrase": "Exact phrase: use quotes \"complete phrase\"",
+    "tipMultiple": "Multiple words: anthropology culture ritual",
+    "tipExclude": "Exclude term: anthropology -religion",
+    "tipAuthor": "Specific author: \"Lévi-Strauss\"",
+    "tipEmpty": "Leave the term empty to browse with filters only."
   },
   "results": {
     "title": "Search Results",
     "itemsHeading": "Items",
     "summary": "Results for: \"{query}\"",
+    "browsing": "Browsing with filters",
+    "activeFilters": "Active filters:",
     "totalCount": "{count, plural, =0 {No results found} one {1 result found} other {# results found}}",
     "noResults": "No results found for your search.",
     "noResultsTip": "Try different terms or check the spelling.",

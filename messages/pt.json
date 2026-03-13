@@ -168,12 +168,22 @@
     "quick": "Busca Rápida",
     "advanced": "Busca Avançada",
     "queryLegend": "Consulta",
-    "parametersLegend": "Parâmetros"
+    "parametersLegend": "Parâmetros",
+    "filtersLegend": "Filtros",
+    "textLegend": "Busca Textual",
+    "tipsHeading": "Dicas",
+    "tipPhrase": "Frase exata: use aspas \"frase completa\"",
+    "tipMultiple": "Múltiplas palavras: antropologia cultura ritual",
+    "tipExclude": "Excluir termo: antropologia -religião",
+    "tipAuthor": "Autor específico: \"Lévi-Strauss\"",
+    "tipEmpty": "Deixe o termo vazio para navegar apenas com filtros."
   },
   "results": {
     "title": "Resultados da Busca",
     "itemsHeading": "Itens",
     "summary": "Resultados para: \"{query}\"",
+    "browsing": "Navegando com filtros",
+    "activeFilters": "Filtros ativos:",
     "totalCount": "{count, plural, =0 {Nenhum resultado encontrado} one {1 resultado encontrado} other {# resultados encontrados}}",
     "noResults": "Nenhum resultado encontrado para sua busca.",
     "noResultsTip": "Tente termos diferentes ou verifique a ortografia.",
