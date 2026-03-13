@@ -91,8 +91,6 @@ export default function SearchSphinxClient({ locale }: Props) {
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('sphinx.title')}</h1>
-      {query ? (<p className="search-summary">{t('results.summary', { query })}</p>) : null}
-      {!loading && state.totalCount > 0 ? (<p className="search-stats">{t('results.totalCount', { count: state.totalCount })}{state.totalPages && state.totalPages > 1 ? ` · ${t('results.pageInfo', { page: state.pageNum })}` : ''}</p>) : null}
       <section aria-labelledby="results-list">
         <h2 className="title-section" id="results-list">{t('sphinx.itemsHeading')}</h2>
         {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>) : null}

@@ -181,13 +181,8 @@
   "results": {
     "title": "Search Results",
     "itemsHeading": "Items",
-    "summary": "Results for: \"{query}\"",
-    "browsing": "Browsing with filters",
-    "activeFilters": "Active filters:",
-    "totalCount": "{count, plural, =0 {No results found} one {1 result found} other {# results found}}",
     "noResults": "No results found for your search.",
-    "noResultsTip": "Try different terms or check the spelling.",
-    "pageInfo": "Page {page}"
+    "noResultsTip": "Try different terms or check the spelling."
   },
   "venues": {
     "title": "Journals",

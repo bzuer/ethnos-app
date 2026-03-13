@@ -86,13 +86,6 @@ export default function SearchResultsClient({ locale }: Props) {
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('results.title')}</h1>
-      {query && query !== '*' ? (
-        <p className="search-summary">{t('results.summary', { query })}</p>
-      ) : hasFilters(params) ? (
-        <p className="search-summary">{t('results.browsing')}</p>
-      ) : null}
-      {!loading && state.totalCount > 0 ? (<p className="search-stats">{t('results.totalCount', { count: state.totalCount })}{state.totalPages && state.totalPages > 1 ? ` · ${t('results.pageInfo', { page: state.pageNum })}` : ''}</p>) : null}
-      <ActiveFilters params={params} t={t} />
       <section aria-labelledby="results-list">
         <h2 className="title-section" id="results-list">{t('results.itemsHeading')}</h2>
         {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>) : null}
@@ -200,42 +193,8 @@ export default function SearchResultsClient({ locale }: Props) {
 
 const FILTER_KEYS = ['work_type', 'type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'];
 
-const FILTER_LABEL_MAP: Record<string, string> = {
-  work_type: 'common.labels.type',
-  type: 'common.labels.type',
-  author: 'common.labels.author',
-  venue: 'common.labels.venue',
-  subject: 'common.labels.subject',
-  year_from: 'common.labels.yearFrom',
-  year_to: 'common.labels.yearTo',
-  language: 'common.labels.language',
-  peer_reviewed: 'common.labels.peerReviewed',
-  open_access: 'common.labels.openAccess',
-};
-
 function hasFilters(params: Record<string, string>) {
   return FILTER_KEYS.some(k => params[k] && params[k] !== '');
-}
-
-function ActiveFilters({ params, t }: { params: Record<string, string>; t: (key: string) => string }) {
-  const active = FILTER_KEYS.filter(k => params[k] && params[k] !== '');
-  if (active.length === 0) return null;
-  const seen = new Set<string>();
-  return (
-    <p className="search-stats">
-      {t('results.activeFilters')}{' '}
-      {active.map(k => {
-        const labelKey = FILTER_LABEL_MAP[k] || k;
-        if (seen.has(labelKey)) return null;
-        seen.add(labelKey);
-        return (
-          <span key={k} className="suggestion-type suggestion-type-title filter-tag">
-            {t(labelKey)}: {params[k]}
-          </span>
-        );
-      })}
-    </p>
-  );
 }
 
 async function fetchResults(params: Record<string, string>, page: string, limit: string, scope: string, signal: AbortSignal) {
