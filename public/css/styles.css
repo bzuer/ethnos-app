@@ -612,7 +612,7 @@ a.action-btn {
 .result-link:hover,
 .action-link:hover,
 .table-link:hover {
-    font-weight: 800;
+    font-weight: 600;
     text-decoration: none;
 }
 .table-link {
@@ -634,7 +634,7 @@ a.action-btn {
     cursor: pointer;
 }
 .list-remove-btn:hover {
-    font-weight: 900;
+    font-weight: 600;
 }
 .result-venue {
     font-family: var(--mono);
@@ -828,13 +828,13 @@ a.action-btn {
 }
 
 .action-link:hover {
-    font-weight: 800;
+    font-weight: 600;
     text-decoration: none;
 }
 
 .nav-breadcrumb:hover:not(.nav-disabled) {
     hyphens: none;
-    font-weight: 800;
+    font-weight: 600;
     text-decoration: none;
 }
 .data-table tr:hover {
