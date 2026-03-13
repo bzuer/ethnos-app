@@ -108,7 +108,7 @@ export default function SearchResultsClient({ locale }: Props) {
           )) : scope === 'persons' ? state.items.map((it: any) => (
             <li className="result-item" key={it.id}>
               <h3 className="result-title">
-                <LocaleLink className="result-link" href={`/persons/${it.id}`}>{it.preferred_name || it.given_names && it.family_name ? `${it.given_names} ${it.family_name}` : t('common.entities.nameUnavailable')}</LocaleLink>
+                <LocaleLink className="result-link" href={`/persons/${it.id}`}>{it.preferred_name || (it.given_names && it.family_name ? `${it.given_names} ${it.family_name}` : t('common.entities.nameUnavailable'))}</LocaleLink>
               </h3>
               <p className="result-meta">
                 {it.orcid ? <span>ORCID {it.orcid}</span> : null}

@@ -3,6 +3,7 @@ import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
 import SearchNotice from './SearchNotice';
+import SearchFormClient from './SearchFormClient';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
@@ -26,9 +27,7 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
             <legend className="form-label">{t('search.queryLegend')}</legend>
             <div>
               <label className="form-label" htmlFor="q">{t('common.labels.term')}</label>
-              <div className="search-input-wrapper">
-                <input className="form-input" type="text" id="q" name="q" placeholder={t('common.placeholders.quickTerm')} autoComplete="off" />
-              </div>
+              <SearchFormClient inputId="q" inputName="q" placeholder={t('common.placeholders.quickTerm')} />
               <label className="form-label" htmlFor="scope">{t('common.labels.scope')}</label>
               <select className="form-input" id="scope" name="scope" defaultValue="works">
                 <option value="works">{t('common.options.works')}</option>
@@ -57,9 +56,7 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
             <legend className="form-label">{t('search.parametersLegend')}</legend>
             <div>
               <label className="form-label" htmlFor="q-adv">{t('common.labels.term')}</label>
-              <div className="search-input-wrapper">
-                <input className="form-input" type="text" id="q-adv" name="q" placeholder={t('common.placeholders.advancedTerm')} autoComplete="off" />
-              </div>
+              <SearchFormClient inputId="q-adv" inputName="q" placeholder={t('common.placeholders.advancedTerm')} />
 
               <label className="form-label" htmlFor="work_type">{t('common.labels.type')}</label>
               <select className="form-input" id="work_type" name="work_type" defaultValue="">
