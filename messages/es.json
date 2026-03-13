@@ -61,8 +61,11 @@
       "author": "Autor",
       "venue": "Revista",
       "subject": "Asunto",
-      "year": "Año",
+      "yearFrom": "Año desde",
+      "yearTo": "Año hasta",
       "language": "Idioma",
+      "peerReviewed": "Peer reviewed",
+      "openAccess": "Open Access",
       "list": "Lista",
       "items": "Elementos",
       "pagination": "Paginación"
@@ -74,7 +77,8 @@
       "person": "Nombre o ID de la persona",
       "venue": "Nombre o ID de la revista",
       "subject": "Tema o palabra clave",
-      "year": "Ej: 2001",
+      "yearFrom": "Ej: 2001",
+      "yearTo": "Ej: 2024",
       "language": "en, pt, es..."
     },
     "options": {

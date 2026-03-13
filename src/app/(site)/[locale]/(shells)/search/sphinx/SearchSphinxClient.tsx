@@ -182,12 +182,12 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
   sphinx.set('limit', String(limit));
   sphinx.delete('page');
   if (!sphinx.has('offset')) sphinx.set('offset', String(offset));
-  if (sphinx.has('include_facets') && !sphinx.has('facets')) sphinx.set('facets', String(sphinx.get('include_facets')));
   tryPaths.push(`/api/search/advanced?${sphinx.toString()}`);
   const qs = new URLSearchParams(base as any);
-  if (qs.has('work_type') && !qs.has('type')) qs.set('type', String(qs.get('work_type')));
-  if (qs.has('year') && !qs.has('year_from')) qs.set('year_from', String(qs.get('year')));
-  if (qs.has('facets') && !qs.has('include_facets')) qs.set('include_facets', String(qs.get('facets')));
+  if (qs.has('work_type') && !qs.has('type')) {
+    qs.set('type', String(qs.get('work_type')));
+    qs.delete('work_type');
+  }
   tryPaths.push(`/api/search/works?${qs.toString()}`);
   tryPaths.push(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
   let lastError: unknown;

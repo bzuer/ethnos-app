@@ -82,11 +82,28 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
               <label className="form-label" htmlFor="subject">{t('common.labels.subject')}</label>
               <input className="form-input" type="text" id="subject" name="subject" placeholder={t('common.placeholders.subject')} />
 
-              <label className="form-label" htmlFor="year">{t('common.labels.year')}</label>
-              <input className="form-input" type="number" id="year" name="year" placeholder={t('common.placeholders.year')} />
+              <label className="form-label" htmlFor="year_from">{t('common.labels.yearFrom')}</label>
+              <input className="form-input" type="number" id="year_from" name="year_from" placeholder={t('common.placeholders.yearFrom')} />
+
+              <label className="form-label" htmlFor="year_to">{t('common.labels.yearTo')}</label>
+              <input className="form-input" type="number" id="year_to" name="year_to" placeholder={t('common.placeholders.yearTo')} />
 
               <label className="form-label" htmlFor="language">{t('common.labels.language')}</label>
               <input className="form-input" type="text" id="language" name="language" placeholder={t('common.placeholders.language')} />
+
+              <label className="form-label" htmlFor="peer_reviewed">{t('common.labels.peerReviewed')}</label>
+              <select className="form-input" id="peer_reviewed" name="peer_reviewed" defaultValue="">
+                <option value="">{t('common.options.any')}</option>
+                <option value="true">{t('common.values.yes')}</option>
+                <option value="false">{t('common.values.no')}</option>
+              </select>
+
+              <label className="form-label" htmlFor="open_access">{t('common.labels.openAccess')}</label>
+              <select className="form-input" id="open_access" name="open_access" defaultValue="">
+                <option value="">{t('common.options.any')}</option>
+                <option value="true">{t('common.values.yes')}</option>
+                <option value="false">{t('common.values.no')}</option>
+              </select>
 
               <label className="form-label" htmlFor="limit-adv">{t('common.labels.itemsPerPage')}</label>
               <select className="form-input" id="limit-adv" name="limit" defaultValue="20">

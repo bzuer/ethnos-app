@@ -61,8 +61,11 @@
       "author": "Author",
       "venue": "Journal",
       "subject": "Subject",
-      "year": "Year",
+      "yearFrom": "Year from",
+      "yearTo": "Year to",
       "language": "Language",
+      "peerReviewed": "Peer reviewed",
+      "openAccess": "Open Access",
       "list": "List",
       "items": "Items",
       "pagination": "Pagination"
@@ -74,7 +77,8 @@
       "person": "Person name or ID",
       "venue": "Journal name or ID",
       "subject": "Topic or keyword",
-      "year": "Ex: 2001",
+      "yearFrom": "Ex: 2001",
+      "yearTo": "Ex: 2024",
       "language": "en, pt, es..."
     },
     "options": {

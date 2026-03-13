@@ -45,6 +45,7 @@ export default function SearchResultsClient({ locale }: Props) {
   const query = params.q || '';
   const page = params.page || '1';
   const limit = params.limit || '20';
+  const scope = params.scope || 'works';
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +54,7 @@ export default function SearchResultsClient({ locale }: Props) {
       setLoading(true);
       setLoadError(false);
       try {
-        const response = await fetchResults(params, page, limit, controller.signal);
+        const response = await fetchResults(params, page, limit, scope, controller.signal);
         if (cancelled) return;
         const nextState = parseSearchState(response, page, limit);
         setState(nextState);
@@ -71,7 +72,7 @@ export default function SearchResultsClient({ locale }: Props) {
       cancelled = true;
       controller.abort();
     };
-  }, [params, page, limit, query]);
+  }, [params, page, limit, query, scope]);
 
   const prevHref = state.hasPrev
     ? `${pathname}?${new URLSearchParams({ ...params, page: String(Math.max(1, state.pageNum - 1)) }).toString()}`
@@ -93,7 +94,28 @@ export default function SearchResultsClient({ locale }: Props) {
           </p>
         ) : null}
         <ul className="results-list">
-          {state.items.map((it: any) => {
+          {scope === 'venues' ? state.items.map((it: any) => (
+            <li className="result-item" key={it.id}>
+              <h3 className="result-title">
+                <LocaleLink className="result-link" href={`/venues/${it.id}`}>{it.name || t('common.entities.titleUnavailable')}</LocaleLink>
+              </h3>
+              <p className="result-meta">
+                {it.type ? <span className="result-type">{it.type}</span> : null}
+                {it.issn ? <><span className="meta-separator" aria-hidden="true">•</span><span>ISSN {it.issn}</span></> : null}
+                {it.work_count ? <><span className="meta-separator" aria-hidden="true">•</span><span>{t('common.meta.worksCount', { count: it.work_count })}</span></> : null}
+              </p>
+            </li>
+          )) : scope === 'persons' ? state.items.map((it: any) => (
+            <li className="result-item" key={it.id}>
+              <h3 className="result-title">
+                <LocaleLink className="result-link" href={`/persons/${it.id}`}>{it.preferred_name || it.given_names && it.family_name ? `${it.given_names} ${it.family_name}` : t('common.entities.nameUnavailable')}</LocaleLink>
+              </h3>
+              <p className="result-meta">
+                {it.orcid ? <span>ORCID {it.orcid}</span> : null}
+                {it.metrics?.works_count ? <><span className="meta-separator" aria-hidden="true">•</span><span>{t('common.meta.worksCount', { count: it.metrics.works_count })}</span></> : null}
+              </p>
+            </li>
+          )) : state.items.map((it: any) => {
             const authors = formatMetadataAuthors(it, t('common.entities.authorUnknown'));
             const year = it.publication_year || it.year || (it.publication && it.publication.year) || '';
             const type = formatMetadataType(it.work_type || it.type || '');
@@ -161,10 +183,25 @@ export default function SearchResultsClient({ locale }: Props) {
   );
 }
 
-async function fetchResults(params: Record<string, string>, page: string, limit: string, signal: AbortSignal) {
+async function fetchResults(params: Record<string, string>, page: string, limit: string, scope: string, signal: AbortSignal) {
   const base = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
   const qv = base.get('q') || '';
+
+  if (scope === 'venues' && qv && qv !== '*') {
+    const qs = new URLSearchParams({ q: qv, limit, offset: String(Math.max(0, (Number(page) - 1) * Number(limit))) });
+    const res = await fetch(`/api/venues/search?${qs.toString()}`, { signal, headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
+
+  if (scope === 'persons' && qv && qv !== '*') {
+    const qs = new URLSearchParams({ q: qv, page, limit });
+    const res = await fetch(`/api/search/persons?${qs.toString()}`, { signal, headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  }
+
   if (!qv || qv === '*') {
     const vitrineParams = new URLSearchParams();
     vitrineParams.set('page', page);
@@ -173,11 +210,14 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
-  const tryPaths: string[] = [];
+
   const qs = new URLSearchParams(base as any);
-  if (qs.has('work_type') && !qs.has('type')) qs.set('type', String(qs.get('work_type')));
-  if (qs.has('year') && !qs.has('year_from')) qs.set('year_from', String(qs.get('year')));
-  if (qs.has('facets') && !qs.has('include_facets')) qs.set('include_facets', String(qs.get('facets')));
+  qs.delete('scope');
+  if (qs.has('work_type') && !qs.has('type')) {
+    qs.set('type', String(qs.get('work_type')));
+    qs.delete('work_type');
+  }
+  const tryPaths: string[] = [];
   tryPaths.push(`/api/search/works?${qs.toString()}`);
   tryPaths.push(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
   let lastError: unknown;
