@@ -86,21 +86,27 @@ export default function SearchSphinxClient({ locale }: Props) {
     ? `${pathname}?${new URLSearchParams({ ...params, page: String(state.pageNum + 1) }).toString()}`
     : undefined;
 
+  const showNoResults = !loading && !loadError && state.items.length === 0 && query && query !== '*';
+
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('sphinx.title')}</h1>
-      <section aria-labelledby="query-block">
-        <h2 className="title-section" id="query-block">{t('sphinx.query')}</h2>
-        <div className="field-value">{t('sphinx.term')}: <strong>{query || t('common.meta.termEmpty')}</strong></div>
-      </section>
+      {query ? (<p className="search-summary">{t('results.summary', { query })}</p>) : null}
+      {!loading && state.totalCount > 0 ? (<p className="search-stats">{t('results.totalCount', { count: state.totalCount })}{state.totalPages && state.totalPages > 1 ? ` · ${t('results.pageInfo', { page: state.pageNum })}` : ''}</p>) : null}
       <section aria-labelledby="results-list">
         <h2 className="title-section" id="results-list">{t('sphinx.itemsHeading')}</h2>
-        {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadJournals')}</p>) : null}
+        {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>) : null}
         {loading ? (
           <p className="temporary-message temporary-message-info" role="status" aria-live="polite">
             <span className="sr-only">{t('common.states.loadingWorks')}</span>
-            <span aria-hidden="true">Loading...</span>
+            <span aria-hidden="true">{t('common.states.loadingWorks')}</span>
           </p>
+        ) : null}
+        {showNoResults ? (
+          <div className="temporary-message temporary-message-info">
+            <p>{t('results.noResults')}</p>
+            <p>{t('results.noResultsTip')}</p>
+          </div>
         ) : null}
         <ul className="results-list">
           {state.items.map((it: any) => {
