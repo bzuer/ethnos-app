@@ -229,8 +229,8 @@ function parseSearchState(data: any, page: string, limit: string): SearchState {
     }
     uniqueItems.push(item);
   });
-  const totalCount = Number(data?.total ?? data?.data?.total ?? data?.meta?.total ?? 0) || 0;
   const psrc: any = data?.pagination || data?.meta?.pagination || data?.data?.pagination || data?.results?.pagination || {};
+  const totalCount = Number(data?.total ?? data?.data?.total ?? data?.meta?.total ?? psrc?.total ?? 0) || 0;
   const pageNum = Number((psrc?.page ?? psrc?.current_page ?? page) || 1);
   const totalPages = Number(psrc?.totalPages ?? psrc?.total_pages ?? (totalCount && limit ? Math.ceil(Number(totalCount) / Number(limit)) : 0)) || undefined;
   const hasPrev = Boolean(psrc?.hasPrev) || pageNum > 1;
