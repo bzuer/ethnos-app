@@ -81,9 +81,13 @@ export default function SearchResultsClient({ locale }: Props) {
     ? `${pathname}?${new URLSearchParams({ ...params, page: String(state.pageNum + 1) }).toString()}`
     : undefined;
 
+  const showNoResults = !loading && !loadError && state.items.length === 0 && (query || Object.keys(params).length > 1);
+
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('results.title')}</h1>
+      {query && query !== '*' ? (<p className="search-summary">{t('results.summary', { query })}</p>) : null}
+      {!loading && state.totalCount > 0 ? (<p className="search-stats">{t('results.totalCount', { count: state.totalCount })}{state.totalPages && state.totalPages > 1 ? ` · ${t('results.pageInfo', { page: state.pageNum })}` : ''}</p>) : null}
       <section aria-labelledby="results-list">
         <h2 className="title-section" id="results-list">{t('results.itemsHeading')}</h2>
         {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>) : null}
@@ -92,6 +96,12 @@ export default function SearchResultsClient({ locale }: Props) {
             <span className="sr-only">{t('common.states.loadingWorks')}</span>
             <span aria-hidden="true">{t('common.states.loadingWorks')}</span>
           </p>
+        ) : null}
+        {showNoResults ? (
+          <div className="temporary-message temporary-message-info">
+            <p>{t('results.noResults')}</p>
+            <p>{t('results.noResultsTip')}</p>
+          </div>
         ) : null}
         <ul className="results-list">
           {scope === 'venues' ? state.items.map((it: any) => (

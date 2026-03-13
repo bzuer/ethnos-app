@@ -172,7 +172,12 @@
   },
   "results": {
     "title": "Resultados de la Búsqueda",
-    "itemsHeading": "Elementos"
+    "itemsHeading": "Elementos",
+    "summary": "Resultados para: \"{query}\"",
+    "totalCount": "{count, plural, =0 {Ningún resultado encontrado} one {1 resultado encontrado} other {# resultados encontrados}}",
+    "noResults": "No se encontraron resultados para su búsqueda.",
+    "noResultsTip": "Intente con términos diferentes o verifique la ortografía.",
+    "pageInfo": "Página {page}"
   },
   "venues": {
     "title": "Revistas",

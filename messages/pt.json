@@ -172,7 +172,12 @@
   },
   "results": {
     "title": "Resultados da Busca",
-    "itemsHeading": "Itens"
+    "itemsHeading": "Itens",
+    "summary": "Resultados para: \"{query}\"",
+    "totalCount": "{count, plural, =0 {Nenhum resultado encontrado} one {1 resultado encontrado} other {# resultados encontrados}}",
+    "noResults": "Nenhum resultado encontrado para sua busca.",
+    "noResultsTip": "Tente termos diferentes ou verifique a ortografia.",
+    "pageInfo": "Página {page}"
   },
   "venues": {
     "title": "Periódicos",
