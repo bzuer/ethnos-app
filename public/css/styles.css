@@ -332,7 +332,7 @@ figcaption {
 .data-table th {
     font-family: var(--mono);
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 600;
     text-transform: uppercase;
     color: var(--label-gray);
     border-bottom-width: 1px;
