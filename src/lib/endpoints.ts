@@ -47,19 +47,19 @@ export async function searchWorks(params: Record<string, string | number | boole
   const page = base.get('page') || '1';
   const limit = base.get('limit') || '25';
 
-  const fallbackList = async () => fetchJson(`/works?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
-
-  if (!qv || qv === '*') return fallbackList();
-
-  const tryPaths: string[] = [];
   const qs = new URLSearchParams(base as any);
   if (qs.has('work_type') && !qs.has('type')) {
     qs.set('type', String(qs.get('work_type')));
     qs.delete('work_type');
   }
-  tryPaths.push(`/search/works?${qs.toString()}`);
 
-  tryPaths.push(`/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
+  const tryPaths: string[] = [];
+  tryPaths.push(`/search/works?${qs.toString()}`);
+  if (qv && qv !== '*') {
+    tryPaths.push(`/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
+  } else {
+    tryPaths.push(`/works/showcase?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
+  }
 
   let lastError: unknown;
   for (const path of tryPaths) {
