@@ -112,7 +112,7 @@ export default function SearchResultsClient({ locale }: Props) {
               <p className="result-meta">
                 {it.type ? <span className="result-type">{it.type}</span> : null}
                 {it.issn ? <><span className="meta-separator" aria-hidden="true">•</span><span>ISSN {it.issn}</span></> : null}
-                {it.work_count ? <><span className="meta-separator" aria-hidden="true">•</span><span>{t('common.meta.worksCount', { count: it.work_count })}</span></> : null}
+                {(it.works_count || it.work_count) ? <><span className="meta-separator" aria-hidden="true">•</span><span>{t('common.meta.worksCount', { count: it.works_count || it.work_count })}</span></> : null}
               </p>
             </li>
           )) : scope === 'persons' ? state.items.map((it: any) => (
@@ -198,9 +198,13 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
   const qv = base.get('q') || '';
 
-  if (scope === 'venues' && qv && qv !== '*') {
-    const qs = new URLSearchParams({ q: qv, limit, offset: String(Math.max(0, (Number(page) - 1) * Number(limit))) });
-    const res = await fetch(`/api/venues/search?${qs.toString()}`, { signal, headers: { accept: 'application/json' } });
+  if (scope === 'venues') {
+    const offset = String(Math.max(0, (Number(page) - 1) * Number(limit)));
+    const qs = qv && qv !== '*'
+      ? new URLSearchParams({ q: qv, limit, offset })
+      : new URLSearchParams({ limit, page });
+    const endpoint = qv && qv !== '*' ? '/api/venues/search' : '/api/venues';
+    const res = await fetch(`${endpoint}?${qs.toString()}`, { signal, headers: { accept: 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
