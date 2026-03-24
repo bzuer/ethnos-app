@@ -12,7 +12,7 @@ Tech stack: React 19, Next.js 16 (App Router), next-intl 4, TypeScript 5.9, Node
 |------|---------|------|
 | Dev | `./bin/dev` or `npm run dev` | 1210 |
 | Build | `npm run build` | — |
-| Prod daemon | `./bin/start` | 1212 |
+| Prod (systemd) | `systemctl --user start ethnos-next` | 1212 |
 | Deploy | `scripts/manage.sh deploy` | 1212 |
 | Lint | `npm run lint` | — |
 | CSS minify | `scripts/manage.sh css` | — |
@@ -30,6 +30,7 @@ messages/{en,pt,es}.json         UI translations (must stay in sync)
 public/css/styles.css            SSOT stylesheet
 docs/html-css/                   Legacy HTML/CSS reference (visual parity target)
 scripts/manage.sh                Build, deploy, daemon management
+scripts/systemd/                 systemd user service unit
 config/env/                      Env file templates
 ```
 
@@ -63,6 +64,16 @@ config/env/                      Env file templates
 - `src/lib/works.ts` — author formatting, OA detection, abstract sanitization
 - `src/i18n/metadata.ts` — SEO metadata builder per locale
 - `src/app/api/[...path]/route.ts` — rate-limited API proxy
+
+## Production Service
+
+The app runs as a **systemd user service** (`ethnos-next.service`). Linger is enabled so it survives logout.
+
+- **Source unit:** `scripts/systemd/ethnos-next.service`
+- **Installed to:** `~/.config/systemd/user/ethnos-next.service`
+- **Manage:** `systemctl --user {start|stop|restart|status} ethnos-next`
+- **Logs:** `journalctl --user -u ethnos-next -f`
+- `scripts/manage.sh restart` and `deploy` use `systemctl --user restart` automatically.
 
 ## Gotchas
 

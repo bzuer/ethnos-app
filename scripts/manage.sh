@@ -10,8 +10,8 @@ ENV_FILE="${ENV_FILE:-}"
 PID_FILE="${PID_FILE:-/tmp/ethnos-next.pid}"
 LOG_FILE="${LOG_FILE:-/tmp/ethnos-next.log}"
 DAEMON_READY_TIMEOUT="${DAEMON_READY_TIMEOUT:-10}"
-SYSTEMD_ARGS="${SYSTEMD_ARGS:-}"
-SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-}"
+SYSTEMD_ARGS="${SYSTEMD_ARGS:---user}"
+SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-ethnos-next.service}"
 
 port_listening() {
   local TARGET="$1"

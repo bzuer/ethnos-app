@@ -12,7 +12,9 @@ Environment=PORT=1212
 ExecStart=/usr/bin/env bash -lc 'cd "%h/app" && exec ./scripts/manage.sh start_foreground'
 Restart=on-failure
 RestartSec=3
+KillSignal=SIGTERM
+KillMode=mixed
 TimeoutStopSec=20
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
