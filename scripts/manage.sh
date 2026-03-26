@@ -229,12 +229,40 @@ deploy() {
   restart
 }
 
+setup_service() {
+  local SRC="$ROOT_DIR/scripts/systemd/ethnos-next.service"
+  local DEST_DIR="$HOME/.config/systemd/user"
+  local DEST="$DEST_DIR/ethnos-next.service"
+
+  if [ ! -f "$SRC" ]; then
+    echo "Service unit not found at $SRC" >&2
+    exit 1
+  fi
+
+  mkdir -p "$DEST_DIR"
+  cp "$SRC" "$DEST"
+  echo "Installed service to $DEST"
+
+  systemctl --user daemon-reload
+  systemctl --user enable ethnos-next.service
+  echo "Service enabled."
+
+  if command -v loginctl >/dev/null 2>&1; then
+    if ! loginctl show-user "$USER" --property=Linger 2>/dev/null | grep -q "Linger=yes"; then
+      echo "Enabling linger for $USER (may require sudo)..."
+      loginctl enable-linger "$USER" 2>/dev/null || sudo loginctl enable-linger "$USER" || echo "Warning: could not enable linger. Service will stop on logout." >&2
+    fi
+  fi
+
+  echo "Setup complete. Use 'scripts/manage.sh deploy' to build and start, or 'systemctl --user start ethnos-next' to start directly."
+}
+
 usage() {
-  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy}"
+  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service}"
 }
 
 case "$CMD" in
-  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy)
+  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service)
     "$CMD"
     ;;
   *)

@@ -16,6 +16,7 @@ Tech stack: React 19, Next.js 16 (App Router), next-intl 4, TypeScript 5.9, Node
 | Deploy | `scripts/manage.sh deploy` | 1212 |
 | Lint | `npm run lint` | — |
 | CSS minify | `scripts/manage.sh css` | — |
+| Setup service | `scripts/manage.sh setup_service` | — |
 
 ## Project Layout
 
@@ -74,6 +75,7 @@ The app runs as a **systemd user service** (`ethnos-next.service`). Linger is en
 - **Manage:** `systemctl --user {start|stop|restart|status} ethnos-next`
 - **Logs:** `journalctl --user -u ethnos-next -f`
 - `scripts/manage.sh restart` and `deploy` use `systemctl --user restart` automatically.
+- **First-time setup:** `scripts/manage.sh setup_service` installs the unit, enables it, and configures linger.
 
 ## Gotchas
 
