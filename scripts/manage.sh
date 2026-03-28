@@ -257,12 +257,47 @@ setup_service() {
   echo "Setup complete. Use 'scripts/manage.sh deploy' to build and start, or 'systemctl --user start ethnos-next' to start directly."
 }
 
+uninstall() {
+  local DEST="$HOME/.config/systemd/user/ethnos-next.service"
+
+  echo "Uninstalling Ethnos..."
+
+  if command -v systemctl >/dev/null 2>&1; then
+    if systemctl --user is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
+      echo "Stopping service..."
+      systemctl --user stop "$SYSTEMD_SERVICE"
+    fi
+    if systemctl --user is-enabled --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
+      echo "Disabling service..."
+      systemctl --user disable "$SYSTEMD_SERVICE"
+    fi
+    if [ -f "$DEST" ]; then
+      echo "Removing service unit..."
+      rm -f "$DEST"
+      systemctl --user daemon-reload
+      systemctl --user reset-failed 2>/dev/null || true
+    fi
+  fi
+
+  stop
+
+  echo "Removing build artifacts..."
+  rm -rf "$ROOT_DIR/.next" "$ROOT_DIR/.turbo" 2>/dev/null || true
+
+  echo "Removing node_modules..."
+  rm -rf "$ROOT_DIR/node_modules" 2>/dev/null || true
+
+  rm -f "$PID_FILE" "$LOG_FILE" 2>/dev/null || true
+
+  echo "Uninstall complete. Source code preserved in $ROOT_DIR."
+}
+
 usage() {
-  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service}"
+  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall}"
 }
 
 case "$CMD" in
-  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service)
+  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall)
     "$CMD"
     ;;
   *)
