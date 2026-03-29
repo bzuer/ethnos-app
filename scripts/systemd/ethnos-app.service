@@ -1,5 +1,5 @@
 [Unit]
-Description=Ethnos Next Frontend
+Description=Ethnos App
 After=network.target
 
 [Service]

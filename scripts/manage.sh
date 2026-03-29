@@ -11,7 +11,7 @@ PID_FILE="${PID_FILE:-/tmp/ethnos-next.pid}"
 LOG_FILE="${LOG_FILE:-/tmp/ethnos-next.log}"
 DAEMON_READY_TIMEOUT="${DAEMON_READY_TIMEOUT:-10}"
 SYSTEMD_ARGS="${SYSTEMD_ARGS:---user}"
-SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-ethnos-next.service}"
+SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-ethnos-app.service}"
 
 port_listening() {
   local TARGET="$1"
@@ -226,13 +226,19 @@ deploy() {
   export NODE_ENV=production
   css
   npx next build
-  restart
+
+  local DEST="$HOME/.config/systemd/user/ethnos-app.service"
+  if [ ! -f "$DEST" ]; then
+    setup_service
+  fi
+  systemctl --user restart "$SYSTEMD_SERVICE"
+  systemctl --user is-active --quiet "$SYSTEMD_SERVICE"
 }
 
 setup_service() {
-  local SRC="$ROOT_DIR/scripts/systemd/ethnos-next.service"
+  local SRC="$ROOT_DIR/scripts/systemd/ethnos-app.service"
   local DEST_DIR="$HOME/.config/systemd/user"
-  local DEST="$DEST_DIR/ethnos-next.service"
+  local DEST="$DEST_DIR/ethnos-app.service"
 
   if [ ! -f "$SRC" ]; then
     echo "Service unit not found at $SRC" >&2
@@ -244,7 +250,7 @@ setup_service() {
   echo "Installed service to $DEST"
 
   systemctl --user daemon-reload
-  systemctl --user enable ethnos-next.service
+  systemctl --user enable ethnos-app.service
   echo "Service enabled."
 
   if command -v loginctl >/dev/null 2>&1; then
@@ -258,7 +264,7 @@ setup_service() {
 }
 
 uninstall() {
-  local DEST="$HOME/.config/systemd/user/ethnos-next.service"
+  local DEST="$HOME/.config/systemd/user/ethnos-app.service"
 
   echo "Uninstalling Ethnos..."
 

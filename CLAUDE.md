@@ -12,7 +12,7 @@ Tech stack: React 19, Next.js 16 (App Router), next-intl 4, TypeScript 5.9, Node
 |------|---------|------|
 | Dev | `./bin/dev` or `npm run dev` | 1210 |
 | Build | `npm run build` | — |
-| Prod (systemd) | `systemctl --user start ethnos-next` | 1212 |
+| Prod (systemd) | `systemctl --user start ethnos-app` | 1212 |
 | Deploy | `scripts/manage.sh deploy` | 1212 |
 | Lint | `npm run lint` | — |
 | CSS minify | `scripts/manage.sh css` | — |
@@ -68,12 +68,12 @@ config/env/                      Env file templates
 
 ## Production Service
 
-The app runs as a **systemd user service** (`ethnos-next.service`). Linger is enabled so it survives logout.
+The app runs as a **systemd user service** (`ethnos-app.service`). Linger is enabled so it survives logout.
 
-- **Source unit:** `scripts/systemd/ethnos-next.service`
-- **Installed to:** `~/.config/systemd/user/ethnos-next.service`
-- **Manage:** `systemctl --user {start|stop|restart|status} ethnos-next`
-- **Logs:** `journalctl --user -u ethnos-next -f`
+- **Source unit:** `scripts/systemd/ethnos-app.service`
+- **Installed to:** `~/.config/systemd/user/ethnos-app.service`
+- **Manage:** `systemctl --user {start|stop|restart|status} ethnos-app`
+- **Logs:** `journalctl --user -u ethnos-app -f`
 - `scripts/manage.sh restart` and `deploy` use `systemctl --user restart` automatically.
 - **First-time setup:** `scripts/manage.sh setup_service` installs the unit, enables it, and configures linger.
 
