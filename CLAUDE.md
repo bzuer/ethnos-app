@@ -44,6 +44,10 @@ config/env/                      Env file templates
 - **Code style:** 2 spaces, semicolons, single quotes. PascalCase components, camelCase props/vars.
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`), short and imperative, in English.
 
+## Search Domain Rule
+
+- **Every search result is a work.** Regardless of entity type searched — author, venue, keyword, institution — the response is always a list of works. Searching an author returns that author's works. Searching a venue returns that venue's works. The work is the universal unit of search results.
+
 ## Architecture Rules
 
 - **Home, Search, Venues are fully static** (`dynamic = 'force-static'`, no `revalidate`). No `headers()`, `cookies()`, or request-bound APIs in these routes.
