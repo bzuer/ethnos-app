@@ -22,9 +22,10 @@ Tech stack: React 19, Next.js 16 (App Router), next-intl 4, TypeScript 5.9, Node
 
 ```
 src/app/(site)/[locale]/         App Router pages (locale-prefixed)
-src/app/api/[...path]/route.ts   API proxy with rate limiting
+src/app/api/[...path]/route.ts   API proxy (rate-limited, 15s timeout, 502 on failure)
 src/components/common/           Shared React components
 src/lib/                         Server utilities, API client, formatters
+src/lib/work-export.ts           Shared export/citation utilities (BibTeX, RIS, APA, normalization)
 src/i18n/                        next-intl config, routing, metadata helpers
 src/proxy.ts                     Locale-aware middleware proxy
 messages/{en,pt,es}.json         UI translations (must stay in sync)
@@ -60,11 +61,14 @@ config/env/                      Env file templates
 
 ## Key Files
 
-- `src/lib/api.ts` — `fetchJson()` with retries, timeout, API key injection
-- `src/lib/endpoints.ts` — high-level API wrappers (search, venues, works, persons)
+- `src/lib/api.ts` — `fetchJson()` with retries (default 2), timeout (default 8s), API key injection
+- `src/lib/endpoints.ts` — high-level API wrappers (search, venues, works, persons); `getPersonsWorks` uses `Promise.allSettled` for parallel fetch; `searchWorks` routes empty queries directly to `/works/showcase`
+- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `attachEid` (used by both `work-actions.tsx` and `ListPageClient.tsx`)
 - `src/lib/works.ts` — author formatting, OA detection, abstract sanitization
+- `src/components/common/GroupedIdentifiers.tsx` — shared identifier renderer (used by works and venues detail pages)
 - `src/i18n/metadata.ts` — SEO metadata builder per locale
-- `src/app/api/[...path]/route.ts` — rate-limited API proxy
+- `src/app/api/[...path]/route.ts` — rate-limited API proxy (15s timeout, 502 on backend failure)
+- `src/app/.../works/[id]/work-detail.ts` — `loadWork()` wrapped with React `cache()` for request deduplication
 
 ## Production Service
 
@@ -82,3 +86,5 @@ The app runs as a **systemd user service** (`ethnos-app.service`). Linger is ena
 - If `Cannot find module './948.js'` on `next start`: ensure Node < 25, run `scripts/manage.sh deploy`.
 - CSS changes: edit `public/css/styles.css`, then run `scripts/manage.sh css` to regenerate minified version.
 - Three message files must stay structurally identical — adding a key in one requires adding it in all three.
+- Export/citation functions (`normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`) live in `src/lib/work-export.ts` — do not duplicate in page components.
+- `loadWork()` and `getPersonsWorks()` are wrapped with React `cache()` — safe to call in both `generateMetadata` and page render without double-fetching.
