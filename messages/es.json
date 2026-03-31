@@ -53,7 +53,6 @@
     "labels": {
       "searchInput": "Término de búsqueda",
       "term": "Término",
-      "scope": "Alcance",
       "itemsPerPage": "Elementos por página",
       "query": "Consulta",
       "parameters": "Parámetros",
@@ -82,10 +81,7 @@
       "language": "en, pt, es..."
     },
     "options": {
-      "any": "Cualquiera",
-      "works": "Obras",
-      "venues": "Revistas",
-      "persons": "Personas"
+      "any": "Cualquiera"
     },
     "states": {
       "loadingWorks": "Cargando obras...",

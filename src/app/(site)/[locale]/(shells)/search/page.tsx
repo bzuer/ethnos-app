@@ -94,14 +94,6 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
           <legend className="form-label">{t('search.parametersLegend')}</legend>
           <div className="search-filters">
             <div className="filter-label">
-              <label className="form-label" htmlFor="scope">{t('common.labels.scope')}</label>
-              <select className="form-input" id="scope" name="scope" defaultValue="works">
-                <option value="works">{t('common.options.works')}</option>
-                <option value="venues">{t('common.options.venues')}</option>
-                <option value="persons">{t('common.options.persons')}</option>
-              </select>
-            </div>
-            <div className="filter-label">
               <label className="form-label" htmlFor="limit">{t('common.labels.itemsPerPage')}</label>
               <select className="form-input" id="limit" name="limit" defaultValue="20">
                 <option value="10">10</option>

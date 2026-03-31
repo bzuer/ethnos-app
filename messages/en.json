@@ -53,7 +53,6 @@
     "labels": {
       "searchInput": "Search term",
       "term": "Term",
-      "scope": "Scope",
       "itemsPerPage": "Items per page",
       "query": "Query",
       "parameters": "Parameters",
@@ -82,10 +81,7 @@
       "language": "en, pt, es..."
     },
     "options": {
-      "any": "Any",
-      "works": "Works",
-      "venues": "Journals",
-      "persons": "Persons"
+      "any": "Any"
     },
     "states": {
       "loadingWorks": "Loading works...",
