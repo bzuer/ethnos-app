@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { fetchJson } from '@/lib/api';
@@ -261,15 +262,14 @@ export function pickReferenceAuthors(item: any) {
   return formatMetadataAuthors(item);
 }
 
-export async function loadWork(id: string) {
+export const loadWork = cache(async (id: string) => {
   let envelope: any = null;
   let work: any = null;
   try {
     envelope = await fetchJson<any>(
-      `/works/${encodeURIComponent(id)}?include=${encodeURIComponent(workIncludes)}`,
-      { cache: 'no-store', next: { revalidate: 0 } }
+      `/works/${encodeURIComponent(id)}?include=${encodeURIComponent(workIncludes)}`
     );
   } catch {}
   try { work = envelope?.data || envelope?.work || envelope || null; } catch {}
   return work;
-}
+});

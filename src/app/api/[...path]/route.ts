@@ -1,18 +1,15 @@
-const DEFAULT_LOCAL_API_BASE = 'http://127.0.0.1:1211';
+import { NextRequest } from 'next/server';
+
+const API_BASE = 'http://127.0.0.1:1211';
 const RATE_LIMIT_WINDOW_MS = 60000;
 const RATE_LIMIT_MAX = 1200;
 const RATE_LIMIT_SUSPICIOUS_MAX = 120;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
-const API_BASE = DEFAULT_LOCAL_API_BASE;
-
 function normalize(base: string, path: string) {
   if (/^https?:\/\//i.test(path)) return path;
-  const joined = `${(base || '').replace(/\/$/, '')}/${String(path || '').replace(/^\//, '')}`;
-  return joined;
+  return `${(base || '').replace(/\/$/, '')}/${String(path || '').replace(/^\//, '')}`;
 }
-
-import { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const rate = checkRateLimit(request);
@@ -32,14 +29,22 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ path: s
   const key = process.env.ETHNOS_API_KEY;
   if (key) headers.set('x-access-key', key);
   const controller = new AbortController();
-  const to = setTimeout(() => controller.abort(), 98000);
-  const res = await fetch(targetUrl, { method: 'GET', headers, cache: 'no-store', signal: controller.signal });
-  clearTimeout(to);
-  const body = await res.arrayBuffer();
-  const outHeaders = new Headers();
-  const ct = res.headers.get('content-type') || 'application/json';
-  outHeaders.set('content-type', ct);
-  return new Response(body, { status: res.status, headers: outHeaders });
+  const to = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(targetUrl, { method: 'GET', headers, cache: 'no-store', signal: controller.signal });
+    clearTimeout(to);
+    const body = await res.arrayBuffer();
+    const outHeaders = new Headers();
+    const ct = res.headers.get('content-type') || 'application/json';
+    outHeaders.set('content-type', ct);
+    return new Response(body, { status: res.status, headers: outHeaders });
+  } catch {
+    clearTimeout(to);
+    return new Response(JSON.stringify({ error: 'Backend unavailable' }), {
+      status: 502,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
 }
 
 function checkRateLimit(request: NextRequest) {

@@ -180,32 +180,29 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
   const base = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
   const qv = base.get('q') || '';
-  const tryPaths: string[] = [];
+  const fetchOpts = { signal, headers: { accept: 'application/json' } };
   const sphinx = new URLSearchParams(base as any);
   const offset = base.has('offset') ? Number(base.get('offset') || '0') : Math.max(0, (Number(page) - 1) * Number(limit));
   sphinx.set('limit', String(limit));
   sphinx.delete('page');
   if (!sphinx.has('offset')) sphinx.set('offset', String(offset));
-  tryPaths.push(`/api/search/advanced?${sphinx.toString()}`);
+
+  try {
+    const res = await fetch(`/api/search/advanced?${sphinx.toString()}`, fetchOpts);
+    if (res.ok) return await res.json();
+  } catch {}
+
   const qs = new URLSearchParams(base as any);
   if (qs.has('work_type') && !qs.has('type')) {
     qs.set('type', String(qs.get('work_type')));
     qs.delete('work_type');
   }
-  tryPaths.push(`/api/search/works?${qs.toString()}`);
-  tryPaths.push(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
-  let lastError: unknown;
-  for (const path of tryPaths) {
-    try {
-      const res = await fetch(path, { signal, headers: { accept: 'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      lastError = err;
-      continue;
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error('Search failed');
+  const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
+  if (res.ok) return await res.json();
+
+  const fallbackRes = await fetch(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
+  if (!fallbackRes.ok) throw new Error(`HTTP ${fallbackRes.status}`);
+  return await fallbackRes.json();
 }
 
 function parseSearchState(data: any, page: string, limit: string): SearchState {

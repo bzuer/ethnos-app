@@ -8,8 +8,6 @@ import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname } from '@/i18n/routing';
 import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 
-type Props = { locale: string };
-
 type SearchState = {
   items: any[];
   pageNum: number;
@@ -19,7 +17,7 @@ type SearchState = {
   totalCount: number;
 };
 
-export default function SearchResultsClient({ locale }: Props) {
+export default function SearchResultsClient() {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -233,6 +231,8 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
     qs.delete('work_type');
   }
 
+  const fetchOpts = { signal, headers: { accept: 'application/json' } };
+
   if (!qv || qv === '*') {
     qs.delete('q');
     const vitrineParams = new URLSearchParams();
@@ -245,38 +245,22 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
         vitrineParams.set(paramName, v);
       }
     });
-    const tryPaths: string[] = [];
-    tryPaths.push(`/api/search/works?${qs.toString()}`);
-    tryPaths.push(`/api/works/showcase?${vitrineParams.toString()}`);
-    let lastError: unknown;
-    for (const path of tryPaths) {
-      try {
-        const res = await fetch(path, { signal, headers: { accept: 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        lastError = err;
-        continue;
-      }
-    }
-    throw lastError instanceof Error ? lastError : new Error('Search failed');
+    const hasFiltersSet = FILTER_KEYS.some(k => qs.get(k === 'work_type' ? 'type' : k));
+    const primaryPath = hasFiltersSet
+      ? `/api/search/works?${qs.toString()}`
+      : `/api/works/showcase?${vitrineParams.toString()}`;
+    const res = await fetch(primaryPath, fetchOpts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
   }
 
-  const tryPaths: string[] = [];
-  tryPaths.push(`/api/search/works?${qs.toString()}`);
-  tryPaths.push(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
-  let lastError: unknown;
-  for (const path of tryPaths) {
-    try {
-      const res = await fetch(path, { signal, headers: { accept: 'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      lastError = err;
-      continue;
-    }
+  const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
+  if (!res.ok) {
+    const fallbackRes = await fetch(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
+    if (!fallbackRes.ok) throw new Error(`HTTP ${fallbackRes.status}`);
+    return await fallbackRes.json();
   }
-  throw lastError instanceof Error ? lastError : new Error('Search failed');
+  return await res.json();
 }
 
 function parseSearchState(data: any, page: string, limit: string): SearchState {

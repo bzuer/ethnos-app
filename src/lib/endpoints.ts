@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { fetchJson } from './api';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
@@ -53,24 +54,21 @@ export async function searchWorks(params: Record<string, string | number | boole
     qs.delete('work_type');
   }
 
-  const tryPaths: string[] = [];
-  tryPaths.push(`/search/works?${qs.toString()}`);
-  if (qv && qv !== '*') {
-    tryPaths.push(`/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
-  } else {
-    tryPaths.push(`/works/showcase?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`);
+  if (!qv || qv === '*') {
+    return await fetchJson(
+      `/works/showcase?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
+      { retries: 1, timeoutMs: 8000 }
+    );
   }
 
-  let lastError: unknown;
-  for (const path of tryPaths) {
-    try {
-      return await fetchJson(path, { retries: 3, timeoutMs: 15000 });
-    } catch (err) {
-      lastError = err;
-      continue;
-    }
+  try {
+    return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
+  } catch {
+    return await fetchJson(
+      `/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
+      { retries: 1, timeoutMs: 8000 }
+    );
   }
-  throw lastError instanceof Error ? lastError : new Error('Search failed');
 }
 
 export async function getVenuesPage(page = 1, limit = 50) {
@@ -86,19 +84,14 @@ export async function getVenueWorksPage(id: string | number, page = 1, limit = 2
   return r;
 }
 
-export async function getPersonsWorks(personId: string | number, page = 1, limit = 25) {
-  let person: any = null;
-  let works: any = null;
-  try {
-    const p: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(personId))}`);
-    person = p?.data || p?.person || p;
-  } catch {
-    person = null;
-  }
-  try {
-    works = await fetchJson<any>(`/persons/${encodeURIComponent(String(personId))}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
-  } catch {
-    works = null;
-  }
+export const getPersonsWorks = cache(async (personId: string | number, page = 1, limit = 25) => {
+  const id = encodeURIComponent(String(personId));
+  const [personResult, worksResult] = await Promise.allSettled([
+    fetchJson<any>(`/persons/${id}`),
+    fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`)
+  ]);
+  const p: any = personResult.status === 'fulfilled' ? personResult.value : null;
+  const person = p?.data || p?.person || p || null;
+  const works = worksResult.status === 'fulfilled' ? worksResult.value : null;
   return { person, works };
-}
+});
