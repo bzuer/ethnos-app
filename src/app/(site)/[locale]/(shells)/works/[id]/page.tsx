@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
+import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/common/GroupedIdentifiers';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import ClientActions from './work-actions';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
@@ -167,7 +168,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
     const name = a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' ');
     return name ? String(name) : '';
   }).filter(Boolean);
-  type IdentifierEntry = { label: string; values: Array<{ text: string; href?: string }> };
   const ids: IdentifierEntry[] = [];
   const venueIds: IdentifierEntry[] = [];
   const addValues = (
@@ -198,23 +198,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
     });
     if (!existing) targetList.push({ label, values: target });
   };
-  const renderGroupedIdentifiers = (entries: IdentifierEntry[], keyPrefix: string) => (
-    entries.map((kv, kvIdx) => (
-      <span key={`${keyPrefix}-${kv.label}-${kvIdx}`}>
-        {kv.label}: {kv.values.map((entry, idx: number) => (
-          <span key={`${keyPrefix}-${kv.label}-${entry.text}-${idx}`}>
-            {entry.href ? (
-              <a className="action-link table-link" href={entry.href} target="_blank" rel="noopener noreferrer">{entry.text}</a>
-            ) : (
-              <span>{entry.text}</span>
-            )}
-            {idx < kv.values.length - 1 ? ', ' : ''}
-          </span>
-        ))}
-        {kvIdx < entries.length - 1 ? ' • ' : ''}
-      </span>
-    ))
-  );
   addValues('DOI', work?.doi || publication?.doi, (value) => `https://doi.org/${encodeURIComponent(String(value))}`);
   addValues('PMID', work?.pmid, (value) => `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(value))}`);
   addValues('PMCID', work?.pmcid);

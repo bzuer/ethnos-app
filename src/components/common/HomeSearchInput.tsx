@@ -13,6 +13,7 @@ export default function HomeSearchInput({ placeholder, ariaLabel }: Props) {
       inputId="search-input"
       inputName="q"
       placeholder={placeholder}
+      ariaLabel={ariaLabel}
       onSelect={(item) => {
         window.location.href = item.href;
       }}

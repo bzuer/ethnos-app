@@ -126,7 +126,7 @@ const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTit
   return other;
 };
 
-type IdentifierEntry = { label: string; values: Array<{ text: string; href?: string }> };
+import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/common/GroupedIdentifiers';
 
 const addIdentifierValues = (
   target: IdentifierEntry[],
@@ -159,23 +159,6 @@ const addIdentifierValues = (
   if (!existing) target.push({ label, values: targetValues });
 };
 
-const renderGroupedIdentifiers = (entries: IdentifierEntry[], keyPrefix: string) => (
-  entries.map((kv, kvIdx) => (
-    <span key={`${keyPrefix}-${kv.label}-${kvIdx}`}>
-      {kv.label}: {kv.values.map((entry, idx: number) => (
-        <span key={`${keyPrefix}-${kv.label}-${entry.text}-${idx}`}>
-          {entry.href ? (
-            <a className="action-link table-link" href={entry.href} target="_blank" rel="noopener noreferrer">{entry.text}</a>
-          ) : (
-            <span>{entry.text}</span>
-          )}
-          {idx < kv.values.length - 1 ? ', ' : ''}
-        </span>
-      ))}
-      {kvIdx < entries.length - 1 ? ' • ' : ''}
-    </span>
-  ))
-);
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;

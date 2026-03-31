@@ -16,7 +16,7 @@ type Props = {
   placeholder: string;
   inputClassName?: string;
   defaultValue?: string;
-  typeLabel?: string;
+  ariaLabel?: string;
   onSelect?: (suggestion: Suggestion) => void;
 };
 
@@ -30,6 +30,7 @@ export default function SearchAutocomplete({
   placeholder,
   inputClassName = 'form-input',
   defaultValue = '',
+  ariaLabel,
   onSelect,
 }: Props) {
   const [query, setQuery] = useState(defaultValue);
@@ -126,6 +127,17 @@ export default function SearchAutocomplete({
     timerRef.current = setTimeout(() => fetchSuggestions(value.trim()), DEBOUNCE_MS);
   }, [fetchSuggestions]);
 
+  const selectItem = useCallback((item: Suggestion) => {
+    setQuery(item.text);
+    setOpen(false);
+    setHighlighted(-1);
+    if (onSelect) {
+      onSelect(item);
+    } else {
+      window.location.href = item.href;
+    }
+  }, [onSelect]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!open || suggestions.length === 0) return;
     if (e.key === 'ArrowDown') {
@@ -141,18 +153,7 @@ export default function SearchAutocomplete({
       setOpen(false);
       setHighlighted(-1);
     }
-  }, [open, suggestions, highlighted]);
-
-  const selectItem = useCallback((item: Suggestion) => {
-    setQuery(item.text);
-    setOpen(false);
-    setHighlighted(-1);
-    if (onSelect) {
-      onSelect(item);
-    } else {
-      window.location.href = item.href;
-    }
-  }, [onSelect]);
+  }, [open, suggestions, highlighted, selectItem]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -199,6 +200,7 @@ export default function SearchAutocomplete({
         onKeyDown={handleKeyDown}
         onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
         role="combobox"
+        aria-label={ariaLabel}
         aria-expanded={open}
         aria-autocomplete="list"
         aria-controls={`${inputId}-suggestions`}
