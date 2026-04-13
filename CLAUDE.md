@@ -67,7 +67,7 @@ config/env/                      Env file templates
 
 - `src/lib/api.ts` — `fetchJson()` with retries (default 2), timeout (default 8s), API key injection
 - `src/lib/endpoints.ts` — high-level API wrappers (search, venues, works, persons); `getPersonsWorks` uses `Promise.allSettled` for parallel fetch; `searchWorks` routes empty queries directly to `/works/showcase`
-- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `attachEid` (used by both `work-actions.tsx` and `ListPageClient.tsx`)
+- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `buildAccessUrl`, `buildDoiUrl` (used by both `work-actions.tsx` and `ListPageClient.tsx`). `normWork` emits a single canonical shape that already carries `id` and `url`; JSON exports use `{ exported_at, count, works }` — never wrap raw + normalized side by side. BibTeX text fields are escaped; `url`, `doi`, `abstract`, `note` (MD5) are emitted as standard BibTeX fields, never folded into `annote`.
 - `src/lib/works.ts` — author formatting, OA detection, abstract sanitization
 - `src/components/common/GroupedIdentifiers.tsx` — shared identifier renderer (used by works and venues detail pages)
 - `src/i18n/metadata.ts` — SEO metadata builder per locale

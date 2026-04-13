@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Document, Packer, Paragraph } from 'docx';
 import { showNotification } from '@/lib/notify';
-import { normWork, attachEid, toBibTeX, toApaParagraph } from '@/lib/work-export';
+import { normWork, toBibTeX, toApaParagraph } from '@/lib/work-export';
 
 type Props = { work: any };
 
@@ -94,10 +94,13 @@ export default function ClientActions({ work }: Props) {
   }, [work, t]);
 
   const onExportJson = useCallback(() => {
-    const normalizedSource = [normWork(work)];
-    const normalized = normalizedSource.filter(Boolean).map((entry) => attachEid(entry as Record<string, any>));
-    const exportedItems = [attachEid(work)];
-    const payload = JSON.stringify({ items: exportedItems, normalized }, null, 2);
+    const nw = normWork(work);
+    const works = nw ? [nw] : [];
+    const payload = JSON.stringify({
+      exported_at: new Date().toISOString(),
+      count: works.length,
+      works
+    }, null, 2);
     download(`work-${work?.id || 'data'}.json`, payload, 'application/json');
     showNotification(t('common.messages.jsonExported'), 'success');
   }, [work, t]);

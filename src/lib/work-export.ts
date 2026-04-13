@@ -22,10 +22,15 @@ export function normalizeDoi(value: any) {
   return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
 }
 
-export function formatAccessLink(id: string | number | null | undefined) {
+export function buildAccessUrl(id: string | number | null | undefined) {
   if (id === null || id === undefined) return '';
   const value = String(id).trim();
-  return value ? `ethnos.app/works/${encodeURIComponent(value)}` : '';
+  return value ? `https://ethnos.app/works/${encodeURIComponent(value)}` : '';
+}
+
+export function buildDoiUrl(doi: string | null | undefined) {
+  const clean = normalizeDoi(doi);
+  return clean ? `https://doi.org/${clean}` : '';
 }
 
 export function normalizeIssue(value: any) {
@@ -68,6 +73,7 @@ export function normWork(raw: any) {
   const isbn = getIsbn(raw);
   return {
     id: raw.id,
+    url: buildAccessUrl(raw.id),
     work_type: raw.work_type || raw.type || null,
     title: raw.title || null,
     subtitle: raw.subtitle || null,
@@ -108,16 +114,42 @@ export function normWork(raw: any) {
   };
 }
 
-export function formatEid(id: string | number | null | undefined) {
-  if (id === null || id === undefined) return '';
-  const value = String(id).trim();
-  return value ? `e-id ${value}` : '';
+function escBibTeX(value: any): string {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/([{}])/g, '\\$1')
+    .replace(/&/g, '\\&')
+    .replace(/%/g, '\\%')
+    .replace(/\$/g, '\\$')
+    .replace(/#/g, '\\#')
+    .replace(/_/g, '\\_')
+    .replace(/\^/g, '\\^{}')
+    .replace(/~/g, '\\~{}');
 }
 
-export function attachEid<T extends Record<string, any>>(item: T, overrideId?: string | number | null) {
-  const eid = formatEid(overrideId ?? item?.id ?? null);
-  if (!eid) return item;
-  return { ...item, 'e-id': eid };
+function escBibVerbatim(value: any): string {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/\\/g, '\\textbackslash{}').replace(/([{}])/g, '\\$1');
+}
+
+function bibKey(nw: any): string {
+  const first = Array.isArray(nw.authors) && nw.authors[0]
+    ? (nw.authors[0].family_name || nw.authors[0].preferred_name || 'work')
+    : 'work';
+  const slug = String(first).toLowerCase().replace(/[^a-z0-9]/g, '') || 'ref';
+  const year = nw.publication?.year ? String(nw.publication.year) : '';
+  const idPart = nw.id !== null && nw.id !== undefined ? String(nw.id) : '';
+  return [slug, year, idPart].filter(Boolean).join('-') || 'ref';
+}
+
+function bibAuthors(authors: any[]): string {
+  return authors.map((a: any) => {
+    const fam = a.family_name || '';
+    const giv = a.given_names || '';
+    const p = a.preferred_name || '';
+    return fam && giv ? `${fam}, ${giv}` : (p || fam || giv);
+  }).filter(Boolean).join(' and ');
 }
 
 export function toRIS(nw: any): string {
@@ -126,71 +158,90 @@ export function toRIS(nw: any): string {
   const lines: string[] = [];
   lines.push(`TY  - ${risType}`);
   if (nw.title) lines.push(`TI  - ${nw.title}`);
+  if (nw.subtitle) lines.push(`T2  - ${nw.subtitle}`);
   if (Array.isArray(nw.authors)) {
     nw.authors.forEach((a: any) => {
       const fam = a.family_name || '';
       const giv = a.given_names || '';
       const p = a.preferred_name || '';
-      lines.push(`AU  - ${fam && giv ? `${fam}, ${giv}` : (p || fam || giv)}`);
+      const v = fam && giv ? `${fam}, ${giv}` : (p || fam || giv);
+      if (v) lines.push(`AU  - ${v}`);
     });
   }
   if (nw.publication?.year) lines.push(`PY  - ${nw.publication.year}`);
-  if (nw.venue?.name) lines.push(`JF  - ${nw.venue.name}`);
+  if (nw.venue?.name) {
+    const venueTag = risType === 'JOUR' ? 'JF' : risType === 'CPAPER' ? 'BT' : 'T2';
+    lines.push(`${venueTag}  - ${nw.venue.name}`);
+  }
+  if (nw.publisher?.name) lines.push(`PB  - ${nw.publisher.name}`);
   if (nw.publication?.volume) lines.push(`VL  - ${nw.publication.volume}`);
-  if (nw.publication?.issue) lines.push(`IS  - ${nw.publication.issue}`);
+  const issue = normalizeIssue(nw.publication?.issue);
+  if (issue) lines.push(`IS  - ${issue}`);
   if (nw.publication?.pages) {
-    const sp = String(nw.publication.pages).split('-')[0];
-    const ep = String(nw.publication.pages).split('-')[1];
+    const parts = String(nw.publication.pages).split(/[-–—]/);
+    const sp = parts[0] && parts[0].trim();
+    const ep = parts[1] && parts[1].trim();
     if (sp) lines.push(`SP  - ${sp}`);
     if (ep) lines.push(`EP  - ${ep}`);
   }
   const doi = normalizeDoi(nw.doi);
   if (doi) lines.push(`DO  - ${doi}`);
+  if (nw.isbn) lines.push(`SN  - ${nw.isbn}`);
   if (nw.language) lines.push(`LA  - ${nw.language}`);
-  const eid = formatEid(nw.id);
-  if (eid) lines.push(`N1  - ${eid}`);
+  const abstract = normalizeValue(nw.abstract);
+  if (abstract) lines.push(`AB  - ${abstract}`);
+  const url = nw.url || buildAccessUrl(nw.id);
+  if (url) lines.push(`UR  - ${url}`);
+  const doiUrl = buildDoiUrl(nw.doi);
+  if (doiUrl && doiUrl !== url) lines.push(`UR  - ${doiUrl}`);
   lines.push('ER  - ');
   return lines.join('\n');
 }
 
 export function toBibTeX(nw: any): string {
   const ty = nw.work_type && String(nw.work_type).toLowerCase();
-  const bt = ty === 'article' ? 'article' : ty === 'book' ? 'book' : 'misc';
-  const keyAuthor = nw.authors && nw.authors[0] ? (nw.authors[0].family_name || nw.authors[0].preferred_name || 'work') : 'work';
-  const key = `${String(keyAuthor).toLowerCase().replace(/[^a-z0-9]/g, '')}${nw.publication?.year || ''}` || 'ref';
-  const lines: string[] = [];
-  lines.push(`@${bt}{${key},`);
-  const accessLink = formatAccessLink(nw.id);
+  const bt = ty === 'article' ? 'article'
+    : ty === 'book' ? 'book'
+    : ty === 'inproceedings' ? 'inproceedings'
+    : ty === 'incollection' ? 'incollection'
+    : ty === 'phdthesis' ? 'phdthesis'
+    : ty === 'mastersthesis' ? 'mastersthesis'
+    : 'misc';
+  const key = bibKey(nw);
+  const lines: string[] = [`@${bt}{${key},`];
+  const fields: Array<[string, string, boolean]> = [];
+
+  if (Array.isArray(nw.authors) && nw.authors.length) {
+    const s = bibAuthors(nw.authors);
+    if (s) fields.push(['author', s, false]);
+  }
+  const fullTitle = nw.subtitle ? `${nw.title || ''}: ${nw.subtitle}` : (nw.title || '');
+  if (fullTitle) fields.push(['title', fullTitle, false]);
+  if (nw.publication?.year) fields.push(['year', String(nw.publication.year), false]);
+  if (nw.venue?.name) {
+    if (bt === 'article') fields.push(['journal', nw.venue.name, false]);
+    else if (bt === 'inproceedings' || bt === 'incollection') fields.push(['booktitle', nw.venue.name, false]);
+  }
+  if (nw.publication?.volume) fields.push(['volume', String(nw.publication.volume), false]);
+  const issue = normalizeIssue(nw.publication?.issue);
+  if (issue) fields.push(['number', issue, false]);
+  if (nw.publication?.pages) fields.push(['pages', String(nw.publication.pages), false]);
+  if (nw.publisher?.name) fields.push(['publisher', nw.publisher.name, false]);
+  if (nw.series) fields.push(['series', String(nw.series), false]);
+  if (nw.isbn) fields.push(['isbn', String(nw.isbn), false]);
+  if (nw.language) fields.push(['language', String(nw.language), false]);
   const doi = normalizeDoi(nw.doi);
-  const annoteParts = [];
-  if (accessLink) annoteParts.push(`Access: ${accessLink}`);
-  if (nw.md5) {
-    const abstract = normalizeValue(nw.abstract);
-    const fileInfo = `File: pdf \\textbar MD5: ${nw.md5}`;
-    annoteParts.push(abstract ? `${fileInfo} \\textbar Abstract: ${abstract}` : fileInfo);
-  }
-  const annote = annoteParts.join(' \\textbar ');
-  if (Array.isArray(nw.authors)) {
-    const s = nw.authors.map((a: any) => {
-      const fam = a.family_name || '';
-      const giv = a.given_names || '';
-      const p = a.preferred_name || '';
-      return fam && giv ? `${fam}, ${giv}` : p || fam || giv;
-    }).filter(Boolean).join(' and ');
-    if (s) lines.push(`  author = {${s}},`);
-  }
-  if (nw.title) lines.push(`  title = {${nw.title}},`);
-  if (nw.publication?.year) lines.push(`  year = {${nw.publication.year}},`);
-  if (annote) lines.push(`  annote = {${annote}},`);
-  if (nw.publisher?.name) lines.push(`  publisher = {${nw.publisher.name}},`);
-  if (nw.language) lines.push(`  language = {${nw.language}},`);
-  if (nw.isbn) lines.push(`  isbn = {${nw.isbn}},`);
-  if (nw.series) lines.push(`  series = {${nw.series}},`);
-  if (nw.venue?.name && bt === 'article') lines.push(`  journal = {${nw.venue.name}},`);
-  if (nw.publication?.volume) lines.push(`  volume = {${nw.publication.volume}},`);
-  if (nw.publication?.issue) lines.push(`  number = {${nw.publication.issue}},`);
-  if (nw.publication?.pages) lines.push(`  pages = {${nw.publication.pages}},`);
-  if (doi) lines.push(`  doi = {${doi}},`);
+  if (doi) fields.push(['doi', doi, true]);
+  const url = nw.url || buildAccessUrl(nw.id);
+  if (url) fields.push(['url', url, true]);
+  const abstract = normalizeValue(nw.abstract);
+  if (abstract) fields.push(['abstract', abstract, false]);
+  if (nw.md5) fields.push(['note', `MD5: ${nw.md5}`, false]);
+
+  fields.forEach(([k, v, verbatim]) => {
+    const escaped = verbatim ? escBibVerbatim(v) : escBibTeX(v);
+    lines.push(`  ${k} = {${escaped}},`);
+  });
   lines.push('}');
   return lines.join('\n');
 }
@@ -225,8 +276,8 @@ export function toApaParagraph(work: any, fallbackAuthor: string, options?: { sp
   const pages = work?.publication?.pages || '';
   const publisher = work?.publisher?.name || work?.publisher_name || '';
   const isbn = work?.isbn || '';
-  const doi = normalizeDoi(work?.doi || work?.publication?.doi);
-  const accessLink = formatAccessLink(work?.id);
+  const doiUrl = buildDoiUrl(work?.doi || work?.publication?.doi);
+  const accessUrl = work?.url || buildAccessUrl(work?.id);
   const children: TextRun[] = [];
   if (authorText) children.push(new TextRun({ text: authorText }));
   if (year) children.push(new TextRun({ text: ` (${year}).` }));
@@ -248,8 +299,8 @@ export function toApaParagraph(work: any, fallbackAuthor: string, options?: { sp
     }
   }
   if (isbn) children.push(new TextRun({ text: ` ISBN: ${isbn}.` }));
-  if (doi) children.push(new TextRun({ text: ` DOI: ${doi}.` }));
-  if (accessLink) children.push(new TextRun({ text: ` Access: ${accessLink}.` }));
+  if (doiUrl) children.push(new TextRun({ text: ` ${doiUrl}` }));
+  else if (accessUrl) children.push(new TextRun({ text: ` ${accessUrl}` }));
   if (!children.length) return null;
   return new Paragraph({ children, ...(options?.spacing ? { spacing: { after: 240 } } : {}), alignment: AlignmentType.JUSTIFIED });
 }

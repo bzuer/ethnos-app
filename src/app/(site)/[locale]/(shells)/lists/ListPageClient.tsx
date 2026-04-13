@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Document, Packer, Paragraph } from 'docx';
 import LocaleLink from '@/components/common/LocaleLink';
 import { showNotification } from '@/lib/notify';
-import { normWork, attachEid, toBibTeX, toRIS, toApaParagraph } from '@/lib/work-export';
+import { normWork, toBibTeX, toRIS, toApaParagraph } from '@/lib/work-export';
 
 type SavedItem = { id: number | string; title?: string; authors?: any; publication_year?: number | string; venue_name?: string; type?: string; added_at?: string };
 type Work = any;
@@ -139,10 +139,12 @@ export default function ListPageClient() {
 
   const exportJson = async () => {
     const resolved = await resolveWorksForExport(items);
-    const normalizedSource = resolved.map(normWork);
-    const normalized = normalizedSource.filter(Boolean).map((entry) => attachEid(entry as Record<string, any>));
-    const exportedItems = resolved.map((entry: any) => attachEid(entry));
-    const payload = JSON.stringify({ items: exportedItems, normalized }, null, 2);
+    const works = resolved.map(normWork).filter(Boolean);
+    const payload = JSON.stringify({
+      exported_at: new Date().toISOString(),
+      count: works.length,
+      works
+    }, null, 2);
     downloadFile(`reading-list-${new Date().toISOString().split('T')[0]}.json`, payload, 'application/json');
     showNotification(t('common.messages.jsonExported'), 'success');
   };
