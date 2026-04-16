@@ -1,4 +1,5 @@
 import { AlignmentType, Paragraph, TextRun } from 'docx';
+import { normalizeWorkDetail } from './works';
 
 export function normAuthor(a: any) {
   if (!a) return null;
@@ -62,8 +63,11 @@ export function getFilesList(raw: any) {
   return [];
 }
 
-export function normWork(raw: any) {
-  if (!raw) return null;
+export function normWork(source: any) {
+  if (!source) return null;
+  const raw = Array.isArray(source?.publications) && source.publications.length
+    ? normalizeWorkDetail(source)
+    : source;
   const authors = Array.isArray(raw.authors) ? raw.authors.map(normAuthor).filter(Boolean) : [];
   const publication = raw.publication || {};
   const venue = raw.venue || {};

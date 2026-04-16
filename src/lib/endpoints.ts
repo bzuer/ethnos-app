@@ -1,5 +1,6 @@
 import { cache } from 'react';
 import { fetchJson } from './api';
+import { normalizePersonDetail, normalizePersonWorkItem, normalizeWorkDetail } from './works';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
   const parsed = Number(limit);
@@ -65,11 +66,43 @@ export async function searchWorks(params: Record<string, string | number | boole
     return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
   } catch {
     return await fetchJson(
-      `/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
+      `/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
       { retries: 1, timeoutMs: 8000 }
     );
   }
 }
+
+export const getWork = cache(async (id: string | number, opts?: { includeCitations?: boolean; includeReferences?: boolean }) => {
+  const includeCitations = opts?.includeCitations ?? true;
+  const includeReferences = opts?.includeReferences ?? true;
+  const qs = new URLSearchParams({
+    include_citations: includeCitations ? 'true' : 'false',
+    include_references: includeReferences ? 'true' : 'false'
+  });
+  let envelope: any = null;
+  try {
+    envelope = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}?${qs.toString()}`);
+  } catch {
+    return null;
+  }
+  const raw = envelope?.data || envelope?.work || envelope || null;
+  return raw ? normalizeWorkDetail(raw) : null;
+});
+
+export const getPublication = cache(async (id: string | number, opts?: { includeCitations?: boolean; includeReferences?: boolean }) => {
+  const includeCitations = opts?.includeCitations ?? false;
+  const includeReferences = opts?.includeReferences ?? false;
+  const qs = new URLSearchParams({
+    include_citations: includeCitations ? 'true' : 'false',
+    include_references: includeReferences ? 'true' : 'false'
+  });
+  try {
+    const envelope: any = await fetchJson<any>(`/publications/${encodeURIComponent(String(id))}?${qs.toString()}`);
+    return envelope?.data || envelope?.publication || envelope || null;
+  } catch {
+    return null;
+  }
+});
 
 export async function getVenuesPage(page = 1, limit = 50) {
   const r: any = await fetchJson(
@@ -91,7 +124,21 @@ export const getPersonsWorks = cache(async (personId: string | number, page = 1,
     fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`)
   ]);
   const p: any = personResult.status === 'fulfilled' ? personResult.value : null;
-  const person = p?.data || p?.person || p || null;
-  const works = worksResult.status === 'fulfilled' ? worksResult.value : null;
+  const personRaw = p?.data || p?.person || p || null;
+  const person = personRaw ? normalizePersonDetail(personRaw) : null;
+  const worksRaw: any = worksResult.status === 'fulfilled' ? worksResult.value : null;
+  let works: any = worksRaw;
+  if (worksRaw && typeof worksRaw === 'object') {
+    const items = Array.isArray(worksRaw.data)
+      ? worksRaw.data
+      : (Array.isArray(worksRaw.results) ? worksRaw.results : (Array.isArray(worksRaw.items) ? worksRaw.items : null));
+    if (items) {
+      const normalized = items.map((entry: any) => normalizePersonWorkItem(entry));
+      works = { ...worksRaw };
+      if (Array.isArray(worksRaw.data)) works.data = normalized;
+      else if (Array.isArray(worksRaw.results)) works.results = normalized;
+      else if (Array.isArray(worksRaw.items)) works.items = normalized;
+    }
+  }
   return { person, works };
 });

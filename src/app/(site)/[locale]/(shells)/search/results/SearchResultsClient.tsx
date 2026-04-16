@@ -210,7 +210,7 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
 
   const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
   if (!res.ok) {
-    const fallbackRes = await fetch(`/api/works?q=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
+    const fallbackRes = await fetch(`/api/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
     if (!fallbackRes.ok) throw new Error(`HTTP ${fallbackRes.status}`);
     return await fallbackRes.json();
   }

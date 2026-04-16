@@ -99,11 +99,18 @@ export function isWorkOpenAccess(item: any) {
     const normalized = license.trim().toLowerCase();
     if (normalized && !['', 'closed', 'all-rights-reserved', 'unknown'].includes(normalized)) return true;
   }
+  if (Array.isArray(item?.publications) && item.publications.some((pub: any) => pub?.open_access === true)) return true;
   return false;
 }
 
 export function getWorkDoi(item: any) {
-  const raw = pickDoiRaw(item);
+  let raw = pickDoiRaw(item);
+  if (!raw && Array.isArray(item?.publications)) {
+    for (const pub of item.publications) {
+      const candidate = pub?.identifiers?.doi ?? pub?.doi;
+      if (candidate) { raw = candidate; break; }
+    }
+  }
   const doi = pickDoiValue(raw);
   if (!doi) return '';
   return doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
@@ -167,8 +174,11 @@ function pickAuthorList(item: any) {
 function pickAuthorString(item: any) {
   const fromAuthors = typeof item?.authors === 'string' ? item.authors : '';
   const fromPreview = typeof item?.authors_preview === 'string' ? item.authors_preview : '';
+  const fromObjectAuthors = (item?.authors && typeof item.authors === 'object' && !Array.isArray(item.authors))
+    ? (item.authors.author_string || '')
+    : '';
   const fromFormatted = item?.formatted_authors || item?.author_string || '';
-  return normalizeText(fromAuthors || fromPreview || fromFormatted);
+  return normalizeText(fromAuthors || fromPreview || fromObjectAuthors || fromFormatted);
 }
 
 function splitAuthorString(value: string) {
@@ -227,4 +237,157 @@ export function formatMetadataVenue(item: any, maxChars: number = METADATA_TEXT_
 export function formatMetadataType(value: any, maxChars: number = METADATA_TEXT_LIMITS.type) {
   const normalized = normalizeText(value).toUpperCase();
   return truncateMetadataText(normalized, maxChars);
+}
+
+const IDENTIFIER_KEYS = [
+  'doi', 'pmid', 'pmcid', 'arxiv', 'wos_id', 'handle',
+  'wikidata_id', 'openalex_id', 'isbn', 'openlibrary_id',
+  'scielo_pid', 'google_book_id', 'mag_id'
+] as const;
+
+type IdKey = typeof IDENTIFIER_KEYS[number];
+type FlatIds = Record<IdKey, string>;
+
+function fileIsMain(file: any) {
+  if (!file) return false;
+  const role = String(file?.role || '').toUpperCase();
+  return role === 'MAIN' || Boolean(file?.best_oa_url || file?.scimag_id || file?.libgen_id);
+}
+
+function publicationHasMainFile(pub: any) {
+  const files = Array.isArray(pub?.files) ? pub.files : [];
+  return files.some(fileIsMain);
+}
+
+export function pickPrimaryPublication(raw: any): any {
+  const list = Array.isArray(raw?.publications) ? raw.publications : [];
+  if (!list.length) return null;
+  const oaMain = list.find((pub: any) => pub?.open_access === true && publicationHasMainFile(pub));
+  if (oaMain) return oaMain;
+  const hasMainFile = list.find((pub: any) => pub?.has_files === true && publicationHasMainFile(pub));
+  if (hasMainFile) return hasMainFile;
+  const openAccess = list.find((pub: any) => pub?.open_access === true);
+  if (openAccess) return openAccess;
+  const anyFiles = list.find((pub: any) => pub?.has_files === true || (Array.isArray(pub?.files) && pub.files.length));
+  if (anyFiles) return anyFiles;
+  const dated = [...list]
+    .filter((pub: any) => pub?.publication_date)
+    .sort((a: any, b: any) => String(b.publication_date).localeCompare(String(a.publication_date)));
+  if (dated.length) return dated[0];
+  return list[0];
+}
+
+function pickFirstIdentifier(raw: any): string {
+  if (raw === null || raw === undefined) return '';
+  if (Array.isArray(raw)) {
+    for (const entry of raw) {
+      const value = pickFirstIdentifier(entry);
+      if (value) return value;
+    }
+    return '';
+  }
+  if (typeof raw === 'object') {
+    return pickFirstIdentifier(raw?.id ?? raw?.value ?? raw?.identifier ?? '');
+  }
+  const text = String(raw).trim();
+  return text;
+}
+
+export function flattenIdentifierArrays(input: any): FlatIds {
+  const source = input && typeof input === 'object' ? input : {};
+  const flat = {} as FlatIds;
+  IDENTIFIER_KEYS.forEach((key) => {
+    flat[key] = pickFirstIdentifier(source[key]);
+  });
+  return flat;
+}
+
+function mergeIdentifierSources(primary: any, fallback: any) {
+  const merged: Record<string, any> = { ...(fallback && typeof fallback === 'object' ? fallback : {}) };
+  if (primary && typeof primary === 'object') {
+    Object.entries(primary).forEach(([key, value]) => {
+      const candidate = pickFirstIdentifier(value);
+      if (candidate) merged[key] = value;
+    });
+  }
+  return merged;
+}
+
+export function normalizeWorkDetail(raw: any) {
+  if (!raw || typeof raw !== 'object') return raw;
+  const publications = Array.isArray(raw?.publications) ? raw.publications : null;
+  if (!publications || !publications.length) return raw;
+  const primary = pickPrimaryPublication(raw);
+  const mergedIds = mergeIdentifierSources(primary?.identifiers, raw?.identifiers);
+  const flat = flattenIdentifierArrays(mergedIds);
+  const primaryDoi = pickFirstIdentifier(primary?.identifiers?.doi) || flat.doi;
+  const workType = raw?.type || raw?.work_type || null;
+  return {
+    ...raw,
+    work_type: workType,
+    type: raw?.type || workType,
+    publication_year: primary?.publication_year ?? null,
+    publication: primary ? {
+      id: primary?.id ?? null,
+      year: primary?.publication_year ?? null,
+      publication_date: primary?.publication_date ?? null,
+      volume: primary?.volume ?? null,
+      issue: primary?.issue ?? null,
+      pages: primary?.pages ?? null,
+      doi: primaryDoi || null,
+      peer_reviewed: typeof primary?.peer_reviewed === 'boolean' ? primary.peer_reviewed : null,
+      open_access: typeof primary?.open_access === 'boolean' ? primary.open_access : null,
+      license_url: primary?.license_url ?? null,
+      license_version: primary?.license_version ?? null
+    } : null,
+    venue: primary?.venue ?? raw?.venue ?? null,
+    publisher: primary?.publisher ?? raw?.publisher ?? null,
+    files: Array.isArray(primary?.files) ? primary.files : (Array.isArray(raw?.files) ? raw.files : []),
+    doi: flat.doi || null,
+    pmid: flat.pmid || null,
+    pmcid: flat.pmcid || null,
+    arxiv: flat.arxiv || null,
+    wos_id: flat.wos_id || null,
+    handle: flat.handle || null,
+    wikidata_id: flat.wikidata_id || null,
+    openalex_id: flat.openalex_id || null,
+    isbn: flat.isbn || null,
+    openlibrary_id: flat.openlibrary_id || null,
+    open_access: typeof primary?.open_access === 'boolean'
+      ? primary.open_access
+      : publications.some((pub: any) => pub?.open_access === true),
+    peer_reviewed: typeof primary?.peer_reviewed === 'boolean' ? primary.peer_reviewed : null,
+    identifiers: mergedIds
+  };
+}
+
+export function normalizePersonDetail(raw: any) {
+  if (!raw || typeof raw !== 'object') return raw;
+  const hasAffiliations = Array.isArray(raw?.affiliations) && raw.affiliations.length > 0;
+  if (hasAffiliations) return raw;
+  const primary = raw?.primary_affiliation;
+  if (!primary) return raw;
+  return { ...raw, affiliations: [primary] };
+}
+
+export function normalizePersonWorkItem(raw: any) {
+  if (!raw || typeof raw !== 'object') return raw;
+  const publication = raw?.publication && typeof raw.publication === 'object' ? raw.publication : {};
+  const authorsObj = raw?.authors && typeof raw.authors === 'object' && !Array.isArray(raw.authors) ? raw.authors : null;
+  const authorString = authorsObj?.author_string ?? raw?.author_string ?? null;
+  const authorsPreview = Array.isArray(raw?.authors_preview) && raw.authors_preview.length
+    ? raw.authors_preview
+    : (authorString
+      ? String(authorString).split(/[;|]/).map((part: string) => part.trim()).filter(Boolean).slice(0, 3)
+      : []);
+  return {
+    ...raw,
+    publication_year: publication?.year ?? null,
+    year: publication?.year ?? null,
+    venue: publication?.journal ? { name: publication.journal } : (raw?.venue ?? null),
+    venue_name: publication?.journal ?? raw?.venue_name ?? null,
+    author_string: authorString,
+    author_count: authorsObj?.total_count ?? raw?.author_count ?? null,
+    authors_preview: authorsPreview
+  };
 }

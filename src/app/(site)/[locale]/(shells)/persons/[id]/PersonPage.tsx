@@ -4,7 +4,7 @@ import LocaleLink from '@/components/common/LocaleLink';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { getPersonsWorks } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
-import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, truncateMetadataText } from '@/lib/works';
+import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, normalizePersonDetail, truncateMetadataText } from '@/lib/works';
 import { fetchJson } from '@/lib/api';
 import { localizedPath } from '@/i18n/paths';
 import { locales, type Locale } from '@/i18n/config';
@@ -84,7 +84,8 @@ const buildPersonMeta = (person: any, locale: string, id: string, workTitles: st
 const loadPerson = async (id: string) => {
   try {
     const res: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(id))}`);
-    return res?.data || res?.person || res || null;
+    const raw = res?.data || res?.person || res || null;
+    return raw ? normalizePersonDetail(raw) : null;
   } catch {
     return null;
   }

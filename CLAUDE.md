@@ -48,6 +48,15 @@ config/env/                      Env file templates
 
 - **Every search result is a work.** Regardless of entity type searched — author, venue, keyword, institution — the response is always a list of works. Searching an author returns that author's works. Searching a venue returns that venue's works. The work is the universal unit of search results.
 
+## API v2 Entity Model
+
+- Upstream is **Ethnos.app Academic Bibliography API v2.0.0** (OpenAPI at `http://127.0.0.1:1211/docs/`). A **work** is an abstract bibliographic entity (title, authors, subjects, citations, aggregated identifiers); concrete editions live in its **publications[]** array (one per venue/year/volume with its own files, DOI, ISSN, peer-review, open-access, license).
+- List endpoints (`/works`, `/works/showcase`, `/search/works`, `/venues/{id}/works`) return already-flat items that merge one primary publication into the work.
+- Detail endpoint `/works/{id}` is **not** flat: `venue`, `publisher`, `publication_year`, `volume`, `issue`, `pages`, `open_access`, `peer_reviewed`, `files[]` and scalar identifier aliases live **inside `publications[]`**, not at the work root. The frontend must flatten before rendering.
+- `/persons/{id}` returns a single `primary_affiliation` object (not an `affiliations[]` array). `/persons/{id}/works` items have `publication.year` / `publication.journal` and `authors` as an object `{total_count, author_string}` (not an array).
+- `/works` accepts `search=` (not `q=`). `/search/works` accepts `q=`. `/search/works` supports `venue_name` / `venue` aliases and `include_facets`.
+- `/works/{id}` citation/reference expansion uses the flags `include_citations=true&include_references=true` (**not** the old `include=metrics,references,files,venue,authors` CSV).
+
 ## Architecture Rules
 
 - **Home, Search, Venues are fully static** (`dynamic = 'force-static'`, no `revalidate`). No `headers()`, `cookies()`, or request-bound APIs in these routes.
@@ -66,13 +75,18 @@ config/env/                      Env file templates
 ## Key Files
 
 - `src/lib/api.ts` — `fetchJson()` with retries (default 2), timeout (default 8s), API key injection
-- `src/lib/endpoints.ts` — high-level API wrappers (search, venues, works, persons); `getPersonsWorks` uses `Promise.allSettled` for parallel fetch; `searchWorks` routes empty queries directly to `/works/showcase`
-- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `buildAccessUrl`, `buildDoiUrl` (used by both `work-actions.tsx` and `ListPageClient.tsx`). `normWork` emits a single canonical shape that already carries `id` and `url`; JSON exports use `{ exported_at, count, works }` — never wrap raw + normalized side by side. BibTeX text fields are escaped; `url`, `doi`, `abstract`, `note` (MD5) are emitted as standard BibTeX fields, never folded into `annote`.
-- `src/lib/works.ts` — author formatting, OA detection, abstract sanitization
+- `src/lib/endpoints.ts` — high-level API wrappers (`searchWorks`, `getWork`, `getPublication`, `getPersonsWorks`, `getVenuesPage`, `getVenueWorksPage`, `getHomeRecentWorks`, `getHomeTopVenues`). `searchWorks` routes empty queries to `/works/showcase` and falls back to `/works?search=…` on `/search/works` failure. `getWork` and `getPersonsWorks` apply the schema adapters below.
+- `src/lib/works.ts` — display helpers (author formatting, OA detection, abstract sanitization) **and** the v2 schema adapters:
+  - `pickPrimaryPublication(raw)` — chooses the canonical publication from `raw.publications[]` (OA+MAIN file wins; then has-files+MAIN; then OA; then any files; then newest `publication_date`; else first).
+  - `flattenIdentifierArrays(idsObj)` — reduces `{doi:[…], pmid:[…], …}` to first-scalar per key.
+  - `normalizeWorkDetail(raw)` — flattens a `/works/{id}` payload so downstream code reads the legacy flat shape (`publication{year,volume,issue,pages,doi,peer_reviewed,open_access}`, `venue`, `publisher`, `files`, and scalar `doi/pmid/isbn/…` aliases). No-op on already-flat list items.
+  - `normalizePersonDetail(raw)` — shims `primary_affiliation` into `affiliations[]` for PersonPage.
+  - `normalizePersonWorkItem(raw)` — maps `/persons/{id}/works` items (`publication.year`, `publication.journal`, `authors.author_string`) to the canonical list-item shape (`publication_year`, `venue.name`, `authors_preview[]`).
+- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `buildAccessUrl`, `buildDoiUrl` (used by both `work-actions.tsx` and `ListPageClient.tsx`). `normWork` pre-flattens new-shape detail payloads via `normalizeWorkDetail` before reading fields; it emits a single canonical shape that already carries `id` and `url`. JSON exports use `{ exported_at, count, works }` — never wrap raw + normalized side by side. BibTeX text fields are escaped; `url`, `doi`, `abstract`, `note` (MD5) are emitted as standard BibTeX fields, never folded into `annote`.
 - `src/components/common/GroupedIdentifiers.tsx` — shared identifier renderer (used by works and venues detail pages)
 - `src/i18n/metadata.ts` — SEO metadata builder per locale
 - `src/app/api/[...path]/route.ts` — rate-limited API proxy (15s timeout, 502 on backend failure)
-- `src/app/.../works/[id]/work-detail.ts` — `loadWork()` wrapped with React `cache()` for request deduplication
+- `src/app/.../works/[id]/work-detail.ts` — `loadWork()` wrapped with React `cache()`; fetches `/works/{id}?include_citations=true&include_references=true` and pipes the response through `normalizeWorkDetail`.
 
 ## Production Service
 

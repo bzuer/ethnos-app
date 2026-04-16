@@ -3,9 +3,9 @@ import { cache } from 'react';
 import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { fetchJson } from '@/lib/api';
-import { formatMetadataAuthors, sanitizeWorkAbstract } from '@/lib/works';
+import { formatMetadataAuthors, normalizeWorkDetail, sanitizeWorkAbstract } from '@/lib/works';
 
-const workIncludes = 'metrics,references,files,venue,authors';
+const workDetailQuery = 'include_citations=true&include_references=true';
 
 function toStringList(raw: any): string[] {
   const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
@@ -264,12 +264,9 @@ export function pickReferenceAuthors(item: any) {
 
 export const loadWork = cache(async (id: string) => {
   let envelope: any = null;
-  let work: any = null;
   try {
-    envelope = await fetchJson<any>(
-      `/works/${encodeURIComponent(id)}?include=${encodeURIComponent(workIncludes)}`
-    );
+    envelope = await fetchJson<any>(`/works/${encodeURIComponent(id)}?${workDetailQuery}`);
   } catch {}
-  try { work = envelope?.data || envelope?.work || envelope || null; } catch {}
-  return work;
+  const raw = envelope?.data || envelope?.work || envelope || null;
+  return raw ? normalizeWorkDetail(raw) : null;
 });
