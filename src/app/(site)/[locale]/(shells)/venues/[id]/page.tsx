@@ -126,7 +126,7 @@ const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTit
   return other;
 };
 
-import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/common/GroupedIdentifiers';
+import { type IdentifierEntry } from '@/components/common/GroupedIdentifiers';
 
 const addIdentifierValues = (
   target: IdentifierEntry[],
@@ -357,14 +357,23 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                   <td className="field-value">{venueScopus}</td>
                 </tr>
               ) : null}
-              {identifierEntries.length > 0 ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.ids')}</th>
+              {identifierEntries.map((entry, idx) => (
+                <tr key={`venue-identifier-${entry.label}-${idx}`}>
+                  <th scope="row">{entry.label}</th>
                   <td className="field-value">
-                    {renderGroupedIdentifiers(identifierEntries, 'venue-identifiers')}
+                    {entry.values.map((value, vIdx) => (
+                      <span key={`venue-identifier-${entry.label}-${value.text}-${vIdx}`}>
+                        {value.href ? (
+                          <a className="action-link table-link" href={value.href} target="_blank" rel="noopener noreferrer">{value.text}</a>
+                        ) : (
+                          <span>{value.text}</span>
+                        )}
+                        {vIdx < entry.values.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
                   </td>
                 </tr>
-              ) : null}
+              ))}
               <tr>
                 <th scope="row">{t('venues.detail.total')}</th>
                 <td className="field-value">{formatNumber(venue?.works_count || 0)}</td>

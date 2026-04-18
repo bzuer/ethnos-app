@@ -83,7 +83,7 @@ config/env/                      Env file templates
   - `normalizePersonDetail(raw)` — shims `primary_affiliation` into `affiliations[]` for PersonPage.
   - `normalizePersonWorkItem(raw)` — maps `/persons/{id}/works` items (`publication.year`, `publication.journal`, `authors.author_string`) to the canonical list-item shape (`publication_year`, `venue.name`, `authors_preview[]`).
 - `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `buildAccessUrl`, `buildDoiUrl` (used by both `work-actions.tsx` and `ListPageClient.tsx`). `normWork` pre-flattens new-shape detail payloads via `normalizeWorkDetail` before reading fields; it emits a single canonical shape that already carries `id` and `url`. JSON exports use `{ exported_at, count, works }` — never wrap raw + normalized side by side. BibTeX text fields are escaped; `url`, `doi`, `abstract`, `note` (MD5) are emitted as standard BibTeX fields, never folded into `annote`.
-- `src/components/common/GroupedIdentifiers.tsx` — shared identifier renderer (used by works and venues detail pages)
+- `src/components/common/GroupedIdentifiers.tsx` — shared identifier renderer (works detail page). Venues detail page renders each identifier on its own table row instead of grouping.
 - `src/i18n/metadata.ts` — SEO metadata builder per locale
 - `src/app/api/[...path]/route.ts` — rate-limited API proxy (15s timeout, 502 on backend failure)
 - `src/app/.../works/[id]/work-detail.ts` — `loadWork()` wrapped with React `cache()`; fetches `/works/{id}?include_citations=true&include_references=true` and pipes the response through `normalizeWorkDetail`.
