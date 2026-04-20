@@ -1,13 +1,13 @@
 import { getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/routing';
 import LocaleLink from '@/components/common/LocaleLink';
-import WorkMetaBadges from '@/components/common/WorkMetaBadges';
+import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
+import VenueWorksList from './VenueWorksList';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
-import { getVenueWorksPage } from '@/lib/endpoints';
+import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
-import { formatMetadataAuthors, formatMetadataType, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
 
@@ -242,10 +242,27 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   if (!venue) redirect({ href: '/venues?notice=venue-not-found', locale });
   const sp = (await props.searchParams) || {};
   const page = Number(sp.page || '1') || 1;
+  const limit = 25;
   let worksPage: any = null;
-  try { worksPage = await getVenueWorksPage(id, page, 25); } catch {}
+  try { worksPage = await getVenueWorksPage(id, page, limit); } catch {}
   const works: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
   const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
+  const total = Number(pagination?.total) || works.length;
+  const oldestOffset = Math.max(0, total - limit);
+  let oldestWorks: any[] = [];
+  if (total > limit) {
+    try {
+      const oldestPage = await getVenueWorksByOffset(id, oldestOffset, limit);
+      oldestWorks = oldestPage?.data || oldestPage?.results || oldestPage?.items || [];
+    } catch {}
+  } else {
+    oldestWorks = works;
+  }
+  let prominentWorks: any[] = [];
+  try {
+    const prominentPage = await getVenueWorksPage(id, 1, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 });
+    prominentWorks = prominentPage?.data || prominentPage?.results || prominentPage?.items || [];
+  } catch {}
   const t = await getTranslations({ locale });
 
   const hasVenue = !!venue;
@@ -427,81 +444,88 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
         </section>
       ) : null}
 
-      <section aria-labelledby="venue-publications-title">
-        <h2 className="title-section" id="venue-publications-title">{t('venues.detail.publications')}</h2>
-        <ul className="results-list" id="venue-publications">
-          {works.length > 0 ? (
-            works.map((pub: any) => {
-              const authors = formatMetadataAuthors(pub, t('common.entities.authorUnknown'));
-              const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
-              const type = formatMetadataType(pub.work_type || pub.type || '');
-              const abstract = getWorkAbstractSnippet(pub);
-              const openAccess = isWorkOpenAccess(pub);
-              const hasListAction = Boolean(pub?.id ?? pub?.work_id);
-              return (
-                <li className="result-item" key={pub.id}>
-                  <h3 className="result-title">
-                    <LocaleLink href={`/works/${pub.id}`} className="result-link">
-                      {pub.title && pub.title.length > 200 ? `${pub.title.slice(0, 200)}…` : (pub.title || t('common.entities.titleUnavailable'))}
-                    </LocaleLink>
-                  </h3>
-                  <p className="result-meta">
-                    {openAccess ? (
-                      <>
-                        <WorkMetaBadges
-                          work={pub}
-                          openAccess={openAccess}
-                          openAccessLabel={t('common.meta.openAccess')}
-                          addToListLabel={t('common.actions.addToList')}
-                          inListLabel={t('common.actions.inList')}
-                          removeFromListLabel={t('common.actions.removeFromList')}
-                          addedMessage={t('common.messages.added')}
-                          removedMessage={t('common.messages.itemRemoved')}
-                          showListBadge={false}
-                        />
-                        <span className="meta-separator" aria-hidden="true">•</span>
-                      </>
-                    ) : null}
-                    <span className="result-authors">{authors}</span>
-                    {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
-                    {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
-                  </p>
-                  {hasListAction ? (
-                    <p className="result-meta result-badges">
-                      <WorkMetaBadges
-                        work={pub}
-                        openAccess={openAccess}
-                        openAccessLabel={t('common.meta.openAccess')}
-                        addToListLabel={t('common.actions.addToList')}
-                        inListLabel={t('common.actions.inList')}
-                        removeFromListLabel={t('common.actions.removeFromList')}
-                        addedMessage={t('common.messages.added')}
-                        removedMessage={t('common.messages.itemRemoved')}
-                        showOpenAccessBadge={false}
-                      />
-                    </p>
-                  ) : null}
-                  {abstract ? <p className="result-abstract">{abstract}</p> : null}
-                </li>
-              );
-            })
-          ) : (
-            <div className="no-results"><p>{t('common.states.noVenueWorks')}</p></div>
-          )}
-        </ul>
-        <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-          {pagination?.hasPrev || page > 1 ? (
-            <LocaleLink className="action-btn btn-negative" href={`?page=${page - 1}`}>{t('common.actions.previous')}</LocaleLink>
-          ) : (
-            <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
-          )}
-          {pagination?.hasNext ? (
-            <LocaleLink className="action-btn btn-positive" href={`?page=${page + 1}`}>{t('common.actions.next')}</LocaleLink>
-          ) : (
-            <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
-          )}
-        </nav>
-      </section>
+      {(() => {
+        const listLabels = {
+          titleUnavailable: t('common.entities.titleUnavailable'),
+          authorUnknown: t('common.entities.authorUnknown'),
+          openAccess: t('common.meta.openAccess'),
+          addToList: t('common.actions.addToList'),
+          inList: t('common.actions.inList'),
+          removeFromList: t('common.actions.removeFromList'),
+          added: t('common.messages.added'),
+          itemRemoved: t('common.messages.itemRemoved'),
+          citedBy: t('common.meta.citedBy'),
+          references: t('common.meta.references'),
+          emptyState: ''
+        };
+        const toYear = (v: any): number => {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : 0;
+        };
+        const toTs = (v: any): number => {
+          if (!v) return 0;
+          const ts = Date.parse(String(v));
+          return Number.isFinite(ts) ? ts : 0;
+        };
+        const byRecency = (a: any, b: any) => {
+          const ya = toYear(a?.publication_year || a?.publication?.year || a?.year);
+          const yb = toYear(b?.publication_year || b?.publication?.year || b?.year);
+          if (yb !== ya) return yb - ya;
+          return toTs(b?.publication_date) - toTs(a?.publication_date);
+        };
+        const byOldest = (a: any, b: any) => {
+          const ya = toYear(a?.publication_year || a?.publication?.year || a?.year) || Number.POSITIVE_INFINITY;
+          const yb = toYear(b?.publication_year || b?.publication?.year || b?.year) || Number.POSITIVE_INFINITY;
+          if (ya !== yb) return ya - yb;
+          return toTs(a?.publication_date) - toTs(b?.publication_date);
+        };
+        const recentItems = [...works].sort(byRecency);
+        const firstItems = [...oldestWorks].sort(byOldest);
+        const prominentItems = prominentWorks;
+
+        const pageHref = (target: number) => `/venues/${id}${target > 1 ? `?page=${target}` : ''}`;
+        const paginationNav = (
+          <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
+            {pagination?.hasPrev || page > 1 ? (
+              <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
+            ) : (
+              <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
+            )}
+            {pagination?.hasNext ? (
+              <LocaleLink className="pagination-btn btn-positive" href={pageHref(page + 1)}>{t('common.actions.next')}</LocaleLink>
+            ) : (
+              <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
+            )}
+          </nav>
+        );
+
+        const tabs: SectionTabDescriptor[] = [
+          {
+            key: 'recent',
+            label: t('venues.sections.recent'),
+            content: (
+              <>
+                <VenueWorksList items={recentItems} labels={{ ...listLabels, emptyState: t('venues.empty.recent') }} />
+                {paginationNav}
+              </>
+            )
+          },
+          {
+            key: 'prominent',
+            label: t('venues.sections.prominent'),
+            content: <VenueWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('venues.empty.prominent') }} />
+          },
+          {
+            key: 'first',
+            label: t('venues.sections.first'),
+            content: (
+              <VenueWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} />
+            )
+          }
+        ];
+
+        return <SectionTabs ariaLabel={t('venues.sections.navLabel')} tabs={tabs} />;
+      })()}
     </div>
   );
 }

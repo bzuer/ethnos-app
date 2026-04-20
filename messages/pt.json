@@ -134,6 +134,8 @@
     "meta": {
       "peerReviewed": "Peer Reviewed",
       "openAccess": "Open Access",
+      "citedBy": "Citada por",
+      "references": "Referências",
       "worksCount": "{count} obras",
       "termEmpty": "(vazio)",
       "ariaSearchForm": "Formulário de busca",
@@ -204,6 +206,17 @@
       "description": "Resumo",
       "subjects": "Assuntos",
       "publications": "Número de publicações"
+    },
+    "sections": {
+      "navLabel": "Seções do periódico",
+      "recent": "Recentes",
+      "prominent": "Proeminentes",
+      "first": "Primeiros"
+    },
+    "empty": {
+      "recent": "Sem publicações nesta página.",
+      "prominent": "Sem publicações proeminentes nesta página.",
+      "first": "Sem publicações nesta página."
     }
   },
   "works": {
@@ -213,8 +226,9 @@
         "bibliographic": "Dados Bibliográficos",
         "abstract": "Resumo",
         "references": "Referências",
-        "citedBy": "Citado por",
-        "tools": "Ferramentas"
+        "citedBy": "Citações",
+        "tools": "Ferramentas",
+        "navLabel": "Seções da obra"
       },
       "labels": {
         "id": "ID",
@@ -283,7 +297,24 @@
       "hIndex": "Índice h"
     },
     "worksHeading": "Obras desta pessoa",
-    "roleFallback": "Autor"
+    "roleFallback": "Autor",
+    "sections": {
+      "navLabel": "Seções do autor",
+      "recent": "Recentes",
+      "prominent": "Proeminentes",
+      "tools": "Ferramentas"
+    },
+    "empty": {
+      "recent": "Sem obras para listar nesta página.",
+      "prominent": "Sem obras proeminentes nesta página."
+    },
+    "tools": {
+      "exportPerson": "Exportar dados do autor (JSON)",
+      "exportWorksJson": "Exportar obras (JSON)",
+      "exportWorksBib": "Exportar obras (BibTeX)",
+      "exportWorksRis": "Exportar obras (RIS)",
+      "exportWorksApa": "Exportar obras (APA .docx)"
+    }
   },
   "lists": {
     "title": "Minha Lista",

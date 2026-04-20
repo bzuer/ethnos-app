@@ -1,12 +1,13 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
 import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/common/GroupedIdentifiers';
-import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import ClientActions from './work-actions';
+import WorkRelatedList from './WorkRelatedList';
+import WorkSectionTabs from './WorkSectionTabs';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
-import { formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, sanitizeWorkAbstract } from '@/lib/works';
+import { getWorkAbstractSnippet, sanitizeWorkAbstract } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
 import { redirect } from '@/i18n/routing';
 import { buildCoins, buildCitationMeta, loadWork, pickReferenceAuthors } from './work-detail';
@@ -235,6 +236,18 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const cleanedAbstract = sanitizeWorkAbstract(abstractText);
   const refs: any[] = Array.isArray(work?.citations?.references) ? work.citations.references : [];
   const citedBy: any[] = Array.isArray(work?.citations?.cited_by) ? work.citations.cited_by : [];
+  const relatedLabels = {
+    titleUnavailable: t('common.entities.titleUnavailable'),
+    authorUnknown: t('common.entities.authorUnknown'),
+    openAccess: t('common.meta.openAccess'),
+    addToList: t('common.actions.addToList'),
+    inList: t('common.actions.inList'),
+    removeFromList: t('common.actions.removeFromList'),
+    added: t('common.messages.added'),
+    itemRemoved: t('common.messages.itemRemoved'),
+    citedBy: t('common.meta.citedBy'),
+    references: t('common.meta.references')
+  };
   const coins = buildCoins(work, locale, id);
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
   const jsonLd: Record<string, any> = {
@@ -282,7 +295,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
             <tr>
               <th scope="row">{t('works.detail.labels.authors')}</th>
               <td className="field-value">
-                {onlyAuthors && onlyAuthors.length > 0 ? (
+                {onlyAuthors.length > 0 ? (
                   onlyAuthors.map((a: any, idx: number) => {
                     const name = a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' ');
                     const pid = a?.person_id || a?.id;
@@ -465,143 +478,27 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         </table>
       </section>
 
-      {abstractText ? (
-        <section aria-labelledby="abstract-block">
-          <h2 className="title-section" id="abstract-block">{t('works.detail.sections.abstract')}</h2>
+      <WorkSectionTabs
+        ariaLabel={t('works.detail.sections.navLabel')}
+        abstractLabel={t('works.detail.sections.abstract')}
+        referencesLabel={t('works.detail.sections.references')}
+        citationsLabel={t('works.detail.sections.citedBy')}
+        toolsLabel={t('works.detail.sections.tools')}
+        abstract={abstractText ? (
           <p className="description">{abstractText}</p>
-        </section>
-      ) : null}
-
-      {Array.isArray(refs) && refs.length > 0 ? (
-        <section aria-labelledby="references-block">
-          <h2 className="title-section" id="references-block">{t('works.detail.sections.references')}</h2>
-          <ul className="results-list">
-            {refs.map((r: any, idx: number) => {
-              const rid = r?.id || r?.work_id;
-              const rtitle = r?.title || r?.work_title || t('common.entities.titleUnavailable');
-              const rauth = pickReferenceAuthors(r);
-              const ryear = r?.publication_year || r?.year || '';
-              const rvenue = formatMetadataVenue(r, 35);
-              const rabstract = getWorkAbstractSnippet(r);
-              const rOpen = isWorkOpenAccess(r);
-              return (
-                <li className="result-item" key={rid || idx}>
-                  <h3 className="result-title">
-                    {rid ? (<LocaleLink className="result-link" href={`/works/${rid}`}>{rtitle}</LocaleLink>) : (<span className="field-value">{rtitle}</span>)}
-                  </h3>
-                  <p className="result-meta">
-                    {rOpen ? (
-                      <>
-                        <WorkMetaBadges
-                          work={r}
-                          openAccess={rOpen}
-                          openAccessLabel={t('common.meta.openAccess')}
-                          addToListLabel={t('common.actions.addToList')}
-                          inListLabel={t('common.actions.inList')}
-                          removeFromListLabel={t('common.actions.removeFromList')}
-                          addedMessage={t('common.messages.added')}
-                          removedMessage={t('common.messages.itemRemoved')}
-                          showListBadge={false}
-                        />
-                        <span className="meta-separator" aria-hidden="true">•</span>
-                      </>
-                    ) : null}
-                    <span className="result-authors">{rauth || t('common.entities.authorUnknown')}</span>
-                    {rvenue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{rvenue}</span></> : null}
-                    {ryear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{ryear}</span></> : null}
-                  </p>
-                  {rid ? (
-                    <p className="result-meta result-badges">
-                      <WorkMetaBadges
-                        work={r}
-                        openAccess={rOpen}
-                        openAccessLabel={t('common.meta.openAccess')}
-                        addToListLabel={t('common.actions.addToList')}
-                        inListLabel={t('common.actions.inList')}
-                        removeFromListLabel={t('common.actions.removeFromList')}
-                        addedMessage={t('common.messages.added')}
-                        removedMessage={t('common.messages.itemRemoved')}
-                        showOpenAccessBadge={false}
-                        showListBadge={true}
-                      />
-                    </p>
-                  ) : null}
-                  {rabstract ? <p className="result-abstract">{rabstract}</p> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      {Array.isArray(citedBy) && citedBy.length > 0 ? (
-        <section aria-labelledby="citations-block">
-          <h2 className="title-section" id="citations-block">{t('works.detail.sections.citedBy')}</h2>
-          <ul className="results-list">
-            {citedBy.map((c: any, idx: number) => {
-              const cid = c?.id || c?.work_id;
-              const ctitle = c?.title || c?.work_title || t('common.entities.titleUnavailable');
-              const cauth = pickReferenceAuthors(c);
-              const cyear = c?.publication_year || c?.year || '';
-              const cvenue = formatMetadataVenue(c, 35);
-              const cabstract = getWorkAbstractSnippet(c);
-              const cOpen = isWorkOpenAccess(c);
-              return (
-                <li className="result-item" key={cid || idx}>
-                  <h3 className="result-title">
-                    {cid ? (<LocaleLink className="result-link" href={`/works/${cid}`}>{ctitle}</LocaleLink>) : (<span className="field-value">{ctitle}</span>)}
-                  </h3>
-                  <p className="result-meta">
-                    {cOpen ? (
-                      <>
-                        <WorkMetaBadges
-                          work={c}
-                          openAccess={cOpen}
-                          openAccessLabel={t('common.meta.openAccess')}
-                          addToListLabel={t('common.actions.addToList')}
-                          inListLabel={t('common.actions.inList')}
-                          removeFromListLabel={t('common.actions.removeFromList')}
-                          addedMessage={t('common.messages.added')}
-                          removedMessage={t('common.messages.itemRemoved')}
-                          showListBadge={false}
-                        />
-                        <span className="meta-separator" aria-hidden="true">•</span>
-                      </>
-                    ) : null}
-                    <span className="result-authors">{cauth || t('common.entities.authorUnknown')}</span>
-                    {cvenue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{cvenue}</span></> : null}
-                    {cyear ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{cyear}</span></> : null}
-                  </p>
-                  {cid ? (
-                    <p className="result-meta result-badges">
-                      <WorkMetaBadges
-                        work={c}
-                        openAccess={cOpen}
-                        openAccessLabel={t('common.meta.openAccess')}
-                        addToListLabel={t('common.actions.addToList')}
-                        inListLabel={t('common.actions.inList')}
-                        removeFromListLabel={t('common.actions.removeFromList')}
-                        addedMessage={t('common.messages.added')}
-                        removedMessage={t('common.messages.itemRemoved')}
-                        showOpenAccessBadge={false}
-                        showListBadge={true}
-                      />
-                    </p>
-                  ) : null}
-                  {cabstract ? <p className="result-abstract">{cabstract}</p> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      <section aria-labelledby="tools-section" className="tools-section">
-        <h2 className="title-section" id="tools-section">{t('works.detail.sections.tools')}</h2>
-        <div className="tools-actions">
-          <ClientActions work={work} />
-        </div>
-      </section>
+        ) : null}
+        references={refs.length > 0 ? (
+          <WorkRelatedList items={refs} pickAuthors={pickReferenceAuthors} labels={relatedLabels} />
+        ) : null}
+        citations={citedBy.length > 0 ? (
+          <WorkRelatedList items={citedBy} pickAuthors={pickReferenceAuthors} labels={relatedLabels} />
+        ) : null}
+        tools={(
+          <div className="tools-actions">
+            <ClientActions work={work} />
+          </div>
+        )}
+      />
     </div>
   );
 }

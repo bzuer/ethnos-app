@@ -136,6 +136,33 @@ body::before {
     margin-bottom: var(--spacing-sm);
     border-bottom: none !important;
 }
+.title-section-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xl);
+}
+.section-tab {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: var(--border-gray);
+    transition: color 120ms ease;
+}
+.section-tab:hover,
+.section-tab:focus-visible,
+.section-tab.is-active {
+    color: var(--label-gray);
+    outline: none;
+}
 .item-subtitle{
     font-family: var(--mono);
     font-size: 18px;
@@ -196,6 +223,7 @@ span,
 .result-type,
 .result-total,
 .result-cited,
+.result-refs,
 .result-doi,
 .pagination-info,
 .temporary-message,
@@ -1186,7 +1214,8 @@ a.action-btn {
 .result-coverage,
 .result-type,
 .result-total,
-.result-cited {
+.result-cited,
+.result-refs {
     font-family: var(--sans);
     font-size: 14px;
     color: var(--data-gray);

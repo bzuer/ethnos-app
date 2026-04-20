@@ -112,16 +112,39 @@ export async function getVenuesPage(page = 1, limit = 50) {
   return r;
 }
 
-export async function getVenueWorksPage(id: string | number, page = 1, limit = 25) {
-  const r: any = await fetchJson(`/venues/${encodeURIComponent(String(id))}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
+export type WorksListOptions = {
+  sortBy?: 'cited_by_count' | string;
+  sortOrder?: 'asc' | 'desc';
+  citedByMin?: number;
+  citedByMax?: number;
+};
+
+function worksListQuery(opts?: WorksListOptions): string {
+  if (!opts) return '';
+  const params: string[] = [];
+  if (opts.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
+  if (opts.sortOrder) params.push(`sortOrder=${encodeURIComponent(opts.sortOrder)}`);
+  if (typeof opts.citedByMin === 'number' && Number.isFinite(opts.citedByMin)) params.push(`cited_by_min=${encodeURIComponent(String(opts.citedByMin))}`);
+  if (typeof opts.citedByMax === 'number' && Number.isFinite(opts.citedByMax)) params.push(`cited_by_max=${encodeURIComponent(String(opts.citedByMax))}`);
+  return params.length ? `&${params.join('&')}` : '';
+}
+
+export async function getVenueWorksPage(id: string | number, page = 1, limit = 25, opts?: WorksListOptions) {
+  const r: any = await fetchJson(`/venues/${encodeURIComponent(String(id))}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`);
   return r;
 }
 
-export const getPersonsWorks = cache(async (personId: string | number, page = 1, limit = 25) => {
+export async function getVenueWorksByOffset(id: string | number, offset: number, limit = 25, opts?: WorksListOptions) {
+  const safeOffset = Math.max(0, Math.floor(offset));
+  const r: any = await fetchJson(`/venues/${encodeURIComponent(String(id))}/works?offset=${encodeURIComponent(String(safeOffset))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`);
+  return r;
+}
+
+export const getPersonsWorks = cache(async (personId: string | number, page = 1, limit = 25, opts?: WorksListOptions) => {
   const id = encodeURIComponent(String(personId));
   const [personResult, worksResult] = await Promise.allSettled([
     fetchJson<any>(`/persons/${id}`),
-    fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`)
+    fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`)
   ]);
   const p: any = personResult.status === 'fulfilled' ? personResult.value : null;
   const personRaw = p?.data || p?.person || p || null;
@@ -133,7 +156,7 @@ export const getPersonsWorks = cache(async (personId: string | number, page = 1,
       ? worksRaw.data
       : (Array.isArray(worksRaw.results) ? worksRaw.results : (Array.isArray(worksRaw.items) ? worksRaw.items : null));
     if (items) {
-      const normalized = items.map((entry: any) => normalizePersonWorkItem(entry));
+      const normalized = dedupeByWorkId(items.map((entry: any) => normalizePersonWorkItem(entry)));
       works = { ...worksRaw };
       if (Array.isArray(worksRaw.data)) works.data = normalized;
       else if (Array.isArray(worksRaw.results)) works.results = normalized;
@@ -142,3 +165,34 @@ export const getPersonsWorks = cache(async (personId: string | number, page = 1,
   }
   return { person, works };
 });
+
+function dedupeByWorkId(items: any[]): any[] {
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const item of items) {
+    const id = item?.id ?? item?.work_id;
+    const key = id != null ? String(id) : '';
+    if (!key) { out.push(item); continue; }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+export async function getPersonsWorksProminent(personId: string | number, limit = 25) {
+  const id = encodeURIComponent(String(personId));
+  // oversample to survive backend duplicates (one row per authorship record)
+  const fetchLimit = Math.min(100, limit * 4);
+  const qs = `limit=${encodeURIComponent(String(fetchLimit))}${worksListQuery({ sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 })}`;
+  try {
+    const raw: any = await fetchJson<any>(`/persons/${id}/works?${qs}`);
+    const items = Array.isArray(raw?.data)
+      ? raw.data
+      : (Array.isArray(raw?.results) ? raw.results : (Array.isArray(raw?.items) ? raw.items : []));
+    const normalized = items.map((entry: any) => normalizePersonWorkItem(entry));
+    return dedupeByWorkId(normalized).slice(0, limit);
+  } catch {
+    return [];
+  }
+}

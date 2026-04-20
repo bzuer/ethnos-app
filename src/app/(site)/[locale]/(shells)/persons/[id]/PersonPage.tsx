@@ -1,11 +1,11 @@
 import { getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/routing';
 import LocaleLink from '@/components/common/LocaleLink';
-import WorkMetaBadges from '@/components/common/WorkMetaBadges';
-import { getPersonsWorks } from '@/lib/endpoints';
+import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
+import PersonWorksList from './PersonWorksList';
+import PersonTools from './PersonTools';
+import { getPersonsWorks, getPersonsWorksProminent } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
-import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess, normalizePersonDetail, truncateMetadataText } from '@/lib/works';
-import { fetchJson } from '@/lib/api';
 import { localizedPath } from '@/i18n/paths';
 import { locales, type Locale } from '@/i18n/config';
 
@@ -43,7 +43,7 @@ const openGraphLocaleMap: Record<string, string> = {
   es: 'es_ES'
 };
 
-const buildPersonMeta = (person: any, locale: string, id: string, workTitles: string[]) => {
+const buildPersonMeta = (person: any, locale: string, id: string) => {
   const name = pickPersonName(person);
   const ids = person?.identifiers || {};
   const orcid = ids?.orcid || person?.orcid;
@@ -54,7 +54,6 @@ const buildPersonMeta = (person: any, locale: string, id: string, workTitles: st
   const homepageUrl = ids?.url || person?.url;
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/persons/${id}`)}`;
   const affiliations = getAffiliationsText(person);
-  const titles = uniqueList(workTitles);
   const identifierList = uniqueList([
     publicUrl,
     homepageUrl,
@@ -81,23 +80,32 @@ const buildPersonMeta = (person: any, locale: string, id: string, workTitles: st
   return other;
 };
 
-const loadPerson = async (id: string) => {
-  try {
-    const res: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(id))}`);
-    const raw = res?.data || res?.person || res || null;
-    return raw ? normalizePersonDetail(raw) : null;
-  } catch {
-    return null;
-  }
+const toYearNumber = (value: any): number => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 };
+
+const toTimestamp = (value: any): number => {
+  if (!value) return 0;
+  const t = Date.parse(String(value));
+  return Number.isFinite(t) ? t : 0;
+};
+
+const sortByRecency = (items: any[]): any[] => {
+  return [...items].sort((a: any, b: any) => {
+    const yearB = toYearNumber(b?.publication_year || b?.publication?.year || b?.year);
+    const yearA = toYearNumber(a?.publication_year || a?.publication?.year || a?.year);
+    if (yearB !== yearA) return yearB - yearA;
+    return toTimestamp(b?.created_at) - toTimestamp(a?.created_at);
+  });
+};
+
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.persons', `/persons/${id}`);
   const data = await getPersonsWorks(id, 1, 25);
   const person = data?.person || null;
-  const works = data?.works || null;
-  const items: any[] = works?.data || works?.results || works?.items || [];
   if (!person) return base;
   const personName = pickPersonName(person);
   const affiliations = getAffiliationsText(person);
@@ -120,8 +128,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     height: 512,
     alt: 'Ethnos Bibliography interface symbol'
   };
-  const workTitles = items.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
-  const other = buildPersonMeta(person, locale, id, workTitles);
+  const other = buildPersonMeta(person, locale, id);
   return {
     ...base,
     title: personName || base.title,
@@ -156,6 +163,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const worksPage = data?.works || null;
   const items: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
   const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
+  const prominentItems = await getPersonsWorksProminent(id, 25);
   if (!person) redirect({ href: '/search?notice=person-not-found', locale });
   const t = await getTranslations({ locale });
 
@@ -206,6 +214,60 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   ]);
   if (sameAs.length) jsonLd.sameAs = sameAs;
   if (affiliations.length) jsonLd.affiliation = affiliations.map((item) => ({ '@type': 'Organization', name: item }));
+
+  const listLabels = {
+    titleUnavailable: t('common.entities.titleUnavailable'),
+    roleFallback: t('persons.roleFallback'),
+    openAccess: t('common.meta.openAccess'),
+    addToList: t('common.actions.addToList'),
+    inList: t('common.actions.inList'),
+    removeFromList: t('common.actions.removeFromList'),
+    added: t('common.messages.added'),
+    itemRemoved: t('common.messages.itemRemoved'),
+    citedBy: t('common.meta.citedBy'),
+    references: t('common.meta.references'),
+    emptyState: ''
+  };
+  const recentItems = sortByRecency(items);
+
+  const pageHref = (target: number) => `/persons/${id}${target > 1 ? `?page=${target}` : ''}`;
+  const paginationNav = (
+    <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
+      {pagination?.hasPrev || page > 1 ? (
+        <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
+      ) : (
+        <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
+      )}
+      {pagination?.hasNext ? (
+        <LocaleLink className="pagination-btn btn-positive" href={pageHref(page + 1)}>{t('common.actions.next')}</LocaleLink>
+      ) : (
+        <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
+      )}
+    </nav>
+  );
+
+  const tabs: SectionTabDescriptor[] = [
+    {
+      key: 'recent',
+      label: t('persons.sections.recent'),
+      content: (
+        <>
+          <PersonWorksList items={recentItems} labels={{ ...listLabels, emptyState: t('persons.empty.recent') }} />
+          {paginationNav}
+        </>
+      )
+    },
+    {
+      key: 'prominent',
+      label: t('persons.sections.prominent'),
+      content: <PersonWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('persons.empty.prominent') }} />
+    },
+    {
+      key: 'tools',
+      label: t('persons.sections.tools'),
+      content: <PersonTools person={person} works={items} />
+    }
+  ];
 
   return (
     <div className="page-header" aria-labelledby="page-title">
@@ -350,82 +412,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
         </section>
       )}
 
-      <section aria-labelledby="person-works-title">
-        <h2 className="title-section" id="person-works-title">{t('persons.worksHeading')}</h2>
-        <ul className="results-list" id="person-works">
-          {items.length > 0 ? (
-            items.map((pub: any) => {
-              const openAccess = isWorkOpenAccess(pub);
-              const authors = formatMetadataAuthors(pub, '');
-              const venue = formatMetadataVenue(pub, 35);
-              const type = formatMetadataType(pub.work_type || pub.type || '');
-              const year = pub.publication_year || (pub.publication && pub.publication.year) || pub.year || '';
-              const role = truncateMetadataText((pub.role || pub.authorship_role || t('persons.roleFallback')).toString().toUpperCase(), 48);
-              const abstract = getWorkAbstractSnippet(pub);
-              const hasListAction = Boolean(pub?.id ?? pub?.work_id);
-              return (
-                <li className="result-item" key={pub.id}>
-                  <h3 className="result-title">
-                    <LocaleLink href={`/works/${pub.id}`} className="result-link">{pub.title && pub.title.length > 200 ? `${pub.title.slice(0, 200)}…` : (pub.title || t('common.entities.titleUnavailable'))}</LocaleLink>
-                  </h3>
-                  <p className="result-meta">
-                    {openAccess ? (
-                      <>
-                        <WorkMetaBadges
-                          work={pub}
-                          openAccess={openAccess}
-                          openAccessLabel={t('common.meta.openAccess')}
-                          addToListLabel={t('common.actions.addToList')}
-                          inListLabel={t('common.actions.inList')}
-                          removeFromListLabel={t('common.actions.removeFromList')}
-                          addedMessage={t('common.messages.added')}
-                          removedMessage={t('common.messages.itemRemoved')}
-                          showListBadge={false}
-                        />
-                      </>
-                    ) : null}
-                    <span className="result-authors">{authors || role} </span>
-                    {type ? <span className="meta-separator" aria-hidden="true">•</span> : null}
-                    {type ? <span className="result-type">{type}</span> : null}
-                    {venue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{venue}</span></> : null}
-                    {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
-                  </p>
-                  {hasListAction ? (
-                    <p className="result-meta result-badges">
-                      <WorkMetaBadges
-                        work={pub}
-                        openAccess={openAccess}
-                        openAccessLabel={t('common.meta.openAccess')}
-                        addToListLabel={t('common.actions.addToList')}
-                        inListLabel={t('common.actions.inList')}
-                        removeFromListLabel={t('common.actions.removeFromList')}
-                        addedMessage={t('common.messages.added')}
-                        removedMessage={t('common.messages.itemRemoved')}
-                        showOpenAccessBadge={false}
-                      />
-                    </p>
-                  ) : null}
-                  {abstract ? <p className="result-abstract">{abstract}</p> : null}
-                </li>
-              );
-            })
-          ) : (
-            <div className="no-results"><p>{t('common.states.noPersonWorks')}</p></div>
-          )}
-        </ul>
-        <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-          {pagination?.hasPrev || page > 1 ? (
-            <LocaleLink className="action-btn btn-negative" href={`?page=${page - 1}`}>{t('common.actions.previous')}</LocaleLink>
-          ) : (
-            <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
-          )}
-          {pagination?.hasNext ? (
-            <LocaleLink className="action-btn btn-positive" href={`?page=${page + 1}`}>{t('common.actions.next')}</LocaleLink>
-          ) : (
-            <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
-          )}
-        </nav>
-      </section>
+      <SectionTabs ariaLabel={t('persons.sections.navLabel')} tabs={tabs} />
     </div>
   );
 }
