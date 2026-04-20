@@ -104,9 +104,34 @@ export const getPublication = cache(async (id: string | number, opts?: { include
   }
 });
 
-export async function getVenuesPage(page = 1, limit = 50) {
+export type VenuesListSort =
+  | 'id' | 'name' | 'type'
+  | 'impact_factor' | 'works_count'
+  | 'score' | 'ranking' | 'h_index' | 'cited_by_count'
+  | 'oldest' | 'newest';
+export type VenuesListSortOrder = 'ASC' | 'DESC';
+export type VenuesListFilters = {
+  sortBy?: VenuesListSort;
+  sortOrder?: VenuesListSortOrder;
+  type?: string;
+  coverageFrom?: number;
+  coverageTo?: number;
+  activeInYear?: number;
+};
+
+export async function getVenuesPage(page = 1, limit = 50, opts?: VenuesListFilters) {
+  const params = [
+    `page=${encodeURIComponent(String(page))}`,
+    `limit=${encodeURIComponent(String(limit))}`
+  ];
+  if (opts?.sortBy) params.push(`sortBy=${encodeURIComponent(opts.sortBy)}`);
+  if (opts?.sortOrder) params.push(`sortOrder=${encodeURIComponent(opts.sortOrder)}`);
+  if (opts?.type) params.push(`type=${encodeURIComponent(opts.type)}`);
+  if (typeof opts?.coverageFrom === 'number' && Number.isFinite(opts.coverageFrom)) params.push(`coverage_from=${encodeURIComponent(String(opts.coverageFrom))}`);
+  if (typeof opts?.coverageTo === 'number' && Number.isFinite(opts.coverageTo)) params.push(`coverage_to=${encodeURIComponent(String(opts.coverageTo))}`);
+  if (typeof opts?.activeInYear === 'number' && Number.isFinite(opts.activeInYear)) params.push(`active_in_year=${encodeURIComponent(String(opts.activeInYear))}`);
   const r: any = await fetchJson(
-    `/venues?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`,
+    `/venues?${params.join('&')}`,
     { cache: 'force-cache' as RequestCache }
   );
   return r;

@@ -217,6 +217,13 @@
       "recent": "No publications on this page.",
       "prominent": "No prominent publications on this page.",
       "first": "No publications on this page."
+    },
+    "listSections": {
+      "navLabel": "Venue catalog sections",
+      "best": "Best",
+      "prominent": "Prominent",
+      "recent": "Recent",
+      "first": "First"
     }
   },
   "works": {

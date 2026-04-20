@@ -217,6 +217,13 @@
       "recent": "Sem publicações nesta página.",
       "prominent": "Sem publicações proeminentes nesta página.",
       "first": "Sem publicações nesta página."
+    },
+    "listSections": {
+      "navLabel": "Seções do catálogo de periódicos",
+      "best": "Melhores",
+      "prominent": "Proeminentes",
+      "recent": "Recentes",
+      "first": "Primeiros"
     }
   },
   "works": {

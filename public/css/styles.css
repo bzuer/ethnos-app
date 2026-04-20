@@ -224,6 +224,8 @@ span,
 .result-total,
 .result-cited,
 .result-refs,
+.result-hindex,
+.result-impact,
 .result-doi,
 .pagination-info,
 .temporary-message,
@@ -1215,7 +1217,9 @@ a.action-btn {
 .result-type,
 .result-total,
 .result-cited,
-.result-refs {
+.result-refs,
+.result-hindex,
+.result-impact {
     font-family: var(--sans);
     font-size: 14px;
     color: var(--data-gray);
@@ -1825,6 +1829,24 @@ section:last-of-type {
 .badge.open-acess {
     background: var(--primary-yellow);
     color: var(--bg-light);
+}
+
+.badge.doaj {
+    background: transparent;
+    color: var(--primary-blue);
+    border: var(--border-thin) solid var(--primary-blue);
+}
+
+.badge.scielo {
+    background: transparent;
+    color: var(--primary-red);
+    border: var(--border-thin) solid var(--primary-red);
+}
+
+.badge.scopus {
+    background: transparent;
+    color: var(--label-gray);
+    border: var(--border-thin) solid var(--border-gray);
 }
 
 .badge-link {
