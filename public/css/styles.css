@@ -140,7 +140,7 @@ body::before {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
 }
 .section-tab {
     font-family: inherit;
