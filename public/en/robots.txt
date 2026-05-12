@@ -29,7 +29,6 @@ Allow: /
 Disallow: /api/
 Disallow: /_next/
 Disallow: /works/sphinx
-Sitemap: https://ethnos.app/sitemap.xml
 
 User-agent: Applebot
 Disallow: /
@@ -75,3 +74,5 @@ Disallow: /
 
 User-agent: Meta-ExternalAgent
 Disallow: /
+
+Sitemap: https://ethnos.app/sitemap.xml
