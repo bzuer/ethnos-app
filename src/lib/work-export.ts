@@ -65,9 +65,9 @@ export function getFilesList(raw: any) {
 
 export function normWork(source: any) {
   if (!source) return null;
-  const raw = Array.isArray(source?.publications) && source.publications.length
-    ? normalizeWorkDetail(source)
-    : source;
+  const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)
+    || (source?.primary_publication && typeof source.primary_publication === 'object');
+  const raw = needsNormalization ? normalizeWorkDetail(source) : source;
   const authors = Array.isArray(raw.authors) ? raw.authors.map(normAuthor).filter(Boolean) : [];
   const publication = raw.publication || {};
   const venue = raw.venue || {};

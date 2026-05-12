@@ -315,18 +315,32 @@ function mergeIdentifierSources(primary: any, fallback: any) {
 
 export function normalizeWorkDetail(raw: any) {
   if (!raw || typeof raw !== 'object') return raw;
-  const publications = Array.isArray(raw?.publications) ? raw.publications : null;
-  if (!publications || !publications.length) return raw;
-  const primary = pickPrimaryPublication(raw);
+  const hasPrimaryField = raw?.primary_publication && typeof raw.primary_publication === 'object';
+  const publications = Array.isArray(raw?.publications) ? raw.publications : [];
+  if (!hasPrimaryField && !publications.length) return raw;
+  const primary = hasPrimaryField ? raw.primary_publication : pickPrimaryPublication(raw);
   const mergedIds = mergeIdentifierSources(primary?.identifiers, raw?.identifiers);
   const flat = flattenIdentifierArrays(mergedIds);
-  const primaryDoi = pickFirstIdentifier(primary?.identifiers?.doi) || flat.doi;
+  const primaryDoi = pickFirstIdentifier(primary?.identifiers?.doi)
+    || pickFirstIdentifier(primary?.doi)
+    || flat.doi;
   const workType = raw?.type || raw?.work_type || null;
+  const rootFiles = Array.isArray(raw?.files) ? raw.files : null;
+  const primaryFiles = Array.isArray(primary?.files) ? primary.files : null;
+  const files = rootFiles && rootFiles.length ? rootFiles : (primaryFiles || rootFiles || []);
+  const openAccess = typeof primary?.open_access === 'boolean'
+    ? primary.open_access
+    : (typeof raw?.open_access === 'boolean'
+      ? raw.open_access
+      : publications.some((pub: any) => pub?.open_access === true));
+  const peerReviewed = typeof primary?.peer_reviewed === 'boolean'
+    ? primary.peer_reviewed
+    : (typeof raw?.peer_reviewed === 'boolean' ? raw.peer_reviewed : null);
   return {
     ...raw,
     work_type: workType,
     type: raw?.type || workType,
-    publication_year: primary?.publication_year ?? null,
+    publication_year: primary?.publication_year ?? raw?.publication_year ?? null,
     publication: primary ? {
       id: primary?.id ?? null,
       year: primary?.publication_year ?? null,
@@ -342,7 +356,7 @@ export function normalizeWorkDetail(raw: any) {
     } : null,
     venue: primary?.venue ?? raw?.venue ?? null,
     publisher: primary?.publisher ?? raw?.publisher ?? null,
-    files: Array.isArray(primary?.files) ? primary.files : (Array.isArray(raw?.files) ? raw.files : []),
+    files,
     doi: flat.doi || null,
     pmid: flat.pmid || null,
     pmcid: flat.pmcid || null,
@@ -353,10 +367,8 @@ export function normalizeWorkDetail(raw: any) {
     openalex_id: flat.openalex_id || null,
     isbn: flat.isbn || null,
     openlibrary_id: flat.openlibrary_id || null,
-    open_access: typeof primary?.open_access === 'boolean'
-      ? primary.open_access
-      : publications.some((pub: any) => pub?.open_access === true),
-    peer_reviewed: typeof primary?.peer_reviewed === 'boolean' ? primary.peer_reviewed : null,
+    open_access: openAccess,
+    peer_reviewed: peerReviewed,
     identifiers: mergedIds
   };
 }
