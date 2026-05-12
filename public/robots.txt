@@ -24,10 +24,8 @@
 # AND RELATED RIGHTS IN THE DIGITAL SINGLE MARKET.
 
 User-agent: *
-Content-Signal: search=yes,ai-train=no
 Allow: /
 Disallow: /api/
-Disallow: /_next/
 Disallow: /works/sphinx
 
 User-agent: Applebot
@@ -67,6 +65,9 @@ User-agent: FacebookBot
 Disallow: /
 
 User-agent: Google-CloudVertexBot
+Disallow: /
+
+User-agent: Google-Extended
 Disallow: /
 
 User-agent: GPTBot
