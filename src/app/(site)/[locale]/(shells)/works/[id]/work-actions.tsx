@@ -124,7 +124,11 @@ export default function ClientActions({ work }: Props) {
   const doiHref = doi ? `https://doi.org/${encodeURIComponent(String(doi))}` : undefined;
   const scihubTarget = scimagFile ? (scimagFile?.doi || doi) : null;
   const scihubHref = scimagFile && scihubTarget ? `https://sci-hub.st/${encodeURIComponent(String(scihubTarget))}` : undefined;
-  const openAccessHref = openAccessFile?.best_oa_url || openAccessFile?.best_oa?.url || openAccessFile?.url;
+  const openAccessIdRaw = openAccessFile?.openacess_id || openAccessFile?.openaccess_id;
+  const openAccessIdDoi = openAccessIdRaw && /^doi:/i.test(String(openAccessIdRaw))
+    ? String(openAccessIdRaw).replace(/^doi:\s*/i, '').trim()
+    : '';
+  const openAccessHref = openAccessFile?.best_oa_url || openAccessFile?.best_oa?.url || openAccessFile?.url || (openAccessIdDoi ? `https://doi.org/${openAccessIdDoi}` : '');
   const libgenHref = libgenFile?.md5 ? `https://libgen.la/ads.php?md5=${encodeURIComponent(String(libgenFile.md5))}` : undefined;
 
   const onOpenDoi = useCallback(() => {

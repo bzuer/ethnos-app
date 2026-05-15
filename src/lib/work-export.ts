@@ -63,6 +63,35 @@ export function getFilesList(raw: any) {
   return [];
 }
 
+export function buildFileOpenAccessUrl(file: any): string {
+  if (!file) return '';
+  if (file.best_oa_url) return String(file.best_oa_url);
+  if (file?.best_oa?.url) return String(file.best_oa.url);
+  if (file.url) return String(file.url);
+  const oid = file.openacess_id || file.openaccess_id;
+  if (oid && typeof oid === 'string') {
+    const match = oid.trim().match(/^doi:\s*(.+)$/i);
+    if (match && match[1]) return `https://doi.org/${match[1].trim()}`;
+  }
+  return '';
+}
+
+export function pickOpenAccessFile(files: any[]) {
+  if (!Array.isArray(files) || !files.length) return null;
+  const direct = files.find((file: any) => buildFileOpenAccessUrl(file));
+  return direct || null;
+}
+
+export function pickLibgenFile(files: any[]) {
+  if (!Array.isArray(files) || !files.length) return null;
+  return files.find((file: any) => file?.libgen_id && file?.md5) || null;
+}
+
+export function pickScimagFile(files: any[]) {
+  if (!Array.isArray(files) || !files.length) return null;
+  return files.find((file: any) => file?.scimag_id) || null;
+}
+
 export function normWork(source: any) {
   if (!source) return null;
   const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)
@@ -75,9 +104,12 @@ export function normWork(source: any) {
   const files = getFilesList(raw);
   const md5 = raw.md5 || files.map((file: any) => file?.md5 || file?.md5_hash || file?.md5sum || file?.md5Hash || file?.checksum).find(Boolean) || null;
   const isbn = getIsbn(raw);
+  const oaFile = pickOpenAccessFile(files);
+  const oaUrl = oaFile ? buildFileOpenAccessUrl(oaFile) : '';
   return {
     id: raw.id,
     url: buildAccessUrl(raw.id),
+    oa_url: oaUrl || null,
     work_type: raw.work_type || raw.type || null,
     title: raw.title || null,
     subtitle: raw.subtitle || null,
@@ -198,6 +230,11 @@ export function toRIS(nw: any): string {
   if (url) lines.push(`UR  - ${url}`);
   const doiUrl = buildDoiUrl(nw.doi);
   if (doiUrl && doiUrl !== url) lines.push(`UR  - ${doiUrl}`);
+  const oaUrl = nw.oa_url ? String(nw.oa_url) : '';
+  if (oaUrl && oaUrl !== url && oaUrl !== doiUrl) {
+    lines.push(`UR  - ${oaUrl}`);
+    lines.push(`L1  - ${oaUrl}`);
+  }
   lines.push('ER  - ');
   return lines.join('\n');
 }
@@ -238,6 +275,8 @@ export function toBibTeX(nw: any): string {
   if (doi) fields.push(['doi', doi, true]);
   const url = nw.url || buildAccessUrl(nw.id);
   if (url) fields.push(['url', url, true]);
+  const oaUrl = nw.oa_url ? String(nw.oa_url) : '';
+  if (oaUrl && oaUrl !== url) fields.push(['pdf_url', oaUrl, true]);
   const abstract = normalizeValue(nw.abstract);
   if (abstract) fields.push(['abstract', abstract, false]);
   if (nw.md5) fields.push(['note', `MD5: ${nw.md5}`, false]);
@@ -303,8 +342,10 @@ export function toApaParagraph(work: any, fallbackAuthor: string, options?: { sp
     }
   }
   if (isbn) children.push(new TextRun({ text: ` ISBN: ${isbn}.` }));
+  const oaUrl = work?.oa_url ? String(work.oa_url) : '';
   if (doiUrl) children.push(new TextRun({ text: ` ${doiUrl}` }));
   else if (accessUrl) children.push(new TextRun({ text: ` ${accessUrl}` }));
+  if (oaUrl && oaUrl !== doiUrl && oaUrl !== accessUrl) children.push(new TextRun({ text: ` ${oaUrl}` }));
   if (!children.length) return null;
   return new Paragraph({ children, ...(options?.spacing ? { spacing: { after: 240 } } : {}), alignment: AlignmentType.JUSTIFIED });
 }

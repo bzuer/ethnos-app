@@ -82,7 +82,7 @@ config/env/                      Env file templates
   - `normalizeWorkDetail(raw)` — flattens a `/works/{id}` payload so downstream code reads the legacy flat shape (`publication{id,year,publication_date,volume,issue,pages,doi,peer_reviewed,open_access,license_*}`, `venue`, `publisher`, `files`, scalar `doi/pmid/isbn/…` aliases, plus `open_access` / `peer_reviewed` mirrored at the root). Prefers `raw.primary_publication` when present and falls back to `pickPrimaryPublication(raw)` otherwise; keeps the v2 root `files[]` array (which carries `publication_id`) over the per-publication files, and preserves root-level `publication_year` / `open_access` / `peer_reviewed` when the primary lacks them. No-op when there is neither a `primary_publication` nor any `publications[]` (i.e. already-flat list items).
   - `normalizePersonDetail(raw)` — shims `primary_affiliation` into `affiliations[]` for PersonPage.
   - `normalizePersonWorkItem(raw)` — maps `/persons/{id}/works` items (`publication.year`, `publication.journal`, `authors.author_string`) to the canonical list-item shape (`publication_year`, `venue.name`, `authors_preview[]`).
-- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `buildAccessUrl`, `buildDoiUrl` (used by both `work-actions.tsx` and `ListPageClient.tsx`). `normWork` pre-flattens new-shape detail payloads via `normalizeWorkDetail` before reading fields; it emits a single canonical shape that already carries `id` and `url`. JSON exports use `{ exported_at, count, works }` — never wrap raw + normalized side by side. BibTeX text fields are escaped; `url`, `doi`, `abstract`, `note` (MD5) are emitted as standard BibTeX fields, never folded into `annote`.
+- `src/lib/work-export.ts` — shared citation/export functions: `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`, `normAuthor`, `buildAccessUrl`, `buildDoiUrl`, plus the file-object helpers `buildFileOpenAccessUrl`, `pickOpenAccessFile`, `pickLibgenFile`, `pickScimagFile` (used by both `work-actions.tsx` and `ListPageClient.tsx`). `normWork` pre-flattens new-shape detail payloads via `normalizeWorkDetail` before reading fields; it emits a single canonical shape that already carries `id`, `url`, and `oa_url` (best open-access URL derived from `files[]`). JSON exports use `{ exported_at, count, works }` — never wrap raw + normalized side by side. BibTeX text fields are escaped; `url`, `doi`, `abstract`, `note` (MD5) and `pdf_url` (OA URL when present and distinct from `url`) are emitted as standard fields, never folded into `annote`. RIS emits the OA URL as an extra `UR  -` line plus `L1  -` (full-text). APA appends the OA URL after DOI/access URLs when it differs.
 - `src/components/common/GroupedIdentifiers.tsx` — shared identifier renderer (works detail page). Venues detail page renders each identifier on its own table row instead of grouping.
 - `src/components/common/SectionTabs.tsx` — generic client component implementing the WAI-ARIA tabs pattern. Takes `ariaLabel` and `tabs: Array<{ key, label, content }>`; empty/falsy content tabs are filtered out so callers can pass conditional content inline. Uses `<div role="tablist">` with `aria-label`, `role="tab"` buttons with `aria-selected` / `aria-controls` / roving `tabIndex`, and keyboard navigation (Left/Right/Home/End). Panels use `role="tabpanel"` with `aria-labelledby` and `hidden` toggles. Styling: `.title-section.title-section-tabs` + `.section-tab` (selected/hover/focus-visible → `--label-gray`; unselected → `--border-gray`; `gap: var(--spacing-xl)`).
 - `src/app/(site)/[locale]/(shells)/works/[id]/WorkSectionTabs.tsx` — thin server wrapper around `SectionTabs`; exposes the fixed **Abstract / References / Citations / Tools** ordering for the work detail page.
@@ -112,6 +112,24 @@ The app runs as a **systemd user service** (`ethnos-app.service`). Linger is ena
 - **Logs:** `journalctl --user -u ethnos-app -f`
 - `scripts/manage.sh restart` and `deploy` use `systemctl --user restart` automatically.
 - **First-time setup:** `scripts/manage.sh setup_service` installs the unit, enables it, and configures linger.
+
+## File Objects (works/:id payload)
+
+Each entry in `work.files[]` (work-detail or per-publication) carries:
+
+```
+{ file_id, publication_id, md5, format, size, pages, language, version,
+  role: 'MAIN'|'SECONDARY',
+  libgen_id, scimag_id, openacess_id, best_oa_url,
+  verification, download_count }
+```
+
+- `openacess_id` (one-c spelling) is a DOI-shaped string like `"doi:10.xxx/yyy"`, NOT a URL. Strip the `doi:` prefix and prefix `https://doi.org/` to build a link.
+- `best_oa_url` is the canonical open-access full-text URL when known; usually populated when `openacess_id` is set, but the export/button helpers must defensively cover the case where only `openacess_id` is present.
+- Sci-Hub uses the work-level DOI (file objects have no `doi` field); the file's `scimag_id` is the only signal that a Sci-Hub mirror exists.
+- Libgen uses the file's `md5` plus presence of `libgen_id`.
+
+The shared helper `buildFileOpenAccessUrl(file)` in `src/lib/work-export.ts` encodes all of the above and is the single source of truth for OA URL derivation across `work-actions.tsx`, `work-detail.ts`, and `normWork` (which exposes the result as `oa_url` on the normalized work).
 
 ## Gotchas
 

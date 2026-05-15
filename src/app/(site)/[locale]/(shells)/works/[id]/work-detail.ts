@@ -51,11 +51,23 @@ function getFilesList(work: any) {
   return [];
 }
 
+function fileOaUrl(file: any): string {
+  if (!file) return '';
+  if (file.best_oa_url) return String(file.best_oa_url);
+  if (file?.best_oa?.url) return String(file.best_oa.url);
+  if (file.url) return String(file.url);
+  const oid = file.openacess_id || file.openaccess_id;
+  if (oid && typeof oid === 'string') {
+    const match = oid.trim().match(/^doi:\s*(.+)$/i);
+    if (match && match[1]) return `https://doi.org/${match[1].trim()}`;
+  }
+  return '';
+}
+
 function pickBestOaUrl(work: any) {
   const files = getFilesList(work);
-  const best = files.find((file: any) => file?.best_oa_url || file?.best_oa?.url);
-  if (!best) return '';
-  return best?.best_oa_url || best?.best_oa?.url || '';
+  const best = files.find((file: any) => fileOaUrl(file));
+  return best ? fileOaUrl(best) : '';
 }
 
 function looksLikePdf(url: string, file: any) {
@@ -69,7 +81,7 @@ function looksLikePdf(url: string, file: any) {
 function pickFulltextUrls(work: any) {
   const files = getFilesList(work);
   const urls = files.map((file: any) => ({
-    url: file?.best_oa_url || file?.best_oa?.url || file?.url || file?.pdf_url || file?.file_url || file?.download_url || file?.link || '',
+    url: fileOaUrl(file) || file?.pdf_url || file?.file_url || file?.download_url || file?.link || '',
     file
   })).filter((entry: any) => entry.url && typeof entry.url === 'string');
   const pdf = urls.find((entry: any) => looksLikePdf(entry.url, entry.file))?.url || '';
