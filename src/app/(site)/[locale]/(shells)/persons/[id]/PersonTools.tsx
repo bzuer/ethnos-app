@@ -2,9 +2,8 @@
 
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Document, Packer, Paragraph } from 'docx';
 import { showNotification } from '@/lib/notify';
-import { normWork, toBibTeX, toApaParagraph, toRIS } from '@/lib/work-export';
+import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
 type Props = {
   person: any;
@@ -84,15 +83,8 @@ export default function PersonTools({ person, works }: Props) {
   const onExportWorksApa = useCallback(() => {
     if (!hasWorks) return;
     const run = async () => {
-      const fallbackAuthor = t('common.entities.authorUnknown');
-      const paragraphs = works
-        .map((w) => {
-          const nw = normWork(w);
-          return nw ? toApaParagraph(nw, fallbackAuthor, { spacing: true }) : null;
-        })
-        .filter((p): p is Paragraph => !!p);
-      const doc = new Document({ sections: [{ children: paragraphs.length ? paragraphs : [new Paragraph(' ')] }] });
-      const blob = await Packer.toBlob(doc);
+      const { buildApaDocxBlob } = await import('@/lib/work-export-docx');
+      const blob = await buildApaDocxBlob(works, t('common.entities.authorUnknown'), { spacing: true });
       downloadBlob(`${base}-works-apa.docx`, blob);
       showNotification(t('common.messages.apaExported'), 'success');
     };

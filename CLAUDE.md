@@ -64,6 +64,10 @@ config/env/                      Env file templates
 - **Next.js 16 params are Promises** — always `await props.params` before accessing fields.
 - **API proxy** injects `x-access-key` from `ETHNOS_API_KEY`; never expose secrets to the client.
 - **Env precedence:** `ENV_FILE` > `/etc/next-frontend.env` > `config/env/next-frontend.env` > `.env.local` > `.env`.
+- **Missing entities return HTTP 404, never 307.** Detail pages (`/works/[id]`, `/persons/[id]`, `/venues/[id]`) call `notFound()` from `next/navigation` when the entity is absent, which renders `src/app/(site)/[locale]/not-found.tsx` with a 404 status. Redirecting bad IDs to a listing/search page (the previous `?notice=*-not-found` pattern) was flagged by Google Search Console as soft 404 / redirect error and is forbidden.
+- **Legacy URL redirects live in `src/app/(site)/[locale]/(redirects)/`.** Each route there must target an existing page; never add a redirect whose destination is itself a redirect (no chains) and never use this folder as a soft-404 sink.
+- **`docx` must stay lazy.** `src/lib/work-export.ts` contains only the cheap text/normalization helpers (`normWork`, `toBibTeX`, `toRIS`, etc.). The `docx` library (Document/Packer/Paragraph/TextRun/AlignmentType) and the APA paragraph builder live in `src/lib/work-export-docx.ts`, which exposes `buildApaDocxBlob(works, fallbackAuthor, { spacing? })`. All export buttons (`work-actions.tsx`, `PersonTools.tsx`, `ListPageClient.tsx`) must reach `docx` only via `await import('@/lib/work-export-docx')` inside the click handler — never a top-level import, or the ~347 KiB JSZip/docx chunk lands in the initial bundle.
+- **Modern browser target (`package.json#browserslist`).** Chrome/Edge/Firefox ≥ 100, Safari/iOS Safari ≥ 15.4, Samsung ≥ 19. Lets SWC skip transpilation of ES2022 features (Array.prototype.at, Object.hasOwn, etc.). Production builds are Turbopack — Next still inlines its tiny `polyfill-module.js` into the eager runtime chunk; that ~1.4 KiB cost is unavoidable until upstream fixes it, and is not worth switching to `next build --webpack` for.
 
 ## i18n
 

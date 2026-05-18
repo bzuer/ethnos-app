@@ -28,5 +28,13 @@
   },
   "engines": {
     "node": ">=18.18 <25"
-  }
+  },
+  "browserslist": [
+    "chrome >= 100",
+    "edge >= 100",
+    "firefox >= 100",
+    "safari >= 15.4",
+    "ios_saf >= 15.4",
+    "samsung >= 19"
+  ]
 }

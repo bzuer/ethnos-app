@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { redirect } from '@/i18n/routing';
+import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import PersonWorksList from './PersonWorksList';
@@ -163,8 +163,8 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const worksPage = data?.works || null;
   const items: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
   const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
+  if (!person) notFound();
   const prominentItems = await getPersonsWorksProminent(id, 25);
-  if (!person) redirect({ href: '/search?notice=person-not-found', locale });
   const t = await getTranslations({ locale });
 
   const personName = pickPersonName(person) || t('common.entities.personNotFound');

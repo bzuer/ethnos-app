@@ -9,7 +9,7 @@ import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { getWorkAbstractSnippet, sanitizeWorkAbstract } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
-import { redirect } from '@/i18n/routing';
+import { notFound } from 'next/navigation';
 import { buildCoins, buildCitationMeta, loadWork, pickReferenceAuthors } from './work-detail';
 
 const openGraphLocaleMap: Record<string, string> = {
@@ -127,7 +127,7 @@ export const revalidate = 0;
 export default async function WorkDetailPage(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
   const work = await loadWork(id);
-  if (!work || !work.id) redirect({ href: '/works?notice=work-not-found', locale });
+  if (!work || !work.id) notFound();
   const t = await getTranslations({ locale });
   const authorsArr = Array.isArray(work?.authors) ? work.authors : [];
   const onlyAuthors = authorsArr.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role);

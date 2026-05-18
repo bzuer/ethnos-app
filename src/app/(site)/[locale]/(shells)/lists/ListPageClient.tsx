@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Document, Packer, Paragraph } from 'docx';
 import LocaleLink from '@/components/common/LocaleLink';
 import { showNotification } from '@/lib/notify';
-import { normWork, toBibTeX, toRIS, toApaParagraph } from '@/lib/work-export';
+import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
 type SavedItem = { id: number | string; title?: string; authors?: any; publication_year?: number | string; venue_name?: string; type?: string; added_at?: string };
 type Work = any;
@@ -95,9 +94,8 @@ async function resolveWorksForExport(list: SavedItem[]) {
 }
 
 async function exportApaDocx(items: any[], filename: string, fallbackAuthor: string) {
-  const paragraphs = items.map((item) => toApaParagraph(item, fallbackAuthor, { spacing: true })).filter(Boolean) as Paragraph[];
-  const doc = new Document({ sections: [{ children: paragraphs.length ? paragraphs : [new Paragraph(' ')] }] });
-  const blob = await Packer.toBlob(doc);
+  const { buildApaDocxBlob } = await import('@/lib/work-export-docx');
+  const blob = await buildApaDocxBlob(items, fallbackAuthor, { spacing: true });
   downloadFile(filename, blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 

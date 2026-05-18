@@ -1,9 +1,8 @@
 'use client';
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { Document, Packer, Paragraph } from 'docx';
 import { showNotification } from '@/lib/notify';
-import { normWork, toBibTeX, toApaParagraph } from '@/lib/work-export';
+import { normWork, toBibTeX } from '@/lib/work-export';
 
 type Props = { work: any };
 
@@ -107,10 +106,8 @@ export default function ClientActions({ work }: Props) {
 
   const onExportApa = useCallback(() => {
     const run = async () => {
-      const nw = normWork(work);
-      const paragraph = nw ? toApaParagraph(nw, t('common.entities.authorUnknown')) : null;
-      const doc = new Document({ sections: [{ children: [paragraph || new Paragraph(' ')] }] });
-      const blob = await Packer.toBlob(doc);
+      const { buildApaDocxBlob } = await import('@/lib/work-export-docx');
+      const blob = await buildApaDocxBlob([work], t('common.entities.authorUnknown'));
       downloadBlob(`work-${work?.id || 'data'}-apa.docx`, blob);
       showNotification(t('common.messages.apaExported'), 'success');
     };

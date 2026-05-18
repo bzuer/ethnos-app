@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { redirect } from '@/i18n/routing';
+import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import VenueWorksList from './VenueWorksList';
@@ -239,7 +239,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams?: Promise<{ page?: string }> }) {
   const { id, locale } = await props.params;
   let venue = await getVenue(id);
-  if (!venue) redirect({ href: '/venues?notice=venue-not-found', locale });
+  if (!venue) notFound();
   const sp = (await props.searchParams) || {};
   const page = Number(sp.page || '1') || 1;
   const limit = 25;
