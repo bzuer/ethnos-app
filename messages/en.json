@@ -179,6 +179,17 @@
   "results": {
     "title": "Search Results",
     "itemsHeading": "Items",
+    "summaryHeading": "Search summary",
+    "queryEcho": "Results for <strong>{query}</strong>",
+    "total": "{count, plural, one {# result} other {# results}}",
+    "totalSingular": "1 result",
+    "pagePosition": "Page {page} of {totalPages}",
+    "refineHeading": "Refine search",
+    "activeFiltersHeading": "Active filters",
+    "removeFilter": "Remove {label}",
+    "clearAllFilters": "Clear all filters",
+    "startPrompt": "Start typing a term or use the filters to begin a search.",
+    "startPromptTip": "You can also leave the term empty and filter by author, journal, year or subject.",
     "noResults": "No results found for your search.",
     "noResultsTip": "Try different terms or check the spelling."
   },

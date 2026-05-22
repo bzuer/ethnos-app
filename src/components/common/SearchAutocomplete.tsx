@@ -172,6 +172,10 @@ export default function SearchAutocomplete({
     };
   }, []);
 
+  useEffect(() => {
+    setQuery(defaultValue);
+  }, [defaultValue]);
+
   const typeClassName = (type: string) => {
     if (type === 'title') return 'suggestion-type suggestion-type-title';
     if (type === 'venue') return 'suggestion-type suggestion-type-venue';

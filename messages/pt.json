@@ -179,6 +179,17 @@
   "results": {
     "title": "Resultados da Busca",
     "itemsHeading": "Itens",
+    "summaryHeading": "Resumo da busca",
+    "queryEcho": "Resultados para <strong>{query}</strong>",
+    "total": "{count, plural, one {# resultado} other {# resultados}}",
+    "totalSingular": "1 resultado",
+    "pagePosition": "Página {page} de {totalPages}",
+    "refineHeading": "Refinar busca",
+    "activeFiltersHeading": "Filtros ativos",
+    "removeFilter": "Remover {label}",
+    "clearAllFilters": "Limpar todos os filtros",
+    "startPrompt": "Digite um termo ou utilize os filtros para iniciar uma busca.",
+    "startPromptTip": "Você também pode deixar o termo vazio e filtrar por autor, periódico, ano ou assunto.",
     "noResults": "Nenhum resultado encontrado para sua busca.",
     "noResultsTip": "Tente termos diferentes ou verifique a ortografia."
   },

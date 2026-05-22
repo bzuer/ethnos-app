@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
+import SearchForm from '@/components/common/SearchForm';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname } from '@/i18n/routing';
 import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
@@ -17,7 +18,26 @@ type SearchState = {
   totalCount: number;
 };
 
-export default function SearchResultsClient() {
+type Props = {
+  formAction: string;
+};
+
+const FILTER_KEYS = ['work_type', 'type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'] as const;
+type FilterKey = typeof FILTER_KEYS[number];
+const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
+  work_type: 'common.labels.type',
+  type: 'common.labels.type',
+  author: 'common.labels.author',
+  venue: 'common.labels.venue',
+  subject: 'common.labels.subject',
+  year_from: 'common.labels.yearFrom',
+  year_to: 'common.labels.yearTo',
+  language: 'common.labels.language',
+  peer_reviewed: 'common.labels.peerReviewed',
+  open_access: 'common.labels.openAccess'
+};
+
+export default function SearchResultsClient({ formAction }: Props) {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -30,7 +50,9 @@ export default function SearchResultsClient() {
     totalCount: 0
   });
   const [loadError, setLoadError] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refineOpen, setRefineOpen] = useState(false);
+
   const params = useMemo(() => {
     const result: Record<string, string> = {};
     if (searchParams) {
@@ -40,9 +62,17 @@ export default function SearchResultsClient() {
     }
     return result;
   }, [searchParams]);
+
   const query = params.q || '';
   const page = params.page || '1';
   const limit = params.limit || '20';
+  const activeFilters = useMemo(() => readActiveFilters(params), [params]);
+  const noParams = !query && activeFilters.length === 0;
+  const hasUserInput = Boolean(query) || activeFilters.length > 0;
+
+  useEffect(() => {
+    setRefineOpen(!hasUserInput);
+  }, [hasUserInput]);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,12 +83,11 @@ export default function SearchResultsClient() {
       try {
         const response = await fetchResults(params, page, limit, controller.signal);
         if (cancelled) return;
-        const nextState = parseSearchState(response, page, limit);
-        setState(nextState);
+        setState(parseSearchState(response, page, limit));
       } catch {
         if (cancelled) return;
         setLoadError(true);
-        setState((prev) => ({ ...prev, items: [] }));
+        setState((prev) => ({ ...prev, items: [], totalCount: 0, hasNext: false, hasPrev: false, totalPages: undefined }));
       } finally {
         if (cancelled) return;
         setLoading(false);
@@ -69,28 +98,120 @@ export default function SearchResultsClient() {
       cancelled = true;
       controller.abort();
     };
-  }, [params, page, limit, query]);
+  }, [params, page, limit]);
 
-  const prevHref = state.hasPrev
-    ? `${pathname}?${new URLSearchParams({ ...params, page: String(Math.max(1, state.pageNum - 1)) }).toString()}`
-    : undefined;
-  const nextHref = state.hasNext
-    ? `${pathname}?${new URLSearchParams({ ...params, page: String(state.pageNum + 1) }).toString()}`
-    : undefined;
+  const buildPagedHref = (nextPage: number) => {
+    const next = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => next.set(k, String(v)));
+    next.set('page', String(Math.max(1, nextPage)));
+    return `${pathname}?${next.toString()}`;
+  };
+  const buildFilteredHref = (omitKey: string) => {
+    const next = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (k !== omitKey && k !== 'page') next.set(k, String(v)); });
+    const qs = next.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
+  const clearAllHref = pathname;
 
-  const showNoResults = !loading && !loadError && state.items.length === 0 && (query || hasFilters(params) || Object.keys(params).length > 1);
+  const prevHref = state.hasPrev ? buildPagedHref(state.pageNum - 1) : undefined;
+  const nextHref = state.hasNext ? buildPagedHref(state.pageNum + 1) : undefined;
+
+  const totalLabel = formatTotal(state.totalCount, t);
+  const pagePositionLabel = state.totalPages && state.totalPages > 0
+    ? t('results.pagePosition', { page: state.pageNum, totalPages: state.totalPages })
+    : '';
+
+  const showNoResults = !loading && !loadError && state.items.length === 0 && hasUserInput;
+  const showStartPrompt = !loading && !loadError && noParams && state.items.length === 0;
 
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('results.title')}</h1>
-      <section aria-labelledby="results-list">
-        <h2 className="title-section" id="results-list">{t('results.itemsHeading')}</h2>
-        {loadError ? (<p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>) : null}
+
+      <section aria-labelledby="results-summary-heading">
+        <h2 className="sr-only" id="results-summary-heading">{t('results.summaryHeading')}</h2>
+        <div className="results-summary" role="region" aria-live="polite">
+          {query ? (
+            <p className="results-summary-query">
+              {t.rich('results.queryEcho', { query, strong: (chunks) => <strong>{chunks}</strong> })}
+            </p>
+          ) : null}
+          {!loading && !loadError && state.totalCount > 0 ? (
+            <p className="results-summary-stats">
+              <span className="results-summary-total">{totalLabel}</span>
+              {pagePositionLabel ? (
+                <>
+                  <span className="meta-separator" aria-hidden="true">•</span>
+                  <span className="results-summary-page">{pagePositionLabel}</span>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+          {activeFilters.length > 0 ? (
+            <div className="active-filters" aria-labelledby="active-filters-heading">
+              <h3 className="sr-only" id="active-filters-heading">{t('results.activeFiltersHeading')}</h3>
+              <ul className="filter-chips" role="list">
+                {activeFilters.map(({ key, value }) => {
+                  const display = formatFilterValue(key, value, t);
+                  return (
+                    <li key={`${key}-${value}`} className="filter-chip">
+                      <span className="filter-chip-label">{t(FILTER_LABEL_KEYS[key])}</span>
+                      <span className="filter-chip-value">{display}</span>
+                      <LocaleLink
+                        className="filter-chip-remove"
+                        href={buildFilteredHref(key)}
+                        aria-label={t('results.removeFilter', { label: `${t(FILTER_LABEL_KEYS[key])} ${display}` })}
+                      >
+                        ×
+                      </LocaleLink>
+                    </li>
+                  );
+                })}
+                <li className="filter-chip-clear-all">
+                  <LocaleLink className="action-link" href={clearAllHref}>
+                    {t('results.clearAllFilters')}
+                  </LocaleLink>
+                </li>
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section aria-labelledby="refine-heading">
+        <h2 className="title-section title-section-toggle" id="refine-heading">
+          <button
+            type="button"
+            className="section-toggle"
+            aria-expanded={refineOpen}
+            aria-controls="refine-panel"
+            onClick={() => setRefineOpen((o) => !o)}
+          >
+            <span aria-hidden="true">{refineOpen ? '▾' : '▸'}</span> {t('results.refineHeading')}
+          </button>
+        </h2>
+        <div id="refine-panel" className="refine-panel" hidden={!refineOpen}>
+          <SearchForm key={searchParams ? searchParams.toString() : ''} action={formAction} autocompleteId="refine-q" embedded />
+        </div>
+      </section>
+
+      <section aria-labelledby="results-list-heading">
+        <h2 className="sr-only" id="results-list-heading">{t('results.itemsHeading')}</h2>
+        {loadError ? (
+          <p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>
+        ) : null}
         {loading ? (
           <p className="temporary-message temporary-message-info" role="status" aria-live="polite">
             <span className="sr-only">{t('common.states.loadingWorks')}</span>
             <span aria-hidden="true">{t('common.states.loadingWorks')}</span>
           </p>
+        ) : null}
+        {showStartPrompt ? (
+          <div className="temporary-message temporary-message-info">
+            <p>{t('results.startPrompt')}</p>
+            <p>{t('results.startPromptTip')}</p>
+          </div>
         ) : null}
         {showNoResults ? (
           <div className="temporary-message temporary-message-info">
@@ -159,18 +280,49 @@ export default function SearchResultsClient() {
           })}
         </ul>
         <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-          {prevHref ? (<LocaleLink className="pagination-btn btn-negative" href={prevHref}>{t('common.actions.previous')}</LocaleLink>) : (<button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>)}
-          {nextHref ? (<LocaleLink className="pagination-btn btn-positive" href={nextHref}>{t('common.actions.next')}</LocaleLink>) : (<button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>)}
+          {prevHref ? (
+            <LocaleLink className="pagination-btn btn-negative" href={prevHref} rel="prev">{t('common.actions.previous')}</LocaleLink>
+          ) : (
+            <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
+          )}
+          <span className="pagination-info" aria-live="polite">
+            {pagePositionLabel || (state.totalCount > 0 ? totalLabel : '')}
+          </span>
+          {nextHref ? (
+            <LocaleLink className="pagination-btn btn-positive" href={nextHref} rel="next">{t('common.actions.next')}</LocaleLink>
+          ) : (
+            <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
+          )}
         </nav>
       </section>
     </div>
   );
 }
 
-const FILTER_KEYS = ['work_type', 'type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'];
+function readActiveFilters(params: Record<string, string>) {
+  const seen = new Set<FilterKey>();
+  const list: Array<{ key: FilterKey; value: string }> = [];
+  for (const key of FILTER_KEYS) {
+    const value = params[key];
+    if (!value) continue;
+    const canonical: FilterKey = key === 'work_type' ? 'work_type' : (key === 'type' ? 'work_type' : key);
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    list.push({ key: canonical, value });
+  }
+  return list;
+}
 
-function hasFilters(params: Record<string, string>) {
-  return FILTER_KEYS.some(k => params[k] && params[k] !== '');
+function formatTotal(total: number, t: ReturnType<typeof useTranslations>) {
+  if (!total) return '';
+  return total === 1 ? t('results.totalSingular') : t('results.total', { count: total });
+}
+
+function formatFilterValue(key: FilterKey, value: string, t: ReturnType<typeof useTranslations>) {
+  if (key === 'peer_reviewed' || key === 'open_access') {
+    return value === 'true' ? t('common.values.yes') : value === 'false' ? t('common.values.no') : value;
+  }
+  return value;
 }
 
 async function fetchResults(params: Record<string, string>, page: string, limit: string, signal: AbortSignal) {
@@ -184,37 +336,32 @@ async function fetchResults(params: Record<string, string>, page: string, limit:
     qs.set('type', String(qs.get('work_type')));
     qs.delete('work_type');
   }
+  if (!qs.has('page')) qs.set('page', String(page));
+  if (!qs.has('limit')) qs.set('limit', String(limit));
 
   const fetchOpts = { signal, headers: { accept: 'application/json' } };
 
   if (!qv || qv === '*') {
     qs.delete('q');
-    const vitrineParams = new URLSearchParams();
-    vitrineParams.set('page', page);
-    vitrineParams.set('limit', limit);
-    FILTER_KEYS.forEach(k => {
-      const v = qs.get(k === 'work_type' ? 'type' : k);
-      if (v) {
-        const paramName = k === 'venue' ? 'venue_name' : (k === 'work_type' ? 'type' : k);
-        vitrineParams.set(paramName, v);
-      }
-    });
     const hasFiltersSet = FILTER_KEYS.some(k => qs.get(k === 'work_type' ? 'type' : k));
-    const primaryPath = hasFiltersSet
-      ? `/api/search/works?${qs.toString()}`
-      : `/api/works/showcase?${vitrineParams.toString()}`;
-    const res = await fetch(primaryPath, fetchOpts);
+    if (hasFiltersSet) {
+      const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
+    const showcase = new URLSearchParams();
+    showcase.set('page', page);
+    showcase.set('limit', limit);
+    const res = await fetch(`/api/works/showcase?${showcase.toString()}`, fetchOpts);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   }
 
   const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
-  if (!res.ok) {
-    const fallbackRes = await fetch(`/api/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
-    if (!fallbackRes.ok) throw new Error(`HTTP ${fallbackRes.status}`);
-    return await fallbackRes.json();
-  }
-  return await res.json();
+  if (res.ok) return await res.json();
+  const fallback = await fetch(`/api/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
+  if (!fallback.ok) throw new Error(`HTTP ${fallback.status}`);
+  return await fallback.json();
 }
 
 function parseSearchState(data: any, page: string, limit: string): SearchState {
