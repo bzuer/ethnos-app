@@ -4,6 +4,7 @@ import LocaleLink from '@/components/common/LocaleLink';
 import { useSearchParams } from 'next/navigation';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { actGetVenuesPage, type VenuesPageActionOptions } from '@/lib/actions';
 import { formatNumber } from '@/lib/format';
 import { extractVenueListState, VenueListState } from '@/lib/venues';
 import { usePathname } from '@/i18n/routing';
@@ -98,17 +99,12 @@ export default function VenuesList({
     const hasDataForRequest = state.page === page && state.limit === limit && state.items.length > 0;
     if (hasDataForRequest) return;
     let cancelled = false;
-    const controller = new AbortController();
     setLoading(true);
     setError(null);
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (sortBy) params.set('sortBy', sortBy);
-    if (sortOrder) params.set('sortOrder', sortOrder);
-    fetch(`/api/venues?${params.toString()}`, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error('Request failed');
-        return res.json();
-      })
+    const opts: VenuesPageActionOptions = {};
+    if (sortBy) opts.sortBy = sortBy as VenuesPageActionOptions['sortBy'];
+    if (sortOrder) opts.sortOrder = sortOrder as VenuesPageActionOptions['sortOrder'];
+    actGetVenuesPage(page, limit, opts)
       .then((json) => {
         if (cancelled) return;
         setState(extractVenueListState(json, { page, limit }));
@@ -123,7 +119,6 @@ export default function VenuesList({
       });
     return () => {
       cancelled = true;
-      controller.abort();
     };
   }, [page, limit, state.page, state.limit, state.items.length, tc, paginated, sortBy, sortOrder]);
 

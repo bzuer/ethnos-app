@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
+import { actGetWorkFull } from '@/lib/actions';
 import { showNotification } from '@/lib/notify';
 import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
@@ -69,13 +70,8 @@ function downloadFile(filename: string, content: Blob | string, type?: string) {
 }
 
 async function fetchWork(id: string | number): Promise<Work | null> {
-  const include = 'metrics,references,files,venue,authors';
-  const url = `/api/works/${encodeURIComponent(String(id))}?include=${encodeURIComponent(include)}`;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const json: any = await res.json();
-    return json?.data || json?.work || json || null;
+    return await actGetWorkFull(id);
   } catch {
     return null;
   }

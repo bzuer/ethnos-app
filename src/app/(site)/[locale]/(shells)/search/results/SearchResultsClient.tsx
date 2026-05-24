@@ -7,6 +7,7 @@ import LocaleLink from '@/components/common/LocaleLink';
 import SearchForm from '@/components/common/SearchForm';
 import WorkMetaBadges from '@/components/common/WorkMetaBadges';
 import { usePathname } from '@/i18n/routing';
+import { actSearchWorks } from '@/lib/actions';
 import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 
 type SearchState = {
@@ -81,8 +82,8 @@ export default function SearchResultsClient({ formAction }: Props) {
       setLoading(true);
       setLoadError(false);
       try {
-        const response = await fetchResults(params, page, limit, controller.signal);
-        if (cancelled) return;
+        const response = await fetchResults(params, page, limit);
+        if (controller.signal.aborted || cancelled) return;
         setState(parseSearchState(response, page, limit));
       } catch {
         if (cancelled) return;
@@ -325,43 +326,12 @@ function formatFilterValue(key: FilterKey, value: string, t: ReturnType<typeof u
   return value;
 }
 
-async function fetchResults(params: Record<string, string>, page: string, limit: string, signal: AbortSignal) {
-  const base = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
-  const qv = base.get('q') || '';
-
-  const qs = new URLSearchParams(base as any);
-  qs.delete('scope');
-  if (qs.has('work_type') && !qs.has('type')) {
-    qs.set('type', String(qs.get('work_type')));
-    qs.delete('work_type');
-  }
-  if (!qs.has('page')) qs.set('page', String(page));
-  if (!qs.has('limit')) qs.set('limit', String(limit));
-
-  const fetchOpts = { signal, headers: { accept: 'application/json' } };
-
-  if (!qv || qv === '*') {
-    qs.delete('q');
-    const hasFiltersSet = FILTER_KEYS.some(k => qs.get(k === 'work_type' ? 'type' : k));
-    if (hasFiltersSet) {
-      const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    }
-    const showcase = new URLSearchParams();
-    showcase.set('page', page);
-    showcase.set('limit', limit);
-    const res = await fetch(`/api/works/showcase?${showcase.toString()}`, fetchOpts);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  }
-
-  const res = await fetch(`/api/search/works?${qs.toString()}`, fetchOpts);
-  if (res.ok) return await res.json();
-  const fallback = await fetch(`/api/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`, fetchOpts);
-  if (!fallback.ok) throw new Error(`HTTP ${fallback.status}`);
-  return await fallback.json();
+async function fetchResults(params: Record<string, string>, page: string, limit: string) {
+  const payload: Record<string, string> = { ...params };
+  payload.page = payload.page || page;
+  payload.limit = payload.limit || limit;
+  delete payload.scope;
+  return await actSearchWorks(payload);
 }
 
 function parseSearchState(data: any, page: string, limit: string): SearchState {

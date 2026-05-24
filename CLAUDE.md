@@ -2,7 +2,7 @@
 
 ## Project
 
-**Ethnos** — Next.js 16 bibliographic discovery app for anthropology/sociology research. Multilingual (en, pt, es), static-first, with API proxy to a backend at `127.0.0.1:1211`.
+**Ethnos** — Next.js 16 bibliographic discovery app for anthropology/sociology research. Multilingual (en, pt, es), static-first. All data is fetched server-side directly from the backend at `127.0.0.1:1211` — there is no in-app HTTP proxy; client components reach the backend through server actions in `src/lib/actions.ts`.
 
 Tech stack: React 19, Next.js 16 (App Router), next-intl 4, TypeScript 5.9, Node 24.x LTS.
 
@@ -17,17 +17,20 @@ Tech stack: React 19, Next.js 16 (App Router), next-intl 4, TypeScript 5.9, Node
 | Lint | `npm run lint` | — |
 | CSS minify | `scripts/manage.sh css` | — |
 | Setup service | `scripts/manage.sh setup_service` | — |
+| Maintenance on/off/status | `scripts/manage.sh maintenance {on\|off\|status}` | — |
 
 ## Project Layout
 
 ```
 src/app/(site)/[locale]/         App Router pages (locale-prefixed)
-src/app/api/[...path]/route.ts   API proxy (rate-limited, 15s timeout, 502 on failure)
 src/components/common/           Shared React components
 src/lib/                         Server utilities, API client, formatters
+src/lib/api.ts                   fetchJson() — the single HTTP client to 127.0.0.1:1211
+src/lib/endpoints.ts             Server-only high-level wrappers (searchWorks, getWork, …)
+src/lib/actions.ts               'use server' actions — RPC bridge for client components
 src/lib/work-export.ts           Shared export/citation utilities (BibTeX, RIS, APA, normalization)
 src/i18n/                        next-intl config, routing, metadata helpers
-src/proxy.ts                     Locale-aware middleware proxy
+src/proxy.ts                     Locale-aware middleware proxy (no HTTP-level API proxy)
 messages/{en,pt,es}.json         UI translations (must stay in sync)
 public/css/styles.css            SSOT stylesheet
 docs/html-css/                   Legacy HTML/CSS reference (visual parity target)
@@ -60,9 +63,10 @@ config/env/                      Env file templates
 ## Architecture Rules
 
 - **Home, Search, Venues are fully static** (`dynamic = 'force-static'`, no `revalidate`). No `headers()`, `cookies()`, or request-bound APIs in these routes.
-- **Pagination/filters are client-side** via `/api/**` proxy; the App Router shell stays static.
+- **One HTTP path to the API.** Every request to `127.0.0.1:1211` is made by `fetchJson()` in `src/lib/api.ts` — server components, `generateMetadata`, and server actions all share it. There is no `src/app/api/**` route and there must not be one; introducing an HTTP proxy duplicates URL/parameter logic and is the source of the dysfunctions that motivated removing it.
+- **Client → backend = server actions.** Pagination, filters, autocomplete, and any other browser-triggered data fetch go through a `'use server'` function in `src/lib/actions.ts` (which internally calls `fetchJson` or a wrapper in `endpoints.ts`). Never call the backend via `fetch('/api/...')` from a client component, and never hard-code the backend URL on the client.
 - **Next.js 16 params are Promises** — always `await props.params` before accessing fields.
-- **API proxy** injects `x-access-key` from `ETHNOS_API_KEY`; never expose secrets to the client.
+- **The API key never leaves the server.** `fetchJson()` injects `x-access-key` from `ETHNOS_API_KEY`; because every backend call funnels through it, no client component (including server-action bodies sent over the wire) ever touches the secret.
 - **Env files live in `/etc/`, period.** The frontend reads secrets (notably `ETHNOS_API_KEY`) from `/etc/next-frontend.env` (mode `0640 root:ubuntu`); the backend reads them from `/etc/node-backend.env`. Never populate `config/env/next-frontend.env`, `.env.local`, or `.env` in the worktree — even though `scripts/manage.sh load_env` and the systemd unit list them as fallbacks, they exist only to support local dev with explicit `ENV_FILE` overrides. Production secrets must not sit inside the project tree. Provision new keys with `sudo install -m 0640 -o root -g ubuntu /dev/stdin /etc/next-frontend.env <<< 'KEY=value'`.
 - **Missing entities return HTTP 404, never 307.** Detail pages (`/works/[id]`, `/persons/[id]`, `/venues/[id]`) call `notFound()` from `next/navigation` when the entity is absent, which renders `src/app/(site)/[locale]/not-found.tsx` with a 404 status. Redirecting bad IDs to a listing/search page (the previous `?notice=*-not-found` pattern) was flagged by Google Search Console as soft 404 / redirect error and is forbidden.
 - **Legacy URL redirects live in `src/app/(site)/[locale]/(redirects)/`.** Each route there must target an existing page; never add a redirect whose destination is itself a redirect (no chains) and never use this folder as a soft-404 sink.
@@ -78,8 +82,9 @@ config/env/                      Env file templates
 
 ## Key Files
 
-- `src/lib/api.ts` — `fetchJson()` with retries (default 2), timeout (default 8s), API key injection
-- `src/lib/endpoints.ts` — high-level API wrappers (`searchWorks`, `getWork`, `getPublication`, `getPersonsWorks`, `getPersonsWorksProminent`, `getVenuesPage`, `getVenueWorksPage`, `getVenueWorksByOffset`, `getHomeRecentWorks`, `getHomeTopVenues`). `searchWorks` routes empty queries to `/works/showcase` and falls back to `/works?search=…` on `/search/works` failure. `getWork` and `getPersonsWorks` apply the schema adapters below. List wrappers accept a `WorksListOptions` bag (`sortBy`, `sortOrder`, `citedByMin`, `citedByMax`) that maps to the backend's citation-aware query params (`sort_by=cited_by_count`, `cited_by_min`, `cited_by_max`). `/persons/{id}/works` returns one row per authorship record (an author listed twice appears twice), so `getPersonsWorks` and `getPersonsWorksProminent` dedupe by work id; the latter oversamples `limit × 4` (capped at 100) so the post-dedupe slice still has a full page.
+- `src/lib/api.ts` — `fetchJson()` with retries (default 2), timeout (default 8s), `x-access-key` injection from `ETHNOS_API_KEY`. Single HTTP client for the entire frontend; both SSR code and server actions use it.
+- `src/lib/endpoints.ts` — server-only high-level API wrappers (`searchWorks`, `getWork`, `getPublication`, `getPersonsWorks`, `getPersonsWorksProminent`, `getVenuesPage`, `getVenueWorksPage`, `getVenueWorksByOffset`, `getHomeRecentWorks`, `getHomeTopVenues`). `searchWorks` is the **single** search-orchestrator: empty `q` with no active filter goes to `/works/showcase`; empty `q` with filters goes to `/search/works` (without `q`); non-empty `q` hits `/search/works` and falls back to `/works?search=…`. Filter detection uses the `SEARCH_FILTER_KEYS` whitelist — keep it in sync if a new filter is added. `getHomeRecentWorks` is **Sphinx-independent by design** — the home page is `force-static` so the build-time fetch must never touch a Sphinx-dependent endpoint (Sphinx may legitimately be off during a deploy and `/search/works?q=*` also fails upstream validation because `q` must be ≥ 2 chars). Primary call is `/works/showcase?limit=N` (pure `summary_publications` MariaDB query); on empty result or HTTP failure it falls back to `/works?limit=N` (same MariaDB path, default `work_id DESC` ordering). Avoid adding `sort_by` to the `/works` fallback — `/works?sort_by=…` currently returns zero rows for unauthenticated sort keys (`id`, `publication_year`, `cited_by_count`). `getWork` and `getPersonsWorks` apply the schema adapters below. List wrappers accept a `WorksListOptions` bag (`sortBy`, `sortOrder`, `citedByMin`, `citedByMax`) that maps to the backend's citation-aware query params (`sort_by=cited_by_count`, `cited_by_min`, `cited_by_max`). `/persons/{id}/works` returns one row per authorship record (an author listed twice appears twice), so `getPersonsWorks` and `getPersonsWorksProminent` dedupe by work id; the latter oversamples `limit × 4` (capped at 100) so the post-dedupe slice still has a full page.
+- `src/lib/actions.ts` — `'use server'` module exposing the only backend bridge available to client components: `actSearchWorks(params)` (delegates to `searchWorks`), `actSearchSphinx(params)` (Sphinx `/search/advanced` with `/search/works` and `/works?search=` fallbacks), `actAutocomplete(query)` (parallel `/search/works`, `/venues/search`, `/search/persons` for the header combobox), `actGetWorkFull(id)` (single-work expansion with `include_citations=true&include_references=true`), and `actGetVenuesPage(page, limit, opts)`. Add a new action here whenever a client component needs new backend data — do not reach back to `fetch()` against an HTTP path.
 - `src/lib/works.ts` — display helpers (author formatting, OA detection, abstract sanitization) **and** the v2 schema adapters:
   - `pickPrimaryPublication(raw)` — fallback heuristic used when the API does not surface `primary_publication`; chooses the canonical publication from `raw.publications[]` (OA+MAIN file wins; then has-files+MAIN; then OA; then any files; then newest `publication_date`; else first).
   - `flattenIdentifierArrays(idsObj)` — reduces `{doi:[…], pmid:[…], …}` to first-scalar per key.
@@ -96,17 +101,16 @@ config/env/                      Env file templates
 - `src/app/(site)/[locale]/(shells)/persons/[id]/PersonTools.tsx` — client component inside the **Tools** tab. Offers one-click exports that operate on the currently fetched page of works: author metadata (JSON), publications (JSON / BibTeX / RIS / APA .docx). Reuses `normWork`, `toBibTeX`, `toRIS`, `toApaParagraph` from `src/lib/work-export.ts`.
 - `src/app/(site)/[locale]/(shells)/venues/[id]/page.tsx` — venue detail page. After the biographic data/description/subjects sections it renders `SectionTabs` with **Recent / Prominent / First** (labels under `venues.sections.*`). "Recent" sorts the current page by `publication_year` DESC then `publication_date` DESC; pagination nav lives in this tab. "Prominent" is a dedicated `getVenueWorksPage` call with `sort_by=cited_by_count&cited_by_min=1&sortOrder=desc` — the venue's top-cited works, no pagination. "First" is a separate `getVenueWorksByOffset` call at `offset = max(0, total - limit)` sorted ASC, so it shows the venue's actual earliest works.
 - `src/app/(site)/[locale]/(shells)/venues/page.tsx` + `VenuesList.tsx` — venues catalog page. Renders `SectionTabs` with four tabs (labels under `venues.listSections.*`, tablist aria-label `venues.listSections.navLabel`). Each tab is a server-fetched `VenuesList`:
-  - **Melhores** (`best`, default) — `getVenuesPage(sortBy='score', sortOrder='DESC')`, paginated (sort propagates into the `/api/venues` refetch URL).
+  - **Melhores** (`best`, default) — `getVenuesPage(sortBy='score', sortOrder='DESC')`, paginated (sort propagates into the `actGetVenuesPage` action on the client).
   - **Proeminentes** (`prominent`) — `sortBy='cited_by_count', sortOrder='DESC'`, fixed top 25.
   - **Recentes** (`recent`) — `sortBy='newest', type='JOURNAL'` (backend alias for `coverage_end_year DESC`), fixed top 25.
   - **Primeiros** (`first`) — `sortBy='oldest', type='JOURNAL'` (backend alias for `coverage_start_year ASC`), fixed top 25.
-  Backend sortBy whitelist includes the `oldest` / `newest` aliases plus `{name, type, impact_factor, works_count, id, score, ranking, h_index, cited_by_count}`. `/venues` also accepts coverage filters (`coverage_from`, `coverage_to`, `active_in_year`, etc.) plumbed via `VenuesListFilters`. `VenuesList` accepts `paginated` / `sortBy` / `sortOrder` props to serve both paginated and curated modes. Each row renders an enriched meta line (type · publisher · coverage · ISSN · E-ISSN · works · `cited_by` · h-index · impact · country), plus a badges row with project-palette variants: Open Access (`.badge.open-acess`, yellow solid), DOAJ (`.badge.doaj`, blue outline), SciELO (`.badge.scielo`, red outline), Scopus (`.badge.scopus`, gray outline). Subjects are serialized via `pickSubjectsText` (reads `term` / `display_name` / `name` from subject objects, avoiding the prior "[object Object]" bug).
+  Backend sortBy whitelist includes the `oldest` / `newest` aliases plus `{name, type, impact_factor, works_count, id, score, ranking, h_index, cited_by_count}`. `/venues` also accepts coverage filters (`coverage_from`, `coverage_to`, `active_in_year`, etc.) plumbed via `VenuesListFilters`. `VenuesList` accepts `paginated` / `sortBy` / `sortOrder` props to serve both paginated and curated modes; client-side refetches on page change invoke `actGetVenuesPage` from `src/lib/actions.ts`. Each row renders an enriched meta line (type · publisher · coverage · ISSN · E-ISSN · works · `cited_by` · h-index · impact · country), plus a badges row with project-palette variants: Open Access (`.badge.open-acess`, yellow solid), DOAJ (`.badge.doaj`, blue outline), SciELO (`.badge.scielo`, red outline), Scopus (`.badge.scopus`, gray outline). Subjects are serialized via `pickSubjectsText` (reads `term` / `display_name` / `name` from subject objects, avoiding the prior "[object Object]" bug).
 - `src/app/(site)/[locale]/(shells)/venues/[id]/VenueWorksList.tsx` — server component that renders a venue's publication as a list item with the shared open-access/badges pattern plus empty-state copy.
 - `src/components/common/SearchForm.tsx` — shared client form used by both `/search` and the `/search/results` refine panel. Reads `useSearchParams()` and binds every field to React state via `useEffect` (initial state is empty so SSR matches the first client render, then state syncs from the URL — defaultValue/key remount tricks were unreliable for `<select>` after hydration). Submits via GET to `formAction` (the locale-aware `/search/results`); the **Clear** button resets state instead of relying on `<button type="reset">`. The autocomplete is delegated to `SearchAutocomplete`, which now has a `useEffect` to mirror its `defaultValue` prop into local `query` state so it tracks the form-controlled `state.q`.
 - `src/app/(site)/[locale]/(shells)/search/page.tsx` — static shell that renders `<SearchForm />` plus the search tips section. The redundant `SearchFormClient` wrapper was removed.
-- `src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx` — client component for the search results page. Above the items list it renders a results summary (query echo via `t.rich('results.queryEcho')`, total via the `results.total` plural ICU message, page position via `results.pagePosition`) and a chip list of active filters (`.filter-chip` with × remove links built by stripping that key from the current URLSearchParams and appending the result to `pathname`). The form itself sits in a collapsible **Refine search** section (`section-toggle` button drives `aria-expanded` + `hidden` on the panel; auto-expanded when no query/filters, collapsed otherwise). Empty results yield two distinct messages: `results.startPrompt` when there are no query/filter params at all, `results.noResults` when there are. The `fetchResults` helper preserves the prior fallback chain (`/api/search/works` → `/api/works?search=` for non-empty `q`; `/api/search/works` with filters → `/api/works/showcase` for empty `q`). Filter values `true`/`false` are rendered through `formatFilterValue` so the chips show "Yes"/"No"/"Sim"/"Não" instead of raw booleans. Pagination row places the centered `pagination-info` (page X of Y) between Previous and Next.
+- `src/app/(site)/[locale]/(shells)/search/results/SearchResultsClient.tsx` — client component for the search results page. Above the items list it renders a results summary (query echo via `t.rich('results.queryEcho')`, total via the `results.total` plural ICU message, page position via `results.pagePosition`) and a chip list of active filters (`.filter-chip` with × remove links built by stripping that key from the current URLSearchParams and appending the result to `pathname`). The form itself sits in a collapsible **Refine search** section (`section-toggle` button drives `aria-expanded` + `hidden` on the panel; auto-expanded when no query/filters, collapsed otherwise). Empty results yield two distinct messages: `results.startPrompt` when there are no query/filter params at all, `results.noResults` when there are. Data fetching is delegated to `actSearchWorks` (`src/lib/actions.ts`); the showcase-vs-search routing and the `/works?search=` fallback live in `searchWorks` (server-side) so SSR and CSR exercise the same branch logic. Filter values `true`/`false` are rendered through `formatFilterValue` so the chips show "Yes"/"No"/"Sim"/"Não" instead of raw booleans. Pagination row places the centered `pagination-info` (page X of Y) between Previous and Next.
 - `src/i18n/metadata.ts` — SEO metadata builder per locale
-- `src/app/api/[...path]/route.ts` — rate-limited API proxy (15s timeout, 502 on backend failure)
 - `src/app/.../works/[id]/work-detail.ts` — `loadWork()` wrapped with React `cache()`; fetches `/works/{id}?include_citations=true&include_references=true` and pipes the response through `normalizeWorkDetail`. The works/[id] page reads citation/reference lists from `work.citations.{references,cited_by}` (each entry: `work_id`, `title`, `authors` string, `publication_year`, `venue_name`, `venue_abbreviated_name`, optional `doi`, `open_access`, `citation_type`, `citation_status`, `citation_context`); the metrics row binds to `work.metrics.{citation_count,reference_count,download_count,view_count}`.
 
 ## Production Service
@@ -119,6 +123,21 @@ The app runs as a **systemd user service** (`ethnos-app.service`). Linger is ena
 - **Logs:** `journalctl --user -u ethnos-app -f`
 - `scripts/manage.sh restart` and `deploy` use `systemctl --user restart` automatically.
 - **First-time setup:** `scripts/manage.sh setup_service` installs the unit, enables it, and configures linger.
+
+## Maintenance Mode
+
+The runtime flag is the env var `MAINTENANCE_MODE` (truthy values: `1`, `true`, `on`, `yes`). When set:
+
+- `src/proxy.ts` intercepts every request (page or server-action POST), rewrites it to `/{locale}/maintenance`, returns **HTTP 503** with `Retry-After: 3600` and `Cache-Control: no-store`. Locale comes from the existing detection (path prefix → cookie → Accept-Language → default). Because every browser-triggered backend call now flows through a server action (which is a POST to a page URL), a single middleware-level short-circuit replaces what used to be a separate `/api` proxy guard.
+- The page itself lives at `src/app/(site)/[locale]/maintenance/page.tsx` (`force-static`, prerendered for `en/pt/es`). Strings under `maintenance.*` in `messages/{en,pt,es}.json`; metadata under `metadata.maintenance`. The route is intentionally reachable directly so the rewrite target resolves; it also appears in the sitemap because it's a normal static page.
+
+Toggle via:
+
+- `scripts/manage.sh maintenance on` writes `~/.config/systemd/user/ethnos-app.service.d/maintenance.conf` with `Environment=MAINTENANCE_MODE=1`, runs `daemon-reload`, then `systemctl --user restart ethnos-app.service` if the service is active.
+- `scripts/manage.sh maintenance off` removes that drop-in, reloads, and restarts.
+- `scripts/manage.sh maintenance status` prints whether the drop-in exists and whether the service is active.
+
+The flag lives in a systemd drop-in (never in `/etc/next-frontend.env` or the worktree), so toggling does not require sudo and the production secret file is left untouched. The service restart is intentional: the env var is read once at process start, and a restart guarantees fresh middleware behavior across all workers.
 
 ## File Objects (works/:id payload)
 

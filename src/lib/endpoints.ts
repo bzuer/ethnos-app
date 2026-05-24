@@ -13,14 +13,14 @@ export async function getHomeRecentWorks(limit = 20) {
   const init = { cache: 'force-cache' as RequestCache };
   try {
     const r: any = await fetchJson(`/works/showcase?limit=${encodeURIComponent(String(safeLimit))}`, init);
+    const data = r?.data || r?.results || r || [];
+    if (Array.isArray(data) && data.length > 0) return data;
+  } catch {}
+  try {
+    const r: any = await fetchJson(`/works?limit=${encodeURIComponent(String(safeLimit))}`, init);
     return r?.data || r?.results || r || [];
   } catch {
-    try {
-      const r: any = await fetchJson(`/search/works?q=${encodeURIComponent('*')}&limit=${encodeURIComponent(String(safeLimit))}&sort=recent`, init);
-      return r?.data || r?.results || r || [];
-    } catch {
-      return [];
-    }
+    return [];
   }
 }
 
@@ -42,6 +42,8 @@ export async function getHomeTopVenues(limit = 25, page = 1) {
   }
 }
 
+const SEARCH_FILTER_KEYS = ['type', 'work_type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access'] as const;
+
 export async function searchWorks(params: Record<string, string | number | boolean | undefined>) {
   const base = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
@@ -49,17 +51,24 @@ export async function searchWorks(params: Record<string, string | number | boole
   const page = base.get('page') || '1';
   const limit = base.get('limit') || '25';
 
-  const qs = new URLSearchParams(base as any);
+  const qs = new URLSearchParams(base);
   if (qs.has('work_type') && !qs.has('type')) {
     qs.set('type', String(qs.get('work_type')));
     qs.delete('work_type');
   }
+  qs.delete('scope');
+
+  const hasFilters = SEARCH_FILTER_KEYS.some((k) => qs.get(k));
 
   if (!qv || qv === '*') {
-    return await fetchJson(
-      `/works/showcase?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
-      { retries: 1, timeoutMs: 8000 }
-    );
+    if (!hasFilters) {
+      return await fetchJson(
+        `/works/showcase?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
+        { retries: 1, timeoutMs: 8000 }
+      );
+    }
+    qs.delete('q');
+    return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
   }
 
   try {

@@ -12,6 +12,8 @@ LOG_FILE="${LOG_FILE:-/tmp/ethnos-next.log}"
 DAEMON_READY_TIMEOUT="${DAEMON_READY_TIMEOUT:-10}"
 SYSTEMD_ARGS="${SYSTEMD_ARGS:---user}"
 SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-ethnos-app.service}"
+MAINTENANCE_DROPIN_DIR="${MAINTENANCE_DROPIN_DIR:-$HOME/.config/systemd/user/ethnos-app.service.d}"
+MAINTENANCE_DROPIN_FILE="${MAINTENANCE_DROPIN_FILE:-$MAINTENANCE_DROPIN_DIR/maintenance.conf}"
 
 port_listening() {
   local TARGET="$1"
@@ -298,13 +300,85 @@ uninstall() {
   echo "Uninstall complete. Source code preserved in $ROOT_DIR."
 }
 
+maintenance_is_active() {
+  [ -f "$MAINTENANCE_DROPIN_FILE" ]
+}
+
+maintenance_on() {
+  mkdir -p "$MAINTENANCE_DROPIN_DIR"
+  cat >"$MAINTENANCE_DROPIN_FILE" <<'UNIT'
+[Service]
+Environment=MAINTENANCE_MODE=1
+UNIT
+  echo "Wrote $MAINTENANCE_DROPIN_FILE"
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl $SYSTEMD_ARGS daemon-reload
+    if systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
+      systemctl $SYSTEMD_ARGS restart "$SYSTEMD_SERVICE"
+      echo "Restarted $SYSTEMD_SERVICE with MAINTENANCE_MODE=1"
+    else
+      echo "Service is not active. Start it with 'systemctl $SYSTEMD_ARGS start $SYSTEMD_SERVICE' to enter maintenance."
+    fi
+  else
+    echo "systemctl not available. Set MAINTENANCE_MODE=1 in the runtime env and restart the service manually."
+  fi
+}
+
+maintenance_off() {
+  if [ -f "$MAINTENANCE_DROPIN_FILE" ]; then
+    rm -f "$MAINTENANCE_DROPIN_FILE"
+    rmdir "$MAINTENANCE_DROPIN_DIR" 2>/dev/null || true
+    echo "Removed $MAINTENANCE_DROPIN_FILE"
+  else
+    echo "Maintenance flag was not set."
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl $SYSTEMD_ARGS daemon-reload
+    if systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
+      systemctl $SYSTEMD_ARGS restart "$SYSTEMD_SERVICE"
+      echo "Restarted $SYSTEMD_SERVICE"
+    fi
+  fi
+}
+
+maintenance_status() {
+  if maintenance_is_active; then
+    echo "maintenance: ON ($MAINTENANCE_DROPIN_FILE)"
+  else
+    echo "maintenance: OFF"
+  fi
+  if command -v systemctl >/dev/null 2>&1; then
+    if systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
+      echo "service: active"
+    else
+      echo "service: inactive"
+    fi
+  fi
+}
+
+maintenance() {
+  local SUB="${2:-status}"
+  case "$SUB" in
+    on|enable|start) maintenance_on ;;
+    off|disable|stop) maintenance_off ;;
+    status|"") maintenance_status ;;
+    *)
+      echo "Usage: $0 maintenance {on|off|status}" >&2
+      exit 1
+      ;;
+  esac
+}
+
 usage() {
-  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall}"
+  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall|maintenance [on|off|status]}"
 }
 
 case "$CMD" in
   css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall)
     "$CMD"
+    ;;
+  maintenance)
+    maintenance "$@"
     ;;
   *)
     usage

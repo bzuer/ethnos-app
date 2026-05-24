@@ -351,6 +351,15 @@
     "description": "A página solicitada não existe.",
     "goHome": "Voltar para o início"
   },
+  "maintenance": {
+    "title": "Manutenção programada",
+    "heading": "Voltamos em instantes",
+    "info": "Estado",
+    "description": "O Ethnos está temporariamente fora do ar para uma manutenção no catálogo. A busca, os periódicos e as listas pessoais retornam assim que o serviço for concluído.",
+    "tryAgain": "Tente novamente em alguns minutos. As listas salvas no seu navegador não são afetadas.",
+    "contact": "Se a página continuar indisponível, escreva ao projeto em",
+    "contactEmail": "contact@ethnos.app"
+  },
   "sphinx": {
     "title": "Busca — Sphinx",
     "query": "Consulta",
@@ -422,6 +431,11 @@
       "title": "Privacidade e Cookies — Ethnos_APP",
       "description": "Política de privacidade e cookies sobre tratamento de localidade, armazenamento local e fluxo de dados via API Proxy.",
       "keywords": "privacidade, cookies, local storage, API proxy, Ethnos Bibliography"
+    },
+    "maintenance": {
+      "title": "Manutenção — Ethnos_APP",
+      "description": "Ethnos Bibliography está temporariamente fora do ar para manutenção programada.",
+      "keywords": "manutenção, indisponibilidade programada, Ethnos Bibliography"
     }
   }
 }

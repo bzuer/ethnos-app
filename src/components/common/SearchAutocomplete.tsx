@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { actAutocomplete } from '@/lib/actions';
 
 type Suggestion = {
   id: string | number;
@@ -47,73 +48,49 @@ export default function SearchAutocomplete({
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const results: Suggestion[] = [];
+    let payload: Awaited<ReturnType<typeof actAutocomplete>>;
     try {
-      const [worksRes, venuesRes, personsRes] = await Promise.allSettled([
-        fetch(`/api/search/works?q=${encodeURIComponent(q)}&limit=3`, {
-          signal: controller.signal,
-          headers: { accept: 'application/json' },
-        }).then(r => r.ok ? r.json() : null),
-        fetch(`/api/venues/search?q=${encodeURIComponent(q)}&limit=2`, {
-          signal: controller.signal,
-          headers: { accept: 'application/json' },
-        }).then(r => r.ok ? r.json() : null),
-        fetch(`/api/search/persons?q=${encodeURIComponent(q)}&limit=2`, {
-          signal: controller.signal,
-          headers: { accept: 'application/json' },
-        }).then(r => r.ok ? r.json() : null),
-      ]);
-
-      if (worksRes.status === 'fulfilled' && worksRes.value) {
-        const items = worksRes.value?.data || worksRes.value?.results || [];
-        (Array.isArray(items) ? items : []).slice(0, 3).forEach((w: any) => {
-          const year = w.publication_year || w.year || '';
-          const authors = w.first_author || (Array.isArray(w.authors_preview) ? w.authors_preview[0] : '') || '';
-          results.push({
-            id: w.id,
-            text: w.title || '',
-            meta: [authors, year].filter(Boolean).join(' · '),
-            type: 'title',
-            href: `/works/${w.id}`,
-          });
-        });
-      }
-
-      if (venuesRes.status === 'fulfilled' && venuesRes.value) {
-        const items = venuesRes.value?.data || venuesRes.value?.results || [];
-        (Array.isArray(items) ? items : []).slice(0, 2).forEach((v: any) => {
-          results.push({
-            id: v.id,
-            text: v.name || '',
-            meta: [v.type, v.issn].filter(Boolean).join(' · '),
-            type: 'venue',
-            href: `/venues/${v.id}`,
-          });
-        });
-      }
-
-      if (personsRes.status === 'fulfilled' && personsRes.value) {
-        const items = personsRes.value?.data || personsRes.value?.results || [];
-        (Array.isArray(items) ? items : []).slice(0, 2).forEach((p: any) => {
-          const name = p.preferred_name || (p.given_names && p.family_name ? `${p.given_names} ${p.family_name}` : '');
-          results.push({
-            id: p.id,
-            text: name,
-            meta: p.orcid ? `ORCID ${p.orcid}` : '',
-            type: 'author',
-            href: `/persons/${p.id}`,
-          });
-        });
-      }
+      payload = await actAutocomplete(q);
     } catch {
       return;
     }
+    if (controller.signal.aborted) return;
 
-    if (!controller.signal.aborted) {
-      setSuggestions(results.slice(0, MAX_RESULTS));
-      setOpen(results.length > 0);
-      setHighlighted(-1);
-    }
+    const results: Suggestion[] = [];
+    payload.works.forEach((w: any) => {
+      const year = w.publication_year || w.year || '';
+      const authors = w.first_author || (Array.isArray(w.authors_preview) ? w.authors_preview[0] : '') || '';
+      results.push({
+        id: w.id,
+        text: w.title || '',
+        meta: [authors, year].filter(Boolean).join(' · '),
+        type: 'title',
+        href: `/works/${w.id}`,
+      });
+    });
+    payload.venues.forEach((v: any) => {
+      results.push({
+        id: v.id,
+        text: v.name || '',
+        meta: [v.type, v.issn].filter(Boolean).join(' · '),
+        type: 'venue',
+        href: `/venues/${v.id}`,
+      });
+    });
+    payload.persons.forEach((p: any) => {
+      const name = p.preferred_name || (p.given_names && p.family_name ? `${p.given_names} ${p.family_name}` : '');
+      results.push({
+        id: p.id,
+        text: name,
+        meta: p.orcid ? `ORCID ${p.orcid}` : '',
+        type: 'author',
+        href: `/persons/${p.id}`,
+      });
+    });
+
+    setSuggestions(results.slice(0, MAX_RESULTS));
+    setOpen(results.length > 0);
+    setHighlighted(-1);
   }, []);
 
   const handleInput = useCallback((value: string) => {

@@ -8,11 +8,23 @@ const intlMiddleware = createMiddleware({
   localePrefix
 });
 
+const MAINTENANCE_RETRY_AFTER = '3600';
+
+function isMaintenanceMode() {
+  const flag = process.env.MAINTENANCE_MODE;
+  if (!flag) return false;
+  const normalized = flag.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'on' || normalized === 'yes';
+}
+
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (shouldBypassIntl(pathname)) return NextResponse.next();
   const prefixed = hasLocalePrefix(pathname);
   const resolvedLocale = prefixed ? extractLocaleFromPath(pathname) ?? defaultLocale : detectPreferredLocale(request);
+  if (isMaintenanceMode() && !isMaintenanceTarget(pathname)) {
+    return buildMaintenanceResponse(request, resolvedLocale);
+  }
   if (!prefixed) {
     const url = request.nextUrl.clone();
     url.pathname = `/${resolvedLocale}${pathname === '/' ? '' : pathname}`;
@@ -22,6 +34,22 @@ export default function proxy(request: NextRequest) {
   }
   const response = intlMiddleware(request);
   setLocaleHeaders(response, resolvedLocale);
+  return response;
+}
+
+function isMaintenanceTarget(pathname: string) {
+  if (pathname === '/maintenance' || pathname.startsWith('/maintenance/')) return true;
+  return locales.some((locale) => pathname === `/${locale}/maintenance` || pathname.startsWith(`/${locale}/maintenance/`));
+}
+
+function buildMaintenanceResponse(request: NextRequest, locale: Locale) {
+  const url = request.nextUrl.clone();
+  url.pathname = `/${locale}/maintenance`;
+  url.search = '';
+  const response = NextResponse.rewrite(url, { status: 503 });
+  response.headers.set('Retry-After', MAINTENANCE_RETRY_AFTER);
+  response.headers.set('Cache-Control', 'no-store');
+  setLocaleHeaders(response, locale);
   return response;
 }
 
@@ -80,5 +108,5 @@ function shouldBypassIntl(pathname: string) {
 }
 
 export const config = {
-  matcher: ['/', '/((?!api|_next/static|_next/image|favicon.ico).*)']
+  matcher: ['/', '/((?!_next/static|_next/image|favicon.ico).*)']
 };

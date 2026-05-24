@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next';
 
 const disallow = [
-  '/api/',
   '/_next/',
   '/works/sphinx'
 ];
