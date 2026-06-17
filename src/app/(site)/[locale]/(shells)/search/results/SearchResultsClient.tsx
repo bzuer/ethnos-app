@@ -72,10 +72,6 @@ export default function SearchResultsClient({ formAction }: Props) {
   const hasUserInput = Boolean(query) || activeFilters.length > 0;
 
   useEffect(() => {
-    setRefineOpen(!hasUserInput);
-  }, [hasUserInput]);
-
-  useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     const load = async () => {
