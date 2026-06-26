@@ -25,7 +25,8 @@ export async function getHomeRecentWorks(limit = 20) {
 }
 
 export async function getVitrinePage(page = 1, limit = 25) {
-  const r: any = await fetchJson(`/works/showcase?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`);
+  const safeLimit = normalizeLimit(limit, 100);
+  const r: any = await fetchJson(`/works/showcase?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(safeLimit))}`);
   return r;
 }
 
@@ -49,9 +50,10 @@ export async function searchWorks(params: Record<string, string | number | boole
   Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
   const qv = base.get('q') || '';
   const page = base.get('page') || '1';
-  const limit = base.get('limit') || '25';
+  const limit = String(normalizeLimit(Number(base.get('limit') || '25'), 100));
 
   const qs = new URLSearchParams(base);
+  qs.set('limit', limit);
   if (qs.has('work_type') && !qs.has('type')) {
     qs.set('type', String(qs.get('work_type')));
     qs.delete('work_type');

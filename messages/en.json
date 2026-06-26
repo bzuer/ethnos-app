@@ -182,6 +182,7 @@
     "summaryHeading": "Search summary",
     "queryEcho": "Results for <strong>{query}</strong>",
     "total": "{count, plural, one {# result} other {# results}}",
+    "totalApprox": "about {count, plural, one {# result} other {# results}}",
     "totalSingular": "1 result",
     "pagePosition": "Page {page} of {totalPages}",
     "refineHeading": "Refine search",

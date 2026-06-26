@@ -17,6 +17,7 @@ type SearchState = {
   hasPrev: boolean;
   hasNext: boolean;
   totalCount: number;
+  totalIsExact: boolean;
 };
 
 type Props = {
@@ -48,11 +49,15 @@ export default function SearchResultsClient({ formAction }: Props) {
     totalPages: undefined,
     hasPrev: false,
     hasNext: false,
-    totalCount: 0
+    totalCount: 0,
+    totalIsExact: true
   });
   const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refineOpen, setRefineOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const params = useMemo(() => {
     const result: Record<string, string> = {};
@@ -64,10 +69,10 @@ export default function SearchResultsClient({ formAction }: Props) {
     return result;
   }, [searchParams]);
 
-  const query = params.q || '';
   const page = params.page || '1';
   const limit = params.limit || '20';
-  const activeFilters = useMemo(() => readActiveFilters(params), [params]);
+  const query = mounted ? (params.q || '') : '';
+  const activeFilters = useMemo(() => (mounted ? readActiveFilters(params) : []), [params, mounted]);
   const noParams = !query && activeFilters.length === 0;
   const hasUserInput = Boolean(query) || activeFilters.length > 0;
 
@@ -114,7 +119,7 @@ export default function SearchResultsClient({ formAction }: Props) {
   const prevHref = state.hasPrev ? buildPagedHref(state.pageNum - 1) : undefined;
   const nextHref = state.hasNext ? buildPagedHref(state.pageNum + 1) : undefined;
 
-  const totalLabel = formatTotal(state.totalCount, t);
+  const totalLabel = formatTotal(state.totalCount, state.totalIsExact, t);
   const pagePositionLabel = state.totalPages && state.totalPages > 0
     ? t('results.pagePosition', { page: state.pageNum, totalPages: state.totalPages })
     : '';
@@ -189,7 +194,7 @@ export default function SearchResultsClient({ formAction }: Props) {
           </button>
         </h2>
         <div id="refine-panel" className="refine-panel" hidden={!refineOpen}>
-          <SearchForm key={searchParams ? searchParams.toString() : ''} action={formAction} autocompleteId="refine-q" embedded />
+          <SearchForm key={mounted && searchParams ? searchParams.toString() : ''} action={formAction} autocompleteId="refine-q" embedded />
         </div>
       </section>
 
@@ -310,8 +315,9 @@ function readActiveFilters(params: Record<string, string>) {
   return list;
 }
 
-function formatTotal(total: number, t: ReturnType<typeof useTranslations>) {
+function formatTotal(total: number, exact: boolean, t: ReturnType<typeof useTranslations>) {
   if (!total) return '';
+  if (!exact) return t('results.totalApprox', { count: total });
   return total === 1 ? t('results.totalSingular') : t('results.total', { count: total });
 }
 
@@ -355,5 +361,7 @@ function parseSearchState(data: any, page: string, limit: string): SearchState {
   const totalPages = Number(psrc?.totalPages ?? psrc?.total_pages ?? (totalCount && limit ? Math.ceil(Number(totalCount) / Number(limit)) : 0)) || undefined;
   const hasPrev = Boolean(psrc?.hasPrev) || pageNum > 1;
   const hasNext = Boolean(psrc?.hasNext) || (totalPages ? pageNum < totalPages : (totalCount ? pageNum * Number(limit) < totalCount : uniqueItems.length === Number(limit)));
-  return { items: uniqueItems, pageNum, totalPages, hasPrev, hasNext, totalCount };
+  const exactFlag = data?.meta?.pagination_total_exact ?? data?.pagination_total_exact ?? data?.data?.meta?.pagination_total_exact;
+  const totalIsExact = exactFlag !== false;
+  return { items: uniqueItems, pageNum, totalPages, hasPrev, hasNext, totalCount, totalIsExact };
 }
