@@ -302,7 +302,6 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   const venueMag = (venue as any)?.mag_id || (venue as any)?.mag;
   addIdentifierValues(identifierEntries, 'ISSN-L', venueIssnL);
   addIdentifierValues(identifierEntries, t('works.detail.labels.wikidata'), venueWikidata, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
-  addIdentifierValues(identifierEntries, t('works.detail.labels.openAlex'), venueOpenalex, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
   addIdentifierValues(identifierEntries, t('works.detail.labels.mag'), venueMag);
   if (venueIdentifiers && typeof venueIdentifiers === 'object') {
     const identifierLabelMap: Record<string, { label: string; hrefBuilder?: (value: string) => string | null }> = {
