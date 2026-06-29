@@ -45,7 +45,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
               </tr>
             </thead>
             <tbody>
-              {recent.slice(0, 10).map((w: any) => {
+              {recent.slice(0, 20).map((w: any) => {
                 const authors = formatMetadataAuthors(w);
                 const year = w.publication_year || (w.publication && w.publication.year) || w.year || '';
                 return (
