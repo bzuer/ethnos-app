@@ -328,7 +328,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               {scopusId ? (
                 <tr>
                   <th scope="row">{t('persons.fields.scopus').toUpperCase()}</th>
-                  <td className="field-value">{scopusId}</td>
+                  <td className="field-value"><a className="action-link table-link" href={`https://www.scopus.com/authid/detail.uri?authorId=${encodeURIComponent(String(scopusId))}`} target="_blank" rel="noopener noreferrer">{scopusId}</a></td>
                 </tr>
               ) : null}
               {wikidataId ? (

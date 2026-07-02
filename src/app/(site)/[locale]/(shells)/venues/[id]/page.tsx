@@ -300,6 +300,8 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   const venueWikidata = (venue as any)?.wikidata_id || (venue as any)?.wikidata;
   const venueOpenalex = (venue as any)?.openalex_id || (venue as any)?.openalex;
   const venueMag = (venue as any)?.mag_id || (venue as any)?.mag;
+  const venueHomepage = pickText([(venue as any)?.homepage_url, (venue as any)?.homepage, (venue as any)?.url]);
+  const buildScopusHref = (value: string) => `https://www.scopus.com/sourceid/${encodeURIComponent(String(value))}`;
   addIdentifierValues(identifierEntries, 'ISSN-L', venueIssnL);
   addIdentifierValues(identifierEntries, t('works.detail.labels.wikidata'), venueWikidata, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
   addIdentifierValues(identifierEntries, t('works.detail.labels.openAlex'), venueOpenalex, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
@@ -309,6 +311,8 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
       issnl: { label: 'ISSN-L' },
       issn_l: { label: 'ISSN-L' },
       wikidata: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
+      wikidataid: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
+      wikidata_id: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
       openalex: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
       openalexid: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
       openalex_id: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
@@ -371,7 +375,9 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
               {venueScopus ? (
                 <tr>
                   <th scope="row">{t('works.detail.labels.scopus')}</th>
-                  <td className="field-value">{venueScopus}</td>
+                  <td className="field-value">
+                    <a className="action-link table-link" href={buildScopusHref(String(venueScopus))} target="_blank" rel="noopener noreferrer">{venueScopus}</a>
+                  </td>
                 </tr>
               ) : null}
               {identifierEntries.map((entry, idx) => (
@@ -391,6 +397,14 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                   </td>
                 </tr>
               ))}
+              {venueHomepage ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.website')}</th>
+                  <td className="field-value">
+                    <a className="action-link table-link" href={venueHomepage} target="_blank" rel="noopener noreferrer">{venueHomepage}</a>
+                  </td>
+                </tr>
+              ) : null}
               <tr>
                 <th scope="row">{t('venues.detail.total')}</th>
                 <td className="field-value">{formatNumber(venue?.works_count || 0)}</td>

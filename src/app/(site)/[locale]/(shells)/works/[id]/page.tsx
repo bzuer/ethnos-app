@@ -205,7 +205,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   addValues('arXiv', work?.arxiv, (value) => `https://arxiv.org/abs/${encodeURIComponent(String(value))}`);
   addValues('WOS ID', work?.wos_id);
   addValues('Handle', work?.handle, (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`);
-  addValues('Wikidata', work?.wikidata_id);
+  addValues('Wikidata', work?.wikidata_id, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
   addValues('MAG', work?.mag_id);
   addValues(t('works.detail.labels.openLibraryId'), work?.openlibrary_id, (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`);
   addValues(t('works.detail.labels.isbn'), work?.isbn);
@@ -228,7 +228,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
           ? (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`
           : normalized === 'openlibrary' || normalized === 'openlibraryid'
             ? (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`
-            : undefined);
+            : normalized === 'wikidata' || normalized === 'wikidataid'
+              ? (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`
+              : normalized === 'scopus' || normalized === 'scopusid'
+                ? (value) => `https://www.scopus.com/sourceid/${encodeURIComponent(String(value))}`
+                : undefined);
   });
   addValues(t('venues.detail.issn'), venueIssn, undefined, venueIds);
   addValues(t('venues.detail.eissn'), venueEissn, undefined, venueIds);
