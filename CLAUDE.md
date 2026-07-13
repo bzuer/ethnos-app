@@ -79,6 +79,8 @@ config/env/                      Env file templates
 - Static shells must be generated per locale at build time.
 - Navigation helpers from `@/i18n/routing`. Locale-aware links via `LocaleLink` component.
 - Every localized page calls `buildPageMetadata` with matching message key.
+- **Locale resolution is cookie-first, then a fallback default.** `src/proxy.ts#detectPreferredLocale` (only runs for unprefixed paths) reads the `NEXT_LOCALE` cookie first, then the `accept-language` header, then `defaultLocale`. The Accept-Language step is only the **first-visit default** — an explicit user choice must always win. Never reorder so the header outranks the cookie.
+- **User-facing language override:** `src/components/common/LocaleSwitcher.tsx` lets the user pick the language regardless of what Accept-Language auto-selected. It writes a 1-year `NEXT_LOCALE` cookie (so the choice persists and outranks the header on every later request) and then hard-navigates (`window.location.assign`) to `localizedPath(locale, pathname)` — a full reload rather than a soft `router.replace`, because with `localePrefix: 'as-needed'` switching *to* the default locale at the unprefixed root can otherwise no-op and never re-hit the middleware. Uses next-intl `usePathname()` (locale-less) and reads `window.location.search` at click time — deliberately **not** `useSearchParams()`, which would force a Suspense boundary / deopt the `force-static` shells this component renders inside. Strings under `layout.language.*`.
 
 ## Key Files
 

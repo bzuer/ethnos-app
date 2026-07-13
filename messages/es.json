@@ -10,6 +10,13 @@
       "listCounterLabel": "Elementos en la lista personal",
       "ariaLabel": "Navegación principal"
     },
+    "language": {
+      "label": "Idioma",
+      "select": "Seleccionar idioma",
+      "en": "English",
+      "pt": "Português",
+      "es": "Español"
+    },
     "footer": {
       "project": "Ethnos_APP",
       "openSource": "Proyecto Open Source",

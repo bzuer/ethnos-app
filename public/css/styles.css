@@ -1431,17 +1431,26 @@ a.action-btn {
   background: var(--primary-yellow);
 }
 
-.scroll-tools {
+.floating-tools {
   position: fixed;
   right: var(--spacing-lg);
   bottom: var(--spacing-lg);
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: var(--spacing-xs);
   z-index: 900;
 }
 
-.scroll-tool {
+.scroll-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.scroll-tool,
+.locale-switcher-toggle,
+.locale-switcher-option {
   width: var(--grid-unit);
   height: var(--grid-height);
   border: var(--border-thin) solid var(--border-gray);
@@ -1457,20 +1466,36 @@ a.action-btn {
   cursor: pointer;
 }
 
-.scroll-tool:hover {
+.scroll-tool:hover,
+.locale-switcher-toggle:hover,
+.locale-switcher-option:hover {
   background-color: var(--document-white);
   color: var(--data-gray);
 }
 
+.locale-switcher {
+  position: relative;
+}
+
+.locale-switcher-menu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: var(--spacing-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.locale-switcher-option[aria-selected='true'] {
+  border-color: var(--label-gray);
+  color: var(--data-gray);
+}
+
 @media (max-width: 640px) {
-  .scroll-tools {
+  .floating-tools {
     right: var(--spacing-md);
     bottom: var(--spacing-md);
-  }
-
-  .scroll-tool {
-    width: var(--grid-unit);
-    height: var(--grid-height);
   }
 
   .data-table th,
