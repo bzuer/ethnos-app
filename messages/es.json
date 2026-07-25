@@ -6,6 +6,7 @@
       "home": "Inicio",
       "search": "Búsqueda",
       "journals": "Revistas",
+      "institutions": "Instituciones",
       "lists": "Lista",
       "listCounterLabel": "Elementos en la lista personal",
       "ariaLabel": "Navegación principal"
@@ -41,6 +42,7 @@
       "previous": "Anterior",
       "next": "Siguiente",
       "goHome": "Ir a la página inicial",
+      "loadMore": "Cargar más",
       "addToList": "Añadir item",
       "inList": "Ya en lista",
       "removeFromList": "Quitar item",
@@ -61,6 +63,10 @@
       "searchInput": "Término de búsqueda",
       "term": "Término",
       "itemsPerPage": "Elementos por página",
+      "sortBy": "Ordenar por",
+      "sortOrder": "Orden",
+      "citedByMin": "Citas mín.",
+      "citedByMax": "Citas máx.",
       "query": "Consulta",
       "parameters": "Parámetros",
       "type": "Tipo",
@@ -88,13 +94,22 @@
       "language": "en, pt, es..."
     },
     "options": {
-      "any": "Cualquiera"
+      "any": "Cualquiera",
+      "relevance": "Relevancia",
+      "citedByCount": "Más citados",
+      "publicationYear": "Más recientes",
+      "referencesCount": "Más referencias",
+      "descending": "Descendente",
+      "ascending": "Ascendente"
     },
     "states": {
       "loadingWorks": "Cargando obras...",
       "loadingJournals": "Cargando revistas...",
       "unableToLoadWorks": "No se pudieron cargar las obras.",
       "unableToLoadJournals": "No se pudieron cargar las revistas.",
+      "loadingInstitutions": "Cargando instituciones…",
+      "noInstitutions": "No se encontraron instituciones.",
+      "unableToLoadInstitutions": "No se pudieron cargar las instituciones.",
       "noJournals": "No hay revistas disponibles.",
       "noPersonWorks": "No se encontraron obras para esta persona.",
       "noVenueWorks": "No se encontraron publicaciones para esta revista.",
@@ -126,6 +141,7 @@
     "yearUnavailable": "Año no disponible",
     "nameUnavailable": "Nombre no disponible",
       "journalNotFound": "Revista no encontrada",
+      "institutionNotFound": "Institución no encontrada",
       "personNotFound": "Persona no encontrada",
       "work": "Obra"
     },
@@ -144,6 +160,7 @@
       "citedBy": "Citada por",
       "references": "Referencias",
       "worksCount": "{count} obras",
+      "authorsCount": "{count} autores",
       "termEmpty": "(vacío)",
       "ariaSearchForm": "Formulario de búsqueda",
       "ariaAdvancedSearchForm": "Formulario de búsqueda avanzada",
@@ -249,6 +266,7 @@
   "works": {
     "detail": {
       "titleFallback": "Detalles de la Obra",
+      "unresolvedReferences": "Referencias no resueltas",
       "sections": {
         "bibliographic": "Datos Bibliográficos",
         "abstract": "Resumen",
@@ -375,7 +393,67 @@
     "itemsHeading": "Elementos",
     "term": "Término"
   },
+  "institutions": {
+    "title": "Instituciones",
+    "listSections": {
+      "navLabel": "Secciones del catálogo de instituciones",
+      "prominent": "Más productivas",
+      "cited": "Más citadas",
+      "hindex": "Mayor índice h"
+    },
+    "detail": {
+      "data": "Datos de la institución",
+      "type": "Tipo",
+      "country": "País",
+      "city": "Ciudad",
+      "works": "Trabajos",
+      "researchers": "Investigadores",
+      "citations": "Citas",
+      "hIndex": "Índice h",
+      "i10Index": "Índice i10",
+      "coverage": "Cobertura",
+      "fundedWorks": "Trabajos financiados",
+      "grants": "Financiamientos",
+      "ror": "ROR",
+      "grid": "GRID",
+      "wikidata": "Wikidata",
+      "openAlex": "OpenAlex",
+      "website": "Sitio web",
+      "alternativeNames": "También conocida como",
+      "production": "Producción por tipo",
+      "trend": "Tendencia de publicación",
+      "relationships": "Instituciones relacionadas",
+      "parents": "Superior",
+      "children": "Subordinada",
+      "related": "Relacionada",
+      "topAuthors": "Autores principales"
+    },
+    "sections": {
+      "navLabel": "Secciones de la institución",
+      "works": "Trabajos",
+      "funded": "Financiados",
+      "authors": "Autores",
+      "production": "Producción",
+      "related": "Relacionadas"
+    },
+    "empty": {
+      "works": "No se encontraron trabajos afiliados para esta institución.",
+      "funded": "No hay trabajos financiados registrados para esta institución.",
+      "authors": "No hay datos de autores disponibles.",
+      "related": "No hay instituciones relacionadas registradas."
+    }
+  },
   "metadata": {
+    "institutions": {
+      "title": "Instituciones — Ethnos_APP",
+      "description": "Directorio de instituciones y organizaciones de investigación con producción, colaboradores y financiamiento en antropología y sociología.",
+      "keywords": "instituciones, organizaciones, universidades, financiadores, antropología, sociología, Ethnos"
+    },
+    "institutionsDetail": {
+      "title": "Detalles de la Institución — Ethnos_APP",
+      "description": "Perfil de la institución con trabajos, autores principales, tendencia de producción, rol de financiamiento y organizaciones relacionadas.",
+      "keywords": "perfil de institución, ROR, OpenAlex, producción de investigación, antropología, sociología"
+    },
     "home": {
       "title": "Inicio — Ethnos_APP",
       "description": "Página principal de Ethnos Bibliography con actualizaciones, revistas destacadas y acceso rápido a datos de antropología y sociología.",

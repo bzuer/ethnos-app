@@ -104,7 +104,12 @@ const sortByRecency = (items: any[]): any[] => {
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.persons', `/persons/${id}`);
-  const data = await getPersonsWorks(id, 1, 25);
+  let data: any = null;
+  try {
+    data = await getPersonsWorks(id, 1, 25);
+  } catch {
+    return base;
+  }
   const person = data?.person || null;
   if (!person) return base;
   const personName = pickPersonName(person);
@@ -157,8 +162,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const { id, locale } = await props.params;
   const sp = (await props.searchParams) || {};
   const page = Number(sp.page || '1') || 1;
-  let data: any = null;
-  try { data = await getPersonsWorks(id, page, 25); } catch {}
+  const data: any = await getPersonsWorks(id, page, 25);
   const person = data?.person || null;
   const worksPage = data?.works || null;
   const items: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
@@ -183,22 +187,14 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const metrics = person?.metrics || {};
   const profile = person?.authorship_profile || {};
   const affiliationsRaw: any = person?.affiliations || person?.affiliation || person?.current_affiliation || [];
-  const affiliations: string[] = Array.isArray(affiliationsRaw)
-    ? affiliationsRaw.map((a: any) => {
-        if (!a) return '';
-        if (typeof a === 'string') return a;
-        const org = a.organization || a.org || a.name || a.institution || '';
-        const role = a.role || a.position || '';
-        return [org, role].filter(Boolean).join(' — ');
-      }).filter(Boolean)
-    : [
-        typeof affiliationsRaw === 'string'
-          ? affiliationsRaw
-          : [
-              affiliationsRaw?.organization || affiliationsRaw?.org || affiliationsRaw?.name || affiliationsRaw?.institution || '',
-              affiliationsRaw?.role || affiliationsRaw?.position || '',
-            ].filter(Boolean).join(' — '),
-      ].filter(Boolean);
+  const affiliationSource: any[] = Array.isArray(affiliationsRaw) ? affiliationsRaw : (affiliationsRaw ? [affiliationsRaw] : []);
+  const affiliationEntries = affiliationSource.map((a: any) => {
+    if (!a) return null;
+    if (typeof a === 'string') return { name: a, id: null };
+    const orgName = a.name || a.organization || a.institution || '';
+    return orgName ? { name: String(orgName), id: a.id ?? null } : null;
+  }).filter(Boolean) as Array<{ name: string; id: number | string | null }>;
+  const affiliations: string[] = affiliationEntries.map((entry) => entry.name);
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/persons/${id}`)}`;
   const jsonLd: Record<string, any> = {
     '@context': 'https://schema.org',
@@ -307,10 +303,21 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
                   <td className="field-value">{nameSignature}</td>
                 </tr>
               ) : null}
-              {affiliations.length > 0 ? (
+              {affiliationEntries.length > 0 ? (
                 <tr>
                   <th scope="row">{t('persons.fields.affiliations').toUpperCase()}</th>
-                  <td className="field-value">{affiliations.join('; ')}</td>
+                  <td className="field-value">
+                    {affiliationEntries.map((entry, idx) => (
+                      <span key={`${entry.id || entry.name}-${idx}`}>
+                        {entry.id ? (
+                          <LocaleLink prefetch={false} className="action-link table-link" href={`/institutions/${entry.id}`}>{entry.name}</LocaleLink>
+                        ) : (
+                          <span>{entry.name}</span>
+                        )}
+                        {idx < affiliationEntries.length - 1 ? '; ' : ''}
+                      </span>
+                    ))}
+                  </td>
                 </tr>
               ) : null}
               {orcid ? (

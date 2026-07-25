@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
-import { fetchJson } from '@/lib/api';
+import { fetchJson, isNotFoundError } from '@/lib/api';
 import { formatMetadataAuthors, normalizeWorkDetail, sanitizeWorkAbstract } from '@/lib/works';
 
 const workDetailQuery = 'include_citations=true&include_references=true';
@@ -275,10 +275,22 @@ export function pickReferenceAuthors(item: any) {
 }
 
 export const loadWork = cache(async (id: string) => {
-  let envelope: any = null;
-  try {
-    envelope = await fetchJson<any>(`/works/${encodeURIComponent(id)}?${workDetailQuery}`);
-  } catch {}
+  const safeId = encodeURIComponent(id);
+  const [workResult, metricsResult] = await Promise.allSettled([
+    fetchJson<any>(`/works/${safeId}?${workDetailQuery}`),
+    fetchJson<any>(`/works/${safeId}/metrics`)
+  ]);
+  if (workResult.status === 'rejected') {
+    if (isNotFoundError(workResult.reason)) return null;
+    throw workResult.reason;
+  }
+  const envelope: any = workResult.value;
   const raw = envelope?.data || envelope?.work || envelope || null;
-  return raw ? normalizeWorkDetail(raw) : null;
+  if (!raw) return null;
+  const work = normalizeWorkDetail(raw);
+  if (work && typeof work === 'object' && metricsResult.status === 'fulfilled') {
+    const md: any = metricsResult.value?.data || metricsResult.value || null;
+    if (md && typeof md === 'object') (work as any).authoritative_metrics = md;
+  }
+  return work;
 });

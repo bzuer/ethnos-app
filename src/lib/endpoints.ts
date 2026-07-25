@@ -1,5 +1,7 @@
 import { cache } from 'react';
-import { fetchJson } from './api';
+import { fetchJson, isNotFoundError, unwrapData } from './api';
+import { normalizeVenue } from './venues';
+import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizePersonDetail, normalizePersonWorkItem, normalizeWorkDetail } from './works';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
@@ -37,13 +39,13 @@ export async function getHomeTopVenues(limit = 25, page = 1) {
   try {
     const r: any = await fetchJson(`/venues?limit=${encodeURIComponent(String(safeLimit))}&page=${encodeURIComponent(String(safePage))}`, init);
     const data = r?.data || r?.results || r?.items || [];
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data.map(normalizeVenue) : [];
   } catch {
     return [];
   }
 }
 
-const SEARCH_FILTER_KEYS = ['type', 'work_type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access'] as const;
+const SEARCH_FILTER_KEYS = ['type', 'work_type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
 
 export async function searchWorks(params: Record<string, string | number | boolean | undefined>) {
   const base = new URLSearchParams();
@@ -64,8 +66,13 @@ export async function searchWorks(params: Record<string, string | number | boole
 
   if (!qv || qv === '*') {
     if (!hasFilters) {
+      const showcaseParams = [`page=${encodeURIComponent(page)}`, `limit=${encodeURIComponent(limit)}`];
+      const sortBy = qs.get('sort_by');
+      const sortOrder = qs.get('sort_order');
+      if (sortBy) showcaseParams.push(`sort_by=${encodeURIComponent(sortBy)}`);
+      if (sortOrder) showcaseParams.push(`sort_order=${encodeURIComponent(sortOrder)}`);
       return await fetchJson(
-        `/works/showcase?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
+        `/works/showcase?${showcaseParams.join('&')}`,
         { retries: 1, timeoutMs: 8000 }
       );
     }
@@ -75,7 +82,8 @@ export async function searchWorks(params: Record<string, string | number | boole
 
   try {
     return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
-  } catch {
+  } catch (error) {
+    if (hasFilters) throw error;
     return await fetchJson(
       `/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
       { retries: 1, timeoutMs: 8000 }
@@ -145,6 +153,7 @@ export async function getVenuesPage(page = 1, limit = 50, opts?: VenuesListFilte
     `/venues?${params.join('&')}`,
     { cache: 'force-cache' as RequestCache }
   );
+  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeVenue);
   return r;
 }
 
@@ -182,6 +191,7 @@ export const getPersonsWorks = cache(async (personId: string | number, page = 1,
     fetchJson<any>(`/persons/${id}`),
     fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`)
   ]);
+  if (personResult.status === 'rejected' && !isNotFoundError(personResult.reason)) throw personResult.reason;
   const p: any = personResult.status === 'fulfilled' ? personResult.value : null;
   const personRaw = p?.data || p?.person || p || null;
   const person = personRaw ? normalizePersonDetail(personRaw) : null;
@@ -218,7 +228,6 @@ function dedupeByWorkId(items: any[]): any[] {
 
 export async function getPersonsWorksProminent(personId: string | number, limit = 25) {
   const id = encodeURIComponent(String(personId));
-  // oversample to survive backend duplicates (one row per authorship record)
   const fetchLimit = Math.min(100, limit * 4);
   const qs = `limit=${encodeURIComponent(String(fetchLimit))}${worksListQuery({ sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 })}`;
   try {
@@ -231,4 +240,53 @@ export async function getPersonsWorksProminent(personId: string | number, limit 
   } catch {
     return [];
   }
+}
+
+export type InstitutionsListSort = 'works_count' | 'citations' | 'cited_by_count' | 'h_index' | 'i10_index' | 'researchers_count' | 'name' | 'id';
+export type InstitutionsListOptions = {
+  sortBy?: InstitutionsListSort;
+  sortOrder?: 'ASC' | 'DESC';
+  type?: string;
+  country?: string;
+  q?: string;
+};
+
+export async function getInstitutionsPage(page = 1, limit = 25, opts?: InstitutionsListOptions) {
+  const params = [
+    `page=${encodeURIComponent(String(page))}`,
+    `limit=${encodeURIComponent(String(normalizeLimit(limit, 100)))}`
+  ];
+  if (opts?.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
+  if (opts?.sortOrder) params.push(`sort_order=${encodeURIComponent(opts.sortOrder)}`);
+  if (opts?.type) params.push(`type=${encodeURIComponent(opts.type)}`);
+  if (opts?.country) params.push(`country=${encodeURIComponent(opts.country)}`);
+  if (opts?.q) params.push(`q=${encodeURIComponent(opts.q)}`);
+  const r: any = await fetchJson(`/institutions?${params.join('&')}`, { cache: 'force-cache' as RequestCache });
+  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeInstitution);
+  return r;
+}
+
+export const getInstitution = cache(async (id: string | number) => {
+  let envelope: any = null;
+  try {
+    envelope = await fetchJson<any>(`/institutions/${encodeURIComponent(String(id))}`);
+  } catch (error) {
+    if (isNotFoundError(error)) return null;
+    throw error;
+  }
+  const raw = unwrapData(envelope);
+  return raw ? normalizeInstitution(raw) : null;
+});
+
+export async function getInstitutionWorks(id: string | number, page = 1, limit = 25, opts?: { funded?: boolean; sortBy?: string; sortOrder?: 'ASC' | 'DESC' }) {
+  const segment = opts?.funded ? 'funded-works' : 'works';
+  const params = [
+    `page=${encodeURIComponent(String(page))}`,
+    `limit=${encodeURIComponent(String(normalizeLimit(limit, 100)))}`
+  ];
+  if (opts?.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
+  if (opts?.sortOrder) params.push(`sort_order=${encodeURIComponent(opts.sortOrder)}`);
+  const r: any = await fetchJson(`/institutions/${encodeURIComponent(String(id))}/${segment}?${params.join('&')}`);
+  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeInstitutionWorkItem);
+  return r;
 }

@@ -32,8 +32,8 @@ const formatSubjectList = (value: unknown) => {
         if (!entry) return '';
         if (typeof entry === 'string') return entry;
         if (typeof entry === 'object') {
-          const obj = entry as { display_name?: string; name?: string; label?: string; value?: string };
-          return obj.display_name || obj.name || obj.label || obj.value || '';
+          const obj = entry as { term?: string; display_name?: string; name?: string; label?: string; value?: string };
+          return obj.term || obj.display_name || obj.name || obj.label || obj.value || '';
         }
         return '';
       })
@@ -43,8 +43,8 @@ const formatSubjectList = (value: unknown) => {
   }
   if (typeof value === 'string') return value;
   if (typeof value === 'object') {
-    const obj = value as { display_name?: string; name?: string; label?: string; value?: string };
-    return obj.display_name || obj.name || obj.label || obj.value || '';
+    const obj = value as { term?: string; display_name?: string; name?: string; label?: string; value?: string };
+    return obj.term || obj.display_name || obj.name || obj.label || obj.value || '';
   }
   return '';
 };
@@ -322,7 +322,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     };
     Object.entries(venueIdentifiers as Record<string, any>).forEach(([rawKey, rawValue]) => {
       const normalized = String(rawKey || '').replace(/[-\s]/g, '').toLowerCase();
-      if (!venueIssn && (normalized === 'issn' || normalized === 'eissn')) {
+      if (normalized === 'issn' || normalized === 'eissn') {
         const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
         if (normalized === 'issn' && first && !venueIssn) venueIssn = String(first);
         if (normalized === 'eissn' && first && !venueEissn) venueEissn = String(first);

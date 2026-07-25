@@ -22,6 +22,10 @@ type FormState = {
   year_to: string;
   peer_reviewed: string;
   open_access: string;
+  sort_by: string;
+  sort_order: string;
+  cited_by_min: string;
+  cited_by_max: string;
   limit: string;
 };
 
@@ -47,13 +51,18 @@ function readState(searchParams: URLSearchParams | null): FormState {
     year_to: get('year_to'),
     peer_reviewed: get('peer_reviewed'),
     open_access: get('open_access'),
+    sort_by: get('sort_by'),
+    sort_order: get('sort_order'),
+    cited_by_min: get('cited_by_min'),
+    cited_by_max: get('cited_by_max'),
     limit
   };
 }
 
 const EMPTY_STATE: FormState = {
   q: '', author: '', venue: '', subject: '', work_type: '', language: '',
-  year_from: '', year_to: '', peer_reviewed: '', open_access: '', limit: DEFAULT_LIMIT
+  year_from: '', year_to: '', peer_reviewed: '', open_access: '',
+  sort_by: '', sort_order: '', cited_by_min: '', cited_by_max: '', limit: DEFAULT_LIMIT
 };
 
 export default function SearchForm({ action, autocompleteId = 'q', embedded = false }: Props) {
@@ -153,8 +162,13 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               <option value="BOOK">BOOK</option>
               <option value="CHAPTER">CHAPTER</option>
               <option value="CONFERENCE">CONFERENCE</option>
-              <option value="REPORT">REPORT</option>
+              <option value="CONFERENCE_PAPER">CONFERENCE_PAPER</option>
               <option value="THESIS">THESIS</option>
+              <option value="REPORT">REPORT</option>
+              <option value="DATASET">DATASET</option>
+              <option value="PREPRINT">PREPRINT</option>
+              <option value="REVIEW">REVIEW</option>
+              <option value="EDITORIAL">EDITORIAL</option>
               <option value="OTHER">OTHER</option>
             </select>
           </div>
@@ -232,6 +246,58 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
       <fieldset className="figure-plate">
         <legend className="form-label">{t('search.parametersLegend')}</legend>
         <div className="search-filters">
+          <div className="filter-label">
+            <label className="form-label" htmlFor={`${autocompleteId}-sort_by`}>{t('common.labels.sortBy')}</label>
+            <select
+              className="form-input"
+              id={`${autocompleteId}-sort_by`}
+              name="sort_by"
+              value={state.sort_by}
+              onChange={update('sort_by')}
+            >
+              <option value="">{t('common.options.relevance')}</option>
+              <option value="cited_by_count">{t('common.options.citedByCount')}</option>
+              <option value="publication_year">{t('common.options.publicationYear')}</option>
+              <option value="references_count">{t('common.options.referencesCount')}</option>
+            </select>
+          </div>
+          <div className="filter-label">
+            <label className="form-label" htmlFor={`${autocompleteId}-sort_order`}>{t('common.labels.sortOrder')}</label>
+            <select
+              className="form-input"
+              id={`${autocompleteId}-sort_order`}
+              name="sort_order"
+              value={state.sort_order}
+              onChange={update('sort_order')}
+            >
+              <option value="">{t('common.options.descending')}</option>
+              <option value="ASC">{t('common.options.ascending')}</option>
+            </select>
+          </div>
+          <div className="filter-label">
+            <label className="form-label" htmlFor={`${autocompleteId}-cited_by_min`}>{t('common.labels.citedByMin')}</label>
+            <input
+              className="form-input"
+              type="number"
+              id={`${autocompleteId}-cited_by_min`}
+              name="cited_by_min"
+              value={state.cited_by_min}
+              onChange={update('cited_by_min')}
+              min={0}
+            />
+          </div>
+          <div className="filter-label">
+            <label className="form-label" htmlFor={`${autocompleteId}-cited_by_max`}>{t('common.labels.citedByMax')}</label>
+            <input
+              className="form-input"
+              type="number"
+              id={`${autocompleteId}-cited_by_max`}
+              name="cited_by_max"
+              value={state.cited_by_max}
+              onChange={update('cited_by_max')}
+              min={0}
+            />
+          </div>
           <div className="filter-label">
             <label className="form-label" htmlFor={`${autocompleteId}-limit`}>{t('common.labels.itemsPerPage')}</label>
             <select

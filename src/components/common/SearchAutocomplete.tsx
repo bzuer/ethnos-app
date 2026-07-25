@@ -59,7 +59,10 @@ export default function SearchAutocomplete({
     const results: Suggestion[] = [];
     payload.works.forEach((w: any) => {
       const year = w.publication_year || w.year || '';
-      const authors = w.first_author || (Array.isArray(w.authors_preview) ? w.authors_preview[0] : '') || '';
+      const firstAuthor = w.first_author;
+      const authors = (firstAuthor && typeof firstAuthor === 'object' ? firstAuthor.name : firstAuthor)
+        || (Array.isArray(w.authors_preview) ? w.authors_preview[0] : '')
+        || '';
       results.push({
         id: w.id,
         text: w.title || '',
@@ -72,17 +75,18 @@ export default function SearchAutocomplete({
       results.push({
         id: v.id,
         text: v.name || '',
-        meta: [v.type, v.issn].filter(Boolean).join(' · '),
+        meta: [v.type, (v.identifiers?.issn || v.issn)].filter(Boolean).join(' · '),
         type: 'venue',
         href: `/venues/${v.id}`,
       });
     });
     payload.persons.forEach((p: any) => {
       const name = p.preferred_name || (p.given_names && p.family_name ? `${p.given_names} ${p.family_name}` : '');
+      const orcid = p.identifiers?.orcid || p.orcid;
       results.push({
         id: p.id,
         text: name,
-        meta: p.orcid ? `ORCID ${p.orcid}` : '',
+        meta: orcid ? `ORCID ${orcid}` : '',
         type: 'author',
         href: `/persons/${p.id}`,
       });

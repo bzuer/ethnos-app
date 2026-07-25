@@ -64,6 +64,7 @@ function buildStaticEntries(locale: Locale, fallbackDate: Date, includeAlternate
     { path: '/', frequency: 'daily', priority: 1 },
     { path: '/search', frequency: 'daily', priority: 0.8 },
     { path: '/venues', frequency: 'weekly', priority: 0.8 },
+    { path: '/institutions', frequency: 'weekly', priority: 0.8 },
     { path: '/lists', frequency: 'weekly', priority: 0.7 }
   ];
   return definitions.map((item) => buildEntry(locale, item.path, fallbackDate, item.frequency, item.priority, includeAlternates));

@@ -96,7 +96,21 @@ export function normWork(source: any) {
   const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)
     || (source?.primary_publication && typeof source.primary_publication === 'object');
   const raw = needsNormalization ? normalizeWorkDetail(source) : source;
-  const authors = Array.isArray(raw.authors) ? raw.authors.map(normAuthor).filter(Boolean) : [];
+  let authors = Array.isArray(raw.authors) ? raw.authors.map(normAuthor).filter(Boolean) : [];
+  if (!authors.length) {
+    let names: any[] = Array.isArray(raw.authors_preview) ? raw.authors_preview : [];
+    if (!names.length) {
+      const authorString = (raw.authors && typeof raw.authors === 'object' && !Array.isArray(raw.authors) ? raw.authors.author_string : '')
+        || raw.author_string || '';
+      if (authorString) names = String(authorString).split(/[;|]/).map((part: string) => part.trim()).filter(Boolean);
+    }
+    if (!names.length && raw.first_author) {
+      const first = raw.first_author;
+      const name = typeof first === 'string' ? first : (first?.name || first?.preferred_name || '');
+      if (name) names = [name];
+    }
+    authors = names.map(normAuthor).filter(Boolean);
+  }
   const publication = raw.publication || {};
   const venue = raw.venue || {};
   const publisher = raw.publisher || {};

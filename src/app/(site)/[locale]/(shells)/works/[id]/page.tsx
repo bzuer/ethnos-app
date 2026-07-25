@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
 import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/common/GroupedIdentifiers';
 import ClientActions from './work-actions';
-import WorkRelatedList from './WorkRelatedList';
+import WorkCitationList from './WorkCitationList';
 import WorkSectionTabs from './WorkSectionTabs';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
@@ -21,7 +21,12 @@ const openGraphLocaleMap: Record<string, string> = {
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.workDetail', `/works/${id}`);
-  const work = await loadWork(id);
+  let work: any = null;
+  try {
+    work = await loadWork(id);
+  } catch {
+    return base;
+  }
   if (!work || !work.id) return base;
   const publication = work?.publication || {};
   const venue = work?.venue || {};
@@ -206,7 +211,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   addValues('WOS ID', work?.wos_id);
   addValues('Handle', work?.handle, (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`);
   addValues('Wikidata', work?.wikidata_id, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
-  addValues('MAG', work?.mag_id);
+  addValues(t('works.detail.labels.openAlex'), work?.openalex_id, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
   addValues(t('works.detail.labels.openLibraryId'), work?.openlibrary_id, (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`);
   addValues(t('works.detail.labels.isbn'), work?.isbn);
   const idLabelMap: Record<string, string> = {
@@ -240,18 +245,23 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const cleanedAbstract = sanitizeWorkAbstract(abstractText);
   const refs: any[] = Array.isArray(work?.citations?.references) ? work.citations.references : [];
   const citedBy: any[] = Array.isArray(work?.citations?.cited_by) ? work.citations.cited_by : [];
-  const relatedLabels = {
-    titleUnavailable: t('common.entities.titleUnavailable'),
-    authorUnknown: t('common.entities.authorUnknown'),
-    openAccess: t('common.meta.openAccess'),
-    addToList: t('common.actions.addToList'),
-    inList: t('common.actions.inList'),
-    removeFromList: t('common.actions.removeFromList'),
-    added: t('common.messages.added'),
-    itemRemoved: t('common.messages.itemRemoved'),
-    citedBy: t('common.meta.citedBy'),
-    references: t('common.meta.references')
-  };
+  const unresolvedRefs = (Array.isArray(work?.citations?.unresolved_references) ? work.citations.unresolved_references : [])
+    .map((entry: any) => ({ doi: entry?.cited_doi ?? null, status: entry?.status ?? null }));
+  const authoritativeMetrics: any = work?.authoritative_metrics || {};
+  const citationMetrics: any = authoritativeMetrics?.citation_metrics || {};
+  const citationsReceived = Number(citationMetrics?.total_citations_received);
+  const uniqueCiting = Number(citationMetrics?.unique_citing_works);
+  const referencesMade = Number(citationMetrics?.total_references_made);
+  const citationsCountDisplay = Number.isFinite(citationsReceived) && citationsReceived > 0
+    ? citationsReceived
+    : (Number(metrics?.citation_count) || 0);
+  const referencesCountDisplay = Number.isFinite(referencesMade) && referencesMade > 0
+    ? referencesMade
+    : (Number(metrics?.reference_count) || 0);
+  const citationsTabTotal = Number.isFinite(uniqueCiting) && uniqueCiting > 0
+    ? uniqueCiting
+    : (citationsCountDisplay || citedBy.length);
+  const referencesTabTotal = referencesCountDisplay || refs.length;
   const coins = buildCoins(work, locale, id);
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
   const jsonLd: Record<string, any> = {
@@ -304,18 +314,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                     const name = a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' ');
                     const pid = a?.person_id || a?.id;
                     const href = pid ? `/persons/${pid}` : undefined;
-                    const affRaw = a?.affiliation || (Array.isArray(a?.affiliations) ? a.affiliations[0] : undefined) || a?.current_affiliation || null;
-                    let aff = '' as string;
-                    if (affRaw) {
-                      if (typeof affRaw === 'string') aff = affRaw;
-                      else {
-                        const dep = affRaw?.department || '';
-                        const org = affRaw?.name || affRaw?.organization || affRaw?.institution || affRaw?.unit || '';
-                        aff = [dep, org].filter((x) => x && String(x).trim()).join(' — ');
-                      }
-                    }
+                    const affRaw = a?.affiliation || (Array.isArray(a?.affiliations) ? a.affiliations[0] : undefined) || null;
+                    const affName = affRaw ? (typeof affRaw === 'string' ? affRaw : (affRaw?.name || '')) : '';
+                    const affId = affRaw && typeof affRaw === 'object' ? (affRaw.id ?? null) : null;
                     const orcid = a?.identifiers?.orcid || a?.orcid || '';
-                    const extra = [orcid, aff].filter((x) => x && String(x).trim()).join(', ');
+                    const hasExtra = !!(orcid || affName);
                     return (
                       <span key={pid || idx}>
                         {href ? (
@@ -323,7 +326,17 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                         ) : (
                           <span className="field-value">{name || t('common.entities.authorUnknown')}</span>
                         )}
-                        {extra ? ` (${extra})` : ''}
+                        {hasExtra ? ' (' : ''}
+                        {orcid ? <span>{orcid}</span> : null}
+                        {orcid && affName ? ', ' : ''}
+                        {affName ? (
+                          affId ? (
+                            <LocaleLink prefetch={false} className="action-link table-link" href={`/institutions/${affId}`}>{affName}</LocaleLink>
+                          ) : (
+                            <span>{affName}</span>
+                          )
+                        ) : null}
+                        {hasExtra ? ')' : ''}
                         {idx < onlyAuthors.length - 1 ? ', ' : ''}
                       </span>
                     );
@@ -454,16 +467,16 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                 <td className="field-value">{String(language).toUpperCase()}</td>
               </tr>
             ) : null}
-            {typeof metrics?.citation_count === 'number' && metrics.citation_count > 0 ? (
+            {citationsCountDisplay > 0 ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.citations')}</th>
-                <td className="field-value">{formatNumber(metrics.citation_count)}</td>
+                <td className="field-value">{formatNumber(citationsCountDisplay)}</td>
               </tr>
             ) : null}
-            {typeof metrics?.reference_count === 'number' && metrics.reference_count > 0 ? (
+            {referencesCountDisplay > 0 ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.references')}</th>
-                <td className="field-value">{formatNumber(metrics.reference_count)}</td>
+                <td className="field-value">{formatNumber(referencesCountDisplay)}</td>
               </tr>
             ) : null}
             {typeof metrics?.download_count === 'number' && metrics.download_count > 0 ? (
@@ -491,11 +504,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         abstract={abstractText ? (
           <p className="description">{abstractText}</p>
         ) : null}
-        references={refs.length > 0 ? (
-          <WorkRelatedList items={refs} pickAuthors={pickReferenceAuthors} labels={relatedLabels} />
+        references={(referencesTabTotal > 0 || refs.length > 0) ? (
+          <WorkCitationList workId={id} kind="references" initialItems={refs} initialUnresolved={unresolvedRefs} total={referencesTabTotal} />
         ) : null}
-        citations={citedBy.length > 0 ? (
-          <WorkRelatedList items={citedBy} pickAuthors={pickReferenceAuthors} labels={relatedLabels} />
+        citations={(citationsTabTotal > 0 || citedBy.length > 0) ? (
+          <WorkCitationList workId={id} kind="citations" initialItems={citedBy} total={citationsTabTotal} />
         ) : null}
         tools={(
           <div className="tools-actions">

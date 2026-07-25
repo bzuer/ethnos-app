@@ -1,3 +1,41 @@
+const firstDefined = (...values: any[]) => {
+  for (const value of values) {
+    if (value !== undefined && value !== null) return value;
+  }
+  return null;
+};
+
+export function normalizeVenue(raw: any): any {
+  if (!raw || typeof raw !== 'object') return raw;
+  const identifiers = raw.identifiers && typeof raw.identifiers === 'object' ? raw.identifiers : {};
+  const indexing = raw.indexing && typeof raw.indexing === 'object' ? raw.indexing : {};
+  const metrics = raw.metrics && typeof raw.metrics === 'object' ? raw.metrics : {};
+  const ranking = raw.ranking && typeof raw.ranking === 'object' ? raw.ranking : {};
+  const location = raw.location && typeof raw.location === 'object' ? raw.location : {};
+  return {
+    ...raw,
+    country_code: firstDefined(raw.country_code, location.country_code),
+    homepage_url: firstDefined(raw.homepage_url, raw.homepage, raw.url),
+    issn: firstDefined(identifiers.issn, raw.issn),
+    eissn: firstDefined(identifiers.eissn, raw.eissn),
+    scopus_id: firstDefined(identifiers.scopus_id, raw.scopus_id),
+    wikidata_id: firstDefined(identifiers.wikidata_id, raw.wikidata_id),
+    openalex_id: firstDefined(identifiers.openalex_id, raw.openalex_id),
+    scielo_id: firstDefined(identifiers.scielo_id, raw.scielo_id),
+    impact_factor: firstDefined(metrics.impact_factor, raw.impact_factor),
+    citescore: firstDefined(metrics.citescore, raw.citescore),
+    sjr: firstDefined(metrics.sjr, raw.sjr),
+    snip: firstDefined(metrics.snip, raw.snip),
+    h_index: firstDefined(metrics.h_index, raw.h_index),
+    is_in_doaj: firstDefined(indexing.is_in_doaj, raw.is_in_doaj),
+    is_in_scielo: firstDefined(indexing.is_in_scielo, raw.is_in_scielo),
+    is_indexed_in_scopus: firstDefined(indexing.is_indexed_in_scopus, raw.is_indexed_in_scopus),
+    ranking_score: firstDefined(ranking.score, raw.ranking_score),
+    description: firstDefined(raw.description, ranking?.llm?.justification, raw.summary),
+    subjects: Array.isArray(raw.subjects) ? raw.subjects : (raw.subjects ? [raw.subjects] : [])
+  };
+}
+
 export interface VenueListState {
   items: any[];
   page: number;
