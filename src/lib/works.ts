@@ -328,14 +328,16 @@ export function normalizeWorkDetail(raw: any) {
   const rootFiles = Array.isArray(raw?.files) ? raw.files : null;
   const primaryFiles = Array.isArray(primary?.files) ? primary.files : null;
   const files = rootFiles && rootFiles.length ? rootFiles : (primaryFiles || rootFiles || []);
-  const openAccess = typeof primary?.open_access === 'boolean'
-    ? primary.open_access
-    : (typeof raw?.open_access === 'boolean'
-      ? raw.open_access
-      : publications.some((pub: any) => pub?.open_access === true));
-  const peerReviewed = typeof primary?.peer_reviewed === 'boolean'
-    ? primary.peer_reviewed
-    : (typeof raw?.peer_reviewed === 'boolean' ? raw.peer_reviewed : null);
+  const openAccess = raw?.open_access === true
+    || primary?.open_access === true
+    || publications.some((pub: any) => pub?.open_access === true);
+  const peerReviewedTrue = raw?.peer_reviewed === true
+    || primary?.peer_reviewed === true
+    || publications.some((pub: any) => pub?.peer_reviewed === true);
+  const peerReviewedKnown = typeof raw?.peer_reviewed === 'boolean'
+    || typeof primary?.peer_reviewed === 'boolean'
+    || publications.some((pub: any) => typeof pub?.peer_reviewed === 'boolean');
+  const peerReviewed = peerReviewedTrue ? true : (peerReviewedKnown ? false : null);
   return {
     ...raw,
     work_type: workType,

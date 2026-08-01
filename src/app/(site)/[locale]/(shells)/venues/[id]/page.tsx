@@ -6,6 +6,7 @@ import VenueWorksList from './VenueWorksList';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
 import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
+import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
@@ -269,6 +270,24 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   const name = venue?.name ?? t('common.entities.journalNotFound');
   const descriptionText = getVenueDescription(venue);
   const subjectsText = getVenueSubjectsText(venue);
+  const venueSubjectsRaw: any[] = Array.isArray((venue as any)?.subjects)
+    ? (venue as any).subjects
+    : (Array.isArray((venue as any)?.summary_snapshot?.subjects) ? (venue as any).summary_snapshot.subjects : []);
+  const venueSubjectItems = (() => {
+    const seen = new Set<string>();
+    const out: Array<{ id: any; term: string }> = [];
+    for (const s of venueSubjectsRaw) {
+      if (!s || typeof s !== 'object') continue;
+      const sid = s.subject_id ?? s.id ?? null;
+      const term = s.term || s.display_name || s.name || s.label || '';
+      if (!term) continue;
+      const key = sid != null ? `id:${sid}` : `term:${String(term).toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ id: sid, term: String(term) });
+    }
+    return out;
+  })();
   const issnValues = uniqueList([
     ...toStringList(venue?.issn),
     ...toStringList(venue?.eissn),
@@ -301,41 +320,33 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
   const venueOpenalex = (venue as any)?.openalex_id || (venue as any)?.openalex;
   const venueMag = (venue as any)?.mag_id || (venue as any)?.mag;
   const venueHomepage = pickText([(venue as any)?.homepage_url, (venue as any)?.homepage, (venue as any)?.url]);
-  const buildScopusHref = (value: string) => `https://www.scopus.com/sourceid/${encodeURIComponent(String(value))}`;
-  addIdentifierValues(identifierEntries, 'ISSN-L', venueIssnL);
-  addIdentifierValues(identifierEntries, t('works.detail.labels.wikidata'), venueWikidata, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
-  addIdentifierValues(identifierEntries, t('works.detail.labels.openAlex'), venueOpenalex, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
-  addIdentifierValues(identifierEntries, t('works.detail.labels.mag'), venueMag);
+  const vIdLabel = (rawKey: string, fallback?: string) => {
+    const labelKey = identifierLabelKey(rawKey);
+    return labelKey ? t(labelKey) : (fallback || rawKey.toUpperCase());
+  };
+  const buildScopusHref = (value: string) => buildIdentifierHref('scopus', value, 'venue') || '';
+  addIdentifierValues(identifierEntries, vIdLabel('issnl'), venueIssnL);
+  addIdentifierValues(identifierEntries, vIdLabel('wikidata'), venueWikidata, (value) => buildIdentifierHref('wikidata', value, 'venue'));
+  addIdentifierValues(identifierEntries, vIdLabel('openalex'), venueOpenalex, (value) => buildIdentifierHref('openalex', value, 'venue'));
+  addIdentifierValues(identifierEntries, vIdLabel('mag'), venueMag);
   if (venueIdentifiers && typeof venueIdentifiers === 'object') {
-    const identifierLabelMap: Record<string, { label: string; hrefBuilder?: (value: string) => string | null }> = {
-      issnl: { label: 'ISSN-L' },
-      issn_l: { label: 'ISSN-L' },
-      wikidata: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
-      wikidataid: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
-      wikidata_id: { label: t('works.detail.labels.wikidata'), hrefBuilder: (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}` },
-      openalex: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
-      openalexid: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
-      openalex_id: { label: t('works.detail.labels.openAlex'), hrefBuilder: (value) => `https://openalex.org/${encodeURIComponent(String(value))}` },
-      mag: { label: t('works.detail.labels.mag') },
-      magid: { label: t('works.detail.labels.mag') },
-      mag_id: { label: t('works.detail.labels.mag') }
-    };
     Object.entries(venueIdentifiers as Record<string, any>).forEach(([rawKey, rawValue]) => {
-      const normalized = String(rawKey || '').replace(/[-\s]/g, '').toLowerCase();
+      const normalized = normalizeIdentifierKey(String(rawKey || ''));
       if (normalized === 'issn' || normalized === 'eissn') {
         const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
         if (normalized === 'issn' && first && !venueIssn) venueIssn = String(first);
         if (normalized === 'eissn' && first && !venueEissn) venueEissn = String(first);
         return;
       }
-      if (!venueScopus && (normalized === 'scopus' || normalized === 'scopusid' || normalized === 'scopus_id')) {
-        const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
-        if (first) venueScopus = String(first);
+      if (normalized === 'scopus') {
+        if (!venueScopus) {
+          const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
+          if (first) venueScopus = String(first);
+        }
         return;
       }
-      const entry = identifierLabelMap[normalized];
-      if (!entry) return;
-      addIdentifierValues(identifierEntries, entry.label, rawValue, entry.hrefBuilder);
+      if (!getIdentifierSpec(normalized)) return;
+      addIdentifierValues(identifierEntries, vIdLabel(normalized), rawValue, (value) => buildIdentifierHref(normalized, value, 'venue'));
     });
   }
   const issnParts = [venueIssn, venueEissn && venueEissn !== venueIssn ? venueEissn : null].filter(Boolean).map((value) => String(value));
@@ -374,7 +385,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
               ) : null}
               {venueScopus ? (
                 <tr>
-                  <th scope="row">{t('works.detail.labels.scopus')}</th>
+                  <th scope="row">{vIdLabel('scopus')}</th>
                   <td className="field-value">
                     <a className="action-link table-link" href={buildScopusHref(String(venueScopus))} target="_blank" rel="noopener noreferrer">{venueScopus}</a>
                   </td>
@@ -451,7 +462,23 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
         </section>
       ) : null}
 
-      {subjectsText ? (
+      {venueSubjectItems.length > 0 ? (
+        <section aria-labelledby="venue-subjects">
+          <h2 className="title-section" id="venue-subjects">{t('venues.detail.subjects')}</h2>
+          <p className="description">
+            {venueSubjectItems.map((subject, idx) => (
+              <span key={subject.id ?? `${subject.term}-${idx}`}>
+                {subject.id ? (
+                  <LocaleLink prefetch={false} className="action-link" href={`/subjects/${subject.id}`}>{subject.term}</LocaleLink>
+                ) : (
+                  <span>{subject.term}</span>
+                )}
+                {idx < venueSubjectItems.length - 1 ? ' · ' : ''}
+              </span>
+            ))}
+          </p>
+        </section>
+      ) : subjectsText ? (
         <section aria-labelledby="venue-subjects">
           <h2 className="title-section" id="venue-subjects">{t('venues.detail.subjects')}</h2>
           <p className="description">{subjectsText}</p>
@@ -496,6 +523,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
         const recentItems = [...works].sort(byRecency);
         const firstItems = [...oldestWorks].sort(byOldest);
         const prominentItems = prominentWorks;
+        const topAuthors: any[] = Array.isArray((venue as any)?.top_authors) ? (venue as any).top_authors : [];
 
         const pageHref = (target: number) => `/venues/${id}${target > 1 ? `?page=${target}` : ''}`;
         const paginationNav = (
@@ -535,8 +563,37 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
             content: (
               <VenueWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} />
             )
-          }
-        ];
+          },
+          topAuthors.length > 0 ? {
+            key: 'authors',
+            label: t('venues.sections.authors'),
+            content: (
+              <ul className="results-list">
+                {topAuthors.map((author: any, idx: number) => {
+                  const authorId = author?.person_id ?? author?.id;
+                  const authorName = author?.preferred_name || author?.name || t('common.entities.authorUnknown');
+                  const authorWorks = Number(author?.works_count) || 0;
+                  return (
+                    <li className="result-item" key={authorId || idx}>
+                      <h3 className="result-title">
+                        {authorId ? (
+                          <LocaleLink prefetch={false} className="result-link" href={`/persons/${authorId}`}>{authorName}</LocaleLink>
+                        ) : (
+                          <span className="field-value">{authorName}</span>
+                        )}
+                      </h3>
+                      {authorWorks > 0 ? (
+                        <p className="result-meta">
+                          <span className="result-total">{t('common.meta.worksCount', { count: authorWorks })}</span>
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )
+          } : null
+        ].filter(Boolean) as SectionTabDescriptor[];
 
         return <SectionTabs ariaLabel={t('venues.sections.navLabel')} tabs={tabs} />;
       })()}

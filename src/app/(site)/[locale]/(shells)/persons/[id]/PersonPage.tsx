@@ -5,6 +5,7 @@ import SectionTabs, { type SectionTabDescriptor } from '@/components/common/Sect
 import PersonWorksList from './PersonWorksList';
 import PersonTools from './PersonTools';
 import { getPersonsWorks, getPersonsWorksProminent } from '@/lib/endpoints';
+import { buildIdentifierHref } from '@/lib/identifiers';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import { locales, type Locale } from '@/i18n/config';
@@ -186,6 +187,8 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const isVerified = !!person?.is_verified;
   const metrics = person?.metrics || {};
   const profile = person?.authorship_profile || {};
+  const subjectExpertise: any[] = Array.isArray(person?.subject_expertise) ? person.subject_expertise : [];
+  const topCollaborators: any[] = Array.isArray(person?.top_collaborators) ? person.top_collaborators : [];
   const affiliationsRaw: any = person?.affiliations || person?.affiliation || person?.current_affiliation || [];
   const affiliationSource: any[] = Array.isArray(affiliationsRaw) ? affiliationsRaw : (affiliationsRaw ? [affiliationsRaw] : []);
   const affiliationEntries = affiliationSource.map((a: any) => {
@@ -213,6 +216,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
 
   const listLabels = {
     titleUnavailable: t('common.entities.titleUnavailable'),
+    authorUnknown: t('common.entities.authorUnknown'),
     roleFallback: t('persons.roleFallback'),
     openAccess: t('common.meta.openAccess'),
     addToList: t('common.actions.addToList'),
@@ -258,12 +262,41 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
       label: t('persons.sections.prominent'),
       content: <PersonWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('persons.empty.prominent') }} />
     },
+    topCollaborators.length > 0 ? {
+      key: 'collaborators',
+      label: t('persons.sections.collaborators'),
+      content: (
+        <ul className="results-list">
+          {topCollaborators.map((collab: any, idx: number) => {
+            const collabId = collab?.person_id ?? collab?.id;
+            const collabName = collab?.preferred_name || collab?.name || t('common.entities.authorUnknown');
+            const shared = Number(collab?.shared_works_count ?? collab?.shared_works) || 0;
+            return (
+              <li className="result-item" key={collabId || idx}>
+                <h3 className="result-title">
+                  {collabId ? (
+                    <LocaleLink prefetch={false} className="result-link" href={`/persons/${collabId}`}>{collabName}</LocaleLink>
+                  ) : (
+                    <span className="field-value">{collabName}</span>
+                  )}
+                </h3>
+                {shared > 0 ? (
+                  <p className="result-meta">
+                    <span className="result-total">{t('common.meta.sharedWorksCount', { count: shared })}</span>
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )
+    } : null,
     {
       key: 'tools',
       label: t('persons.sections.tools'),
       content: <PersonTools person={person} works={items} />
     }
-  ];
+  ].filter(Boolean) as SectionTabDescriptor[];
 
   return (
     <div className="page-header" aria-labelledby="page-title">
@@ -323,7 +356,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               {orcid ? (
                 <tr>
                   <th scope="row">{t('persons.fields.orcid').toUpperCase()}</th>
-                  <td className="field-value"><a className="action-link table-link" href={`https://orcid.org/${orcid}`} target="_blank" rel="noopener noreferrer">{orcid}</a></td>
+                  <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('orcid', orcid, 'person') || undefined} target="_blank" rel="noopener noreferrer">{orcid}</a></td>
                 </tr>
               ) : null}
               {lattesId ? (
@@ -335,19 +368,19 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
               {scopusId ? (
                 <tr>
                   <th scope="row">{t('persons.fields.scopus').toUpperCase()}</th>
-                  <td className="field-value"><a className="action-link table-link" href={`https://www.scopus.com/authid/detail.uri?authorId=${encodeURIComponent(String(scopusId))}`} target="_blank" rel="noopener noreferrer">{scopusId}</a></td>
+                  <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('scopus', scopusId, 'person') || undefined} target="_blank" rel="noopener noreferrer">{scopusId}</a></td>
                 </tr>
               ) : null}
               {wikidataId ? (
                 <tr>
                   <th scope="row">{t('persons.fields.wikidata').toUpperCase()}</th>
-                  <td className="field-value"><a className="action-link table-link" href={`https://www.wikidata.org/wiki/${wikidataId}`} target="_blank" rel="noopener noreferrer">{wikidataId}</a></td>
+                  <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('wikidata', wikidataId, 'person') || undefined} target="_blank" rel="noopener noreferrer">{wikidataId}</a></td>
                 </tr>
               ) : null}
               {openalexId ? (
                 <tr>
                   <th scope="row">{t('persons.fields.openalex').toUpperCase()}</th>
-                  <td className="field-value"><a className="action-link table-link" href={`https://openalex.org/${openalexId}`} target="_blank" rel="noopener noreferrer">{openalexId}</a></td>
+                  <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('openalex', openalexId, 'person') || undefined} target="_blank" rel="noopener noreferrer">{openalexId}</a></td>
                 </tr>
               ) : null}
               {magId ? (
@@ -418,6 +451,28 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
           </table>
         </section>
       )}
+
+      {subjectExpertise.length > 0 ? (
+        <section aria-labelledby="person-expertise">
+          <h2 className="title-section" id="person-expertise">{t('persons.expertise.title')}</h2>
+          <p className="description">
+            {subjectExpertise.map((subject: any, idx: number) => {
+              const term = subject?.term || subject?.display_name || subject?.name || '';
+              if (!term) return null;
+              const sid = subject?.subject_id ?? subject?.id ?? null;
+              const works = Number(subject?.works_count) || 0;
+              const href = sid ? `/subjects/${sid}` : `/search/results?subject=${encodeURIComponent(String(term))}`;
+              return (
+                <span key={sid || `${term}-${idx}`}>
+                  <LocaleLink prefetch={false} className="action-link" href={href}>{term}</LocaleLink>
+                  {works > 0 ? <span className="result-total"> ({t('common.meta.worksCount', { count: works })})</span> : null}
+                  {idx < subjectExpertise.length - 1 ? ' · ' : ''}
+                </span>
+              );
+            })}
+          </p>
+        </section>
+      ) : null}
 
       <SectionTabs ariaLabel={t('persons.sections.navLabel')} tabs={tabs} />
     </div>

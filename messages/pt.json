@@ -7,6 +7,8 @@
       "search": "Busca",
       "journals": "Periódicos",
       "institutions": "Instituições",
+      "subjects": "Assuntos",
+      "explore": "Explorar",
       "lists": "Lista",
       "listCounterLabel": "Itens na lista pessoal",
       "ariaLabel": "Navegação principal"
@@ -70,13 +72,14 @@
       "query": "Consulta",
       "parameters": "Parâmetros",
       "type": "Tipo",
+      "work": "Obra",
       "author": "Autor",
       "venue": "Periódico",
       "subject": "Assunto",
       "yearFrom": "Ano de",
       "yearTo": "Ano até",
       "language": "Idioma",
-      "peerReviewed": "Peer reviewed",
+      "peerReviewed": "Revisado por pares",
       "openAccess": "Open Access",
       "list": "Lista",
       "items": "Itens",
@@ -126,20 +129,14 @@
       "risExported": "RIS exportado",
       "bibExported": "BibTeX exportado",
       "apaExported": "APA exportado",
-      "confirmClear": "Confirmar limpeza da lista? Esta ação é irreversível.",
-      "personNotFoundRedirect": "Página de pessoa não encontrada. Exibindo a busca.",
-      "personNotFoundRedirectShort": "Pessoa não encontrada. Exibindo a busca.",
-      "workNotFoundRedirect": "Página de obra não encontrada. Exibindo a busca.",
-      "workNotFoundRedirectShort": "Obra não encontrada. Exibindo a busca.",
-      "venueNotFoundRedirect": "Página de periódico não encontrada. Exibindo os periódicos.",
-      "venueNotFoundRedirectShort": "Periódico não encontrado. Exibindo os periódicos."
+      "confirmClear": "Confirmar limpeza da lista? Esta ação é irreversível."
     },
     "entities": {
-    "authorUnknown": "Autor desconhecido",
-    "publisherUnknown": "Editora não informada",
-    "titleUnavailable": "Título indisponível",
-    "yearUnavailable": "Ano indisponível",
-    "nameUnavailable": "Nome indisponível",
+      "authorUnknown": "Autor desconhecido",
+      "publisherUnknown": "Editora não informada",
+      "titleUnavailable": "Título indisponível",
+      "yearUnavailable": "Ano indisponível",
+      "nameUnavailable": "Nome indisponível",
       "journalNotFound": "Periódico não encontrado",
       "institutionNotFound": "Instituição não encontrada",
       "personNotFound": "Pessoa não encontrada",
@@ -150,7 +147,7 @@
       "authors": "Autores",
       "year": "Ano",
       "journal": "Periódico",
-      "coverage": "Corpo",
+      "coverage": "Cobertura",
       "publisher": "Editora",
       "actions": "Ações"
     },
@@ -161,6 +158,7 @@
       "references": "Referências",
       "worksCount": "{count} obras",
       "authorsCount": "{count} autores",
+      "sharedWorksCount": "{count} trabalhos em coautoria",
       "termEmpty": "(vazio)",
       "ariaSearchForm": "Formulário de busca",
       "ariaAdvancedSearchForm": "Formulário de busca avançada",
@@ -175,6 +173,28 @@
       "yes": "Sim",
       "no": "Não"
     }
+  },
+  "identifiers": {
+    "doi": "DOI",
+    "pmid": "PMID",
+    "pmcid": "PMCID",
+    "arxiv": "arXiv",
+    "wos": "Web of Science",
+    "handle": "Handle",
+    "wikidata": "Wikidata",
+    "openalex": "OpenAlex",
+    "openlibrary": "Open Library",
+    "isbn": "ISBN",
+    "issn": "ISSN",
+    "eissn": "E-ISSN",
+    "issnl": "ISSN-L",
+    "scopus": "Scopus",
+    "orcid": "ORCID",
+    "ror": "ROR",
+    "grid": "GRID",
+    "mag": "MAG",
+    "lattes": "Lattes",
+    "url": "Site"
   },
   "home": {
     "title": "Início",
@@ -248,7 +268,8 @@
       "navLabel": "Seções do periódico",
       "recent": "Recentes",
       "prominent": "Proeminentes",
-      "first": "Primeiros"
+      "first": "Primeiros",
+      "authors": "Autores"
     },
     "empty": {
       "recent": "Sem publicações nesta página.",
@@ -274,6 +295,19 @@
         "citedBy": "Citações",
         "tools": "Ferramentas",
         "navLabel": "Seções da obra"
+      },
+      "impact": {
+        "title": "Impacto",
+        "uniqueCiting": "Obras citantes distintas",
+        "citationsPerYear": "Citações por ano",
+        "citationSpan": "Intervalo de citações",
+        "velocity": "Velocidade de citação",
+        "highlyCited": "Altamente citado",
+        "citationTypes": "Tipos de citação",
+        "positive": "Positivas",
+        "neutral": "Neutras",
+        "negative": "Negativas",
+        "selfCitations": "Autocitações"
       },
       "labels": {
         "id": "ID",
@@ -309,9 +343,6 @@
         "ror": "ROR",
         "url": "URL"
       }
-    },
-    "sphinx": {
-      "title": "Busca — Sphinx"
     }
   },
   "persons": {
@@ -347,7 +378,11 @@
       "navLabel": "Seções do autor",
       "recent": "Recentes",
       "prominent": "Proeminentes",
+      "collaborators": "Colaboradores",
       "tools": "Ferramentas"
+    },
+    "expertise": {
+      "title": "Áreas de atuação"
     },
     "empty": {
       "recent": "Sem obras para listar nesta página.",
@@ -386,12 +421,6 @@
     "tryAgain": "Tente novamente em alguns minutos. As listas salvas no seu navegador não são afetadas.",
     "contact": "Se a página continuar indisponível, escreva ao projeto em",
     "contactEmail": "contact@ethnos.app"
-  },
-  "sphinx": {
-    "title": "Busca — Sphinx",
-    "query": "Consulta",
-    "itemsHeading": "Itens",
-    "term": "Termo"
   },
   "institutions": {
     "title": "Instituições",
@@ -449,6 +478,21 @@
       "description": "Diretório de instituições e organizações de pesquisa com produção, colaboradores e financiamento em antropologia e sociologia.",
       "keywords": "instituições, organizações, universidades, financiadores, antropologia, sociologia, Ethnos"
     },
+    "subjects": {
+      "title": "Assuntos — Ethnos_APP",
+      "description": "Assuntos de vocabulário controlado que organizam o catálogo de antropologia e sociologia; cada assunto lista suas obras.",
+      "keywords": "assuntos, palavras-chave, vocabulário controlado, classificação, antropologia, sociologia, Ethnos"
+    },
+    "subjectsDetail": {
+      "title": "Assunto — Ethnos_APP",
+      "description": "Detalhe do assunto com suas obras classificadas no catálogo de antropologia e sociologia.",
+      "keywords": "assunto, palavra-chave, obras, classificação, antropologia, sociologia, Ethnos"
+    },
+    "explore": {
+      "title": "Explorar — Ethnos_APP",
+      "description": "Estatísticas do corpus de veículos e assuntos no catálogo de antropologia e sociologia.",
+      "keywords": "estatísticas, corpus, veículos, assuntos, indexação, antropologia, sociologia, Ethnos"
+    },
     "institutionsDetail": {
       "title": "Detalhes da Instituição — Ethnos_APP",
       "description": "Perfil da instituição com trabalhos, principais autores, tendência de produção, papel de financiamento e organizações relacionadas.",
@@ -494,10 +538,10 @@
       "description": "Lista de resultados de busca com metadados, filtros aplicados e paginação.",
       "keywords": "resultados de busca, antropologia, sociologia, pesquisa bibliográfica"
     },
-    "searchSphinx": {
-      "title": "Busca — Sphinx — Ethnos_APP",
-      "description": "Mecanismo de busca Sphinx focado em relevância, texto integral e facetas exploratórias.",
-      "keywords": "Sphinx, busca por relevância, texto integral, busca facetada"
+    "searchGlobal": {
+      "title": "Busca Global — Ethnos_APP",
+      "description": "Busca unificada que retorna obras, com autores e instituições relacionados como refinamentos.",
+      "keywords": "busca global, obras, autores, instituições, pesquisa bibliográfica"
     },
     "lists": {
       "title": "Minha Lista — Ethnos_APP",
@@ -516,13 +560,64 @@
     },
     "privacy": {
       "title": "Privacidade e Cookies — Ethnos_APP",
-      "description": "Política de privacidade e cookies sobre tratamento de localidade, armazenamento local e fluxo de dados via API Proxy.",
-      "keywords": "privacidade, cookies, local storage, API proxy, Ethnos Bibliography"
+      "description": "Política de privacidade e cookies sobre tratamento de localidade, armazenamento local e busca de dados no servidor.",
+      "keywords": "privacidade, cookies, local storage, tratamento de dados, Ethnos Bibliography"
     },
     "maintenance": {
       "title": "Manutenção — Ethnos_APP",
       "description": "Ethnos Bibliography está temporariamente fora do ar para manutenção programada.",
       "keywords": "manutenção, indisponibilidade programada, Ethnos Bibliography"
     }
+  },
+  "searchGlobal": {
+    "title": "Busca global",
+    "intro": "Pesquise obras em todo o catálogo e navegue até autores e instituições relacionados.",
+    "worksHeading": "Obras",
+    "authorsHeading": "Autores relacionados",
+    "institutionsHeading": "Instituições relacionadas",
+    "seeAllWorks": "Ver todas as {count} obras",
+    "startPrompt": "Digite um termo para pesquisar obras e descobrir autores e instituições relacionados.",
+    "noResults": "Nenhuma obra encontrada para este termo.",
+    "submit": "Pesquisar"
+  },
+  "subjects": {
+    "title": "Assuntos",
+    "intro": "Explore os assuntos de vocabulário controlado que organizam o catálogo. Cada assunto lista as obras classificadas nele.",
+    "overviewHeading": "Visão geral",
+    "overview": {
+      "total": "Assuntos",
+      "relations": "Relações obra–assunto",
+      "vocabularies": "Vocabulários"
+    },
+    "topHeading": "Assuntos mais usados",
+    "worksHeading": "Obras",
+    "detail": {
+      "data": "Dados do assunto",
+      "vocabulary": "Vocabulário",
+      "works": "Obras",
+      "courses": "Cursos",
+      "children": "Subassuntos",
+      "parent": "Assunto principal"
+    },
+    "empty": {
+      "works": "Nenhuma obra listada para este assunto.",
+      "top": "Nenhum assunto para listar."
+    }
+  },
+  "explore": {
+    "title": "Explorar",
+    "intro": "Estatísticas do corpus em todo o catálogo bibliográfico — veículos, assuntos e sua cobertura de indexação.",
+    "venuesHeading": "Veículos",
+    "subjectsHeading": "Assuntos",
+    "venues": {
+      "total": "Total de veículos",
+      "journals": "Periódicos",
+      "doaj": "Indexados na DOAJ",
+      "scielo": "Indexados na SciELO",
+      "scopus": "Indexados na Scopus",
+      "avgImpact": "Fator de impacto médio"
+    },
+    "browseVenues": "Ver veículos",
+    "browseSubjects": "Ver assuntos"
   }
 }

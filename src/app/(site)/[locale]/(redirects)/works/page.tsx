@@ -9,5 +9,5 @@ export default async function WorksRedirect(props: { params: Promise<{ locale: s
   const { locale } = await props.params;
   const sp = (await props.searchParams) || {};
   const qs = new URLSearchParams(sp).toString();
-  redirect({ href: qs ? `/search?${qs}` : '/search', locale });
+  redirect({ href: qs ? `/search/results?${qs}` : '/search/results', locale });
 }

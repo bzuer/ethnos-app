@@ -152,14 +152,6 @@ export interface Venue {
   summary?: string | null;
 }
 
-export interface VenueWorkItem {
-  id: string | number;
-  title?: string;
-  year?: number;
-  work_type?: string;
-  authors?: Array<{ person_id?: string | number; name: string } | string>;
-}
-
 type ApiEnvelope<T> = { data?: T } | { venue?: T } | T;
 
 export async function getVenue(id: string | number): Promise<Venue | null> {
@@ -172,34 +164,4 @@ export async function getVenue(id: string | number): Promise<Venue | null> {
   }
   const v: any = unwrapData(res);
   return v ? (normalizeVenue(v) as Venue) : null;
-}
-
-export async function getVenueWorks(
-  venueId: string | number,
-  limit = 25,
-  cursor?: string
-): Promise<{ items: VenueWorkItem[]; total?: number; nextCursor?: string | null }> {
-  const cursorParam = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
-  const limitParam = encodeURIComponent(String(limit));
-  const parse = (res: any) => {
-    const items = (res?.results ?? res?.data ?? res?.items ?? res) as VenueWorkItem[];
-    const total = res?.total ?? res?.meta?.total ?? res?.pagination?.total;
-    const next = res?.next_cursor ?? res?.pagination?.nextCursor ?? null;
-    if (Array.isArray(items)) return { items, total, nextCursor: next ?? null };
-    return null;
-  };
-
-  try {
-    const res = await fetchJson<any>(`/venues/${venueId}/works?limit=${limitParam}${cursorParam}`, { retries: 1 });
-    const parsed = parse(res);
-    if (parsed) return parsed;
-  } catch {}
-
-  try {
-    const res = await fetchJson<any>(`/works?venue_id=${encodeURIComponent(String(venueId))}&limit=${limitParam}${cursorParam}`, { retries: 1 });
-    const parsed = parse(res);
-    if (parsed) return parsed;
-  } catch {}
-
-  return { items: [], total: 0, nextCursor: null };
 }

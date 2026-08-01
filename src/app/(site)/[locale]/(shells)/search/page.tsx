@@ -2,8 +2,8 @@ import { getTranslations } from 'next-intl/server';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import type { Locale } from '@/i18n/config';
-import SearchNotice from './SearchNotice';
 import SearchForm from '@/components/common/SearchForm';
+import LocaleLink from '@/components/common/LocaleLink';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
@@ -19,8 +19,11 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('search.title')}</h1>
-      <SearchNotice />
       <SearchForm action={searchAction} />
+
+      <div className="action-links">
+        <LocaleLink className="action-btn" href="/search/global">{t('searchGlobal.title')}</LocaleLink>
+      </div>
 
       <section aria-labelledby="search-tips-section">
         <h2 className="title-section" id="search-tips-section">{t('search.tipsHeading')}</h2>

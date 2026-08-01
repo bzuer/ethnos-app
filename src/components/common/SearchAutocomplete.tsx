@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { actAutocomplete } from '@/lib/actions';
+import { useLocale, useTranslations } from 'next-intl';
+import { actAutocompleteSuggest } from '@/lib/actions';
+import { localizedPath } from '@/i18n/paths';
+import type { Locale } from '@/i18n/config';
 
 type Suggestion = {
-  id: string | number;
+  key: string;
   text: string;
   meta: string;
-  type: 'title' | 'venue' | 'author';
+  type: 'title' | 'author' | 'venue';
   href: string;
 };
 
@@ -23,7 +26,7 @@ type Props = {
 
 const DEBOUNCE_MS = 280;
 const MIN_CHARS = 2;
-const MAX_RESULTS = 6;
+const MAX_RESULTS = 8;
 
 export default function SearchAutocomplete({
   inputId,
@@ -34,6 +37,8 @@ export default function SearchAutocomplete({
   ariaLabel,
   onSelect,
 }: Props) {
+  const t = useTranslations();
+  const locale = useLocale() as Locale;
   const [query, setQuery] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -43,59 +48,38 @@ export default function SearchAutocomplete({
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const buildHref = useCallback((type: Suggestion['type'], text: string) => {
+    const base = localizedPath(locale, '/search/results');
+    const enc = encodeURIComponent(text);
+    const param = type === 'author' ? `author=${enc}` : type === 'venue' ? `venue=${enc}` : `q=${enc}`;
+    return `${base}?${param}`;
+  }, [locale]);
+
   const fetchSuggestions = useCallback(async (q: string) => {
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    let payload: Awaited<ReturnType<typeof actAutocomplete>>;
+    let payload: Awaited<ReturnType<typeof actAutocompleteSuggest>>;
     try {
-      payload = await actAutocomplete(q);
+      payload = await actAutocompleteSuggest(q);
     } catch {
       return;
     }
     if (controller.signal.aborted) return;
 
-    const results: Suggestion[] = [];
-    payload.works.forEach((w: any) => {
-      const year = w.publication_year || w.year || '';
-      const firstAuthor = w.first_author;
-      const authors = (firstAuthor && typeof firstAuthor === 'object' ? firstAuthor.name : firstAuthor)
-        || (Array.isArray(w.authors_preview) ? w.authors_preview[0] : '')
-        || '';
-      results.push({
-        id: w.id,
-        text: w.title || '',
-        meta: [authors, year].filter(Boolean).join(' · '),
-        type: 'title',
-        href: `/works/${w.id}`,
-      });
-    });
-    payload.venues.forEach((v: any) => {
-      results.push({
-        id: v.id,
-        text: v.name || '',
-        meta: [v.type, (v.identifiers?.issn || v.issn)].filter(Boolean).join(' · '),
-        type: 'venue',
-        href: `/venues/${v.id}`,
-      });
-    });
-    payload.persons.forEach((p: any) => {
-      const name = p.preferred_name || (p.given_names && p.family_name ? `${p.given_names} ${p.family_name}` : '');
-      const orcid = p.identifiers?.orcid || p.orcid;
-      results.push({
-        id: p.id,
-        text: name,
-        meta: orcid ? `ORCID ${orcid}` : '',
-        type: 'author',
-        href: `/persons/${p.id}`,
-      });
-    });
+    const results: Suggestion[] = payload.slice(0, MAX_RESULTS).map((s, idx) => ({
+      key: `${s.type}-${idx}-${s.text}`,
+      text: s.text,
+      meta: s.workCount ? t('common.meta.worksCount', { count: s.workCount }) : '',
+      type: s.type,
+      href: buildHref(s.type, s.text),
+    }));
 
-    setSuggestions(results.slice(0, MAX_RESULTS));
+    setSuggestions(results);
     setOpen(results.length > 0);
     setHighlighted(-1);
-  }, []);
+  }, [buildHref, t]);
 
   const handleInput = useCallback((value: string) => {
     setQuery(value);
@@ -115,7 +99,7 @@ export default function SearchAutocomplete({
     if (onSelect) {
       onSelect(item);
     } else {
-      window.location.href = item.href;
+      window.location.assign(item.href);
     }
   }, [onSelect]);
 
@@ -164,10 +148,10 @@ export default function SearchAutocomplete({
     return 'suggestion-type';
   };
 
-  const typeLabels: Record<string, string> = {
-    title: 'WORK',
-    venue: 'JOURNAL',
-    author: 'PERSON',
+  const typeLabel = (type: Suggestion['type']) => {
+    if (type === 'venue') return t('common.labels.venue');
+    if (type === 'author') return t('common.labels.author');
+    return t('common.labels.work');
   };
 
   return (
@@ -198,7 +182,7 @@ export default function SearchAutocomplete({
       >
         {suggestions.map((item, idx) => (
           <div
-            key={`${item.type}-${item.id}`}
+            key={item.key}
             id={`${inputId}-suggestion-${idx}`}
             className={`autocomplete-suggestion${idx === highlighted ? ' highlighted' : ''}`}
             role="option"
@@ -206,7 +190,7 @@ export default function SearchAutocomplete({
             onMouseEnter={() => setHighlighted(idx)}
             onMouseDown={e => { e.preventDefault(); selectItem(item); }}
           >
-            <span className={typeClassName(item.type)}>{typeLabels[item.type] || item.type}</span>
+            <span className={typeClassName(item.type)}>{typeLabel(item.type)}</span>
             <span className="suggestion-text">{item.text}</span>
             {item.meta ? <span className="suggestion-meta">{item.meta}</span> : null}
           </div>

@@ -1,8 +1,9 @@
 'use server';
 
-import { ApiError, fetchJson } from './api';
+import { fetchJson } from './api';
 import {
   getInstitutionsPage,
+  getSubjectWorksPage,
   getVenuesPage,
   searchWorks,
   type InstitutionsListOptions,
@@ -15,82 +16,86 @@ import {
 export type Primitive = string | number | boolean;
 export type ParamRecord = Record<string, Primitive | undefined | null>;
 
-function buildQuery(params: ParamRecord): URLSearchParams {
-  const qs = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || value === '') continue;
-    qs.set(key, String(value));
-  }
-  return qs;
-}
-
 export async function actSearchWorks(params: ParamRecord) {
   return await searchWorks(params as Record<string, string | number | boolean | undefined>);
 }
 
-export async function actSearchSphinx(params: ParamRecord) {
-  const base = buildQuery(params);
-  const page = base.get('page') || '1';
-  const limit = base.get('limit') || '25';
-
-  const sphinx = new URLSearchParams(base);
-  const offset = base.has('offset')
-    ? Number(base.get('offset') || '0')
-    : Math.max(0, (Number(page) - 1) * Number(limit));
-  sphinx.set('limit', String(limit));
-  sphinx.delete('page');
-  if (!sphinx.has('offset')) sphinx.set('offset', String(offset));
-
-  try {
-    return await fetchJson(`/search/advanced?${sphinx.toString()}`, { retries: 1, timeoutMs: 12000 });
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 400) throw error;
-  }
-
-  const qs = new URLSearchParams(base);
-  if (qs.has('work_type') && !qs.has('type')) {
-    qs.set('type', String(qs.get('work_type')));
-    qs.delete('work_type');
-  }
-  return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
-}
-
-export type AutocompletePayload = {
-  works: any[];
-  venues: any[];
-  persons: any[];
+export type AutocompleteSuggestion = {
+  text: string;
+  type: 'title' | 'author' | 'venue';
+  preview?: string;
+  workCount?: number;
 };
 
-export async function actAutocomplete(query: string): Promise<AutocompletePayload> {
+export async function actAutocompleteSuggest(query: string): Promise<AutocompleteSuggestion[]> {
   const q = String(query || '').trim();
-  if (q.length < 2) return { works: [], venues: [], persons: [] };
+  if (q.length < 2) return [];
   const enc = encodeURIComponent(q);
-  const init = { retries: 1, timeoutMs: 4000 };
-
-  const [worksRes, venuesRes, personsRes] = await Promise.allSettled([
-    fetchJson<any>(`/search/works?q=${enc}&limit=3`, init),
-    fetchJson<any>(`/venues/search?q=${enc}&limit=2`, init),
-    fetchJson<any>(`/search/persons?q=${enc}&limit=2`, init)
-  ]);
-
-  const pickList = (r: PromiseSettledResult<any>): any[] => {
-    if (r.status !== 'fulfilled' || !r.value) return [];
-    const items = r.value?.data ?? r.value?.results ?? r.value?.items ?? r.value;
-    return Array.isArray(items) ? items : [];
-  };
-
-  return {
-    works: pickList(worksRes).slice(0, 3),
-    venues: pickList(venuesRes).slice(0, 2),
-    persons: pickList(personsRes).slice(0, 2)
-  };
+  try {
+    const res = await fetchJson<any>(`/search/autocomplete?q=${enc}&limit=8`, { retries: 1, timeoutMs: 4000 });
+    const suggestions = res?.data?.suggestions ?? res?.suggestions ?? [];
+    if (!Array.isArray(suggestions)) return [];
+    const mapped: AutocompleteSuggestion[] = [];
+    for (const s of suggestions) {
+      const text = String(s?.text ?? s?.name ?? '').trim();
+      if (!text) continue;
+      const type: AutocompleteSuggestion['type'] = s?.type === 'author' ? 'author' : s?.type === 'venue' ? 'venue' : 'title';
+      const rawCount = Number(s?.work_count ?? s?.works_count);
+      mapped.push({
+        text,
+        type,
+        preview: s?.preview ? String(s.preview) : undefined,
+        workCount: Number.isFinite(rawCount) && rawCount > 0 ? rawCount : undefined
+      });
+      if (mapped.length >= 8) break;
+    }
+    return mapped;
+  } catch {
+    return [];
+  }
 }
 
-export async function actGetWorkFull(id: string | number) {
+export type GlobalSearchBucket = { total: number; results: any[] };
+export type GlobalSearchResult = {
+  works: GlobalSearchBucket;
+  persons: GlobalSearchBucket;
+  institutions: GlobalSearchBucket;
+};
+
+export async function actSearchGlobal(query: string, limit = 10): Promise<GlobalSearchResult> {
+  const q = String(query || '').trim();
+  const empty: GlobalSearchResult = {
+    works: { total: 0, results: [] },
+    persons: { total: 0, results: [] },
+    institutions: { total: 0, results: [] }
+  };
+  if (q.length < 2) return empty;
+  try {
+    const res = await fetchJson<any>(
+      `/search/global?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(String(limit))}`,
+      { retries: 1, timeoutMs: 8000 }
+    );
+    const data = res?.data ?? res ?? {};
+    const bucket = (b: any): GlobalSearchBucket => ({
+      total: Number(b?.total) || 0,
+      results: Array.isArray(b?.results) ? b.results : (Array.isArray(b) ? b : [])
+    });
+    return { works: bucket(data.works), persons: bucket(data.persons), institutions: bucket(data.institutions) };
+  } catch {
+    return empty;
+  }
+}
+
+export async function actGetSubjectWorksPage(id: string | number, page = 1, limit = 25) {
+  return await getSubjectWorksPage(id, page, limit);
+}
+
+export async function actGetWorkFull(id: string | number, slim = false) {
   const safeId = encodeURIComponent(String(id));
+  const query = slim ? '' : '?include_citations=true&include_references=true';
   try {
     const envelope: any = await fetchJson<any>(
-      `/works/${safeId}?include_citations=true&include_references=true`,
+      `/works/${safeId}${query}`,
       { retries: 1, timeoutMs: 8000 }
     );
     return envelope?.data ?? envelope?.work ?? envelope ?? null;

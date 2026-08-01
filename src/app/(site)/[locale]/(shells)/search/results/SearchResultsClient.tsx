@@ -5,10 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import SearchForm from '@/components/common/SearchForm';
-import WorkMetaBadges from '@/components/common/WorkMetaBadges';
+import { WorkResultItem, type WorkResultLabels } from '@/components/common/WorkResultItem';
 import { usePathname } from '@/i18n/routing';
 import { actSearchWorks } from '@/lib/actions';
-import { formatMetadataAuthors, formatMetadataType, formatMetadataVenue, getWorkAbstractSnippet, isWorkOpenAccess } from '@/lib/works';
 
 type SearchState = {
   items: any[];
@@ -127,6 +126,19 @@ export default function SearchResultsClient({ formAction }: Props) {
   const showNoResults = !loading && !loadError && state.items.length === 0 && hasUserInput;
   const showStartPrompt = !loading && !loadError && noParams && state.items.length === 0;
 
+  const resultLabels: WorkResultLabels = {
+    titleUnavailable: t('common.entities.titleUnavailable'),
+    authorUnknown: t('common.entities.authorUnknown'),
+    openAccess: t('common.meta.openAccess'),
+    addToList: t('common.actions.addToList'),
+    inList: t('common.actions.inList'),
+    removeFromList: t('common.actions.removeFromList'),
+    added: t('common.messages.added'),
+    itemRemoved: t('common.messages.itemRemoved'),
+    citedBy: t('common.meta.citedBy'),
+    references: t('common.meta.references')
+  };
+
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('results.title')}</h1>
@@ -222,64 +234,9 @@ export default function SearchResultsClient({ formAction }: Props) {
           </div>
         ) : null}
         <ul className="results-list">
-          {state.items.map((it: any) => {
-            const authors = formatMetadataAuthors(it, t('common.entities.authorUnknown'));
-            const year = it.publication_year || it.year || (it.publication && it.publication.year) || '';
-            const type = formatMetadataType(it.work_type || it.type || '');
-            const venue = formatMetadataVenue(it, 35);
-            const abstractShort = getWorkAbstractSnippet(it);
-            const openAccess = isWorkOpenAccess(it);
-            const relRaw = (it.relevance ?? it.score ?? it._score ?? it.rank);
-            const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);
-            const rel = relNum && isFinite(relNum) ? relNum.toFixed(2) : '';
-            const hasListAction = Boolean(it?.id ?? it?.work_id);
-            return (
-              <li className="result-item" key={it.id}>
-                <h3 className="result-title">
-                  <LocaleLink className="result-link" href={`/works/${it.id}`}>{it.title || t('common.entities.titleUnavailable')}</LocaleLink>
-                </h3>
-                <p className="result-meta">
-                  {openAccess ? (
-                    <>
-                      <WorkMetaBadges
-                        work={it}
-                        openAccess={openAccess}
-                        openAccessLabel={t('common.meta.openAccess')}
-                        addToListLabel={t('common.actions.addToList')}
-                        inListLabel={t('common.actions.inList')}
-                        removeFromListLabel={t('common.actions.removeFromList')}
-                        addedMessage={t('common.messages.added')}
-                        removedMessage={t('common.messages.itemRemoved')}
-                        showListBadge={false}
-                      />
-                      <span className="meta-separator" aria-hidden="true">•</span>
-                    </>
-                  ) : null}
-                  <span className="result-authors">{authors}</span>
-                  {type ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-type">{type}</span></> : null}
-                  {venue ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-venue">{venue}</span></> : null}
-                  {year ? <><span className="meta-separator" aria-hidden="true">•</span><span className="result-year">{year}</span></> : null}
-                  {rel ? <><span className="meta-separator" aria-hidden="true">•</span><span className="relevance-score">{rel}</span></> : null}
-                </p>
-                {hasListAction ? (
-                  <p className="result-meta result-badges">
-                    <WorkMetaBadges
-                      work={it}
-                      openAccess={openAccess}
-                      openAccessLabel={t('common.meta.openAccess')}
-                      addToListLabel={t('common.actions.addToList')}
-                      inListLabel={t('common.actions.inList')}
-                      removeFromListLabel={t('common.actions.removeFromList')}
-                      addedMessage={t('common.messages.added')}
-                      removedMessage={t('common.messages.itemRemoved')}
-                      showOpenAccessBadge={false}
-                    />
-                  </p>
-                ) : null}
-                {abstractShort ? (<p className="result-abstract">{abstractShort}</p>) : null}
-              </li>
-            );
-          })}
+          {state.items.map((it: any) => (
+            <WorkResultItem key={it.id} item={it} labels={resultLabels} showRelevance />
+          ))}
         </ul>
         <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
           {prevHref ? (

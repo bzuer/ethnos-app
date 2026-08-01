@@ -1,4 +1,29 @@
 import { normalizeWorkDetail } from './works';
+import { buildIdentifierHref } from './identifiers';
+
+const WORK_TYPE_FORMATS: Record<string, { bibtex: string; ris: string }> = {
+  ARTICLE: { bibtex: 'article', ris: 'JOUR' },
+  REVIEW: { bibtex: 'article', ris: 'JOUR' },
+  EDITORIAL: { bibtex: 'article', ris: 'JOUR' },
+  BOOK: { bibtex: 'book', ris: 'BOOK' },
+  CHAPTER: { bibtex: 'incollection', ris: 'CHAP' },
+  CONFERENCE: { bibtex: 'inproceedings', ris: 'CPAPER' },
+  CONFERENCE_PAPER: { bibtex: 'inproceedings', ris: 'CPAPER' },
+  THESIS: { bibtex: 'phdthesis', ris: 'THES' },
+  REPORT: { bibtex: 'techreport', ris: 'RPRT' },
+  DATASET: { bibtex: 'misc', ris: 'DATA' },
+  PREPRINT: { bibtex: 'misc', ris: 'UNPB' },
+  OTHER: { bibtex: 'misc', ris: 'GEN' },
+  INPROCEEDINGS: { bibtex: 'inproceedings', ris: 'CPAPER' },
+  INCOLLECTION: { bibtex: 'incollection', ris: 'CHAP' },
+  PHDTHESIS: { bibtex: 'phdthesis', ris: 'THES' },
+  MASTERSTHESIS: { bibtex: 'mastersthesis', ris: 'THES' }
+};
+
+export function workTypeFormats(workType: any) {
+  const key = String(workType || '').toUpperCase().trim();
+  return WORK_TYPE_FORMATS[key] || { bibtex: 'misc', ris: 'GEN' };
+}
 
 export function normAuthor(a: any) {
   if (!a) return null;
@@ -119,6 +144,32 @@ export function normWork(source: any) {
   const isbn = getIsbn(raw);
   const oaFile = pickOpenAccessFile(files);
   const oaUrl = oaFile ? buildFileOpenAccessUrl(oaFile) : '';
+  const pickId = (...keys: string[]) => {
+    for (const key of keys) {
+      const scalar = raw[key];
+      if (scalar) return normalizeValue(Array.isArray(scalar) ? scalar.find(Boolean) : scalar);
+      const fromObj = raw.identifiers?.[key];
+      if (fromObj) return normalizeValue(Array.isArray(fromObj) ? fromObj.find(Boolean) : fromObj);
+    }
+    return null;
+  };
+  const identifiers = {
+    pmid: pickId('pmid'),
+    pmcid: pickId('pmcid'),
+    arxiv: pickId('arxiv', 'arxiv_id'),
+    openalex: pickId('openalex_id', 'openalex'),
+    wikidata: pickId('wikidata_id', 'wikidata'),
+    handle: pickId('handle'),
+    openlibrary: pickId('openlibrary_id', 'openlibrary')
+  };
+  const subjects = Array.isArray(raw.subjects)
+    ? Array.from(new Set(raw.subjects
+        .map((s: any) => (typeof s === 'string' ? s : (s?.term || s?.display_name || s?.name || '')))
+        .map((s: string) => String(s).trim())
+        .filter(Boolean)))
+    : (Array.isArray(raw.keywords)
+        ? Array.from(new Set(raw.keywords.map((k: any) => String(k).trim()).filter(Boolean)))
+        : []);
   return {
     id: raw.id,
     url: buildAccessUrl(raw.id),
@@ -131,12 +182,16 @@ export function normWork(source: any) {
     doi: raw.doi || publication.doi || null,
     md5,
     isbn,
-    series: raw.series || raw.series_name || raw.series_title || raw.series_title_name || raw.series_title_value || raw.series_title_text || null,
+    identifiers,
+    subjects,
+    series: raw.series || raw.series_name || null,
     publication: {
       year: publication.year || raw.publication_year || raw.year || null,
+      date: publication.publication_date || raw.publication_date || null,
       volume: publication.volume || raw.volume || null,
       issue: publication.issue || raw.issue || null,
-      pages: publication.pages || raw.pages || null
+      pages: publication.pages || raw.pages || null,
+      license_url: publication.license_url || raw.license_url || null
     },
     venue: {
       id: venue.id || null,
@@ -145,8 +200,7 @@ export function normWork(source: any) {
       eissn: venue.eissn || null,
       scopus_id: venue.scopus_id || null,
       wikidata_id: venue.wikidata_id || null,
-      openalex_id: venue.openalex_id || null,
-      mag_id: venue.mag_id || null
+      openalex_id: venue.openalex_id || null
     },
     publisher: {
       id: publisher.id || null,
@@ -156,7 +210,6 @@ export function normWork(source: any) {
       ror_id: publisher.ror_id || null,
       wikidata_id: publisher.wikidata_id || null,
       openalex_id: publisher.openalex_id || null,
-      mag_id: publisher.mag_id || null,
       url: publisher.url || null
     },
     authors
@@ -202,8 +255,7 @@ function bibAuthors(authors: any[]): string {
 }
 
 export function toRIS(nw: any): string {
-  const ty = nw.work_type && String(nw.work_type).toUpperCase();
-  const risType = ty === 'ARTICLE' ? 'JOUR' : ty === 'BOOK' ? 'BOOK' : ty === 'INPROCEEDINGS' ? 'CPAPER' : 'GEN';
+  const risType = workTypeFormats(nw.work_type).ris;
   const lines: string[] = [];
   lines.push(`TY  - ${risType}`);
   if (nw.title) lines.push(`TI  - ${nw.title}`);
@@ -218,8 +270,12 @@ export function toRIS(nw: any): string {
     });
   }
   if (nw.publication?.year) lines.push(`PY  - ${nw.publication.year}`);
+  if (nw.publication?.date) {
+    const da = String(nw.publication.date).slice(0, 10).replace(/-/g, '/');
+    if (/^\d{4}(\/\d{2}){0,2}$/.test(da)) lines.push(`DA  - ${da}`);
+  }
   if (nw.venue?.name) {
-    const venueTag = risType === 'JOUR' ? 'JF' : risType === 'CPAPER' ? 'BT' : 'T2';
+    const venueTag = risType === 'JOUR' ? 'JF' : (risType === 'CPAPER' || risType === 'CHAP') ? 'BT' : 'T2';
     lines.push(`${venueTag}  - ${nw.venue.name}`);
   }
   if (nw.publisher?.name) lines.push(`PB  - ${nw.publisher.name}`);
@@ -248,19 +304,24 @@ export function toRIS(nw: any): string {
     lines.push(`UR  - ${oaUrl}`);
     lines.push(`L1  - ${oaUrl}`);
   }
+  const ids = nw.identifiers || {};
+  if (ids.pmid) lines.push(`AN  - PMID:${ids.pmid}`);
+  const seenUrls = new Set([url, doiUrl, oaUrl].filter(Boolean));
+  ([['arxiv', ids.arxiv], ['openalex', ids.openalex], ['handle', ids.handle], ['pmcid', ids.pmcid], ['openlibrary', ids.openlibrary], ['wikidata', ids.wikidata]] as Array<[string, any]>)
+    .forEach(([key, value]) => {
+      const href = buildIdentifierHref(key, value, 'work');
+      if (href && !seenUrls.has(href)) {
+        seenUrls.add(href);
+        lines.push(`UR  - ${href}`);
+      }
+    });
+  if (Array.isArray(nw.subjects)) nw.subjects.forEach((subject: string) => { if (subject) lines.push(`KW  - ${subject}`); });
   lines.push('ER  - ');
   return lines.join('\n');
 }
 
 export function toBibTeX(nw: any): string {
-  const ty = nw.work_type && String(nw.work_type).toLowerCase();
-  const bt = ty === 'article' ? 'article'
-    : ty === 'book' ? 'book'
-    : ty === 'inproceedings' ? 'inproceedings'
-    : ty === 'incollection' ? 'incollection'
-    : ty === 'phdthesis' ? 'phdthesis'
-    : ty === 'mastersthesis' ? 'mastersthesis'
-    : 'misc';
+  const bt = workTypeFormats(nw.work_type).bibtex;
   const key = bibKey(nw);
   const lines: string[] = [`@${bt}{${key},`];
   const fields: Array<[string, string, boolean]> = [];
@@ -290,6 +351,13 @@ export function toBibTeX(nw: any): string {
   if (url) fields.push(['url', url, true]);
   const oaUrl = nw.oa_url ? String(nw.oa_url) : '';
   if (oaUrl && oaUrl !== url) fields.push(['pdf_url', oaUrl, true]);
+  const ids = nw.identifiers || {};
+  if (ids.pmid) fields.push(['pmid', String(ids.pmid), true]);
+  if (ids.arxiv) {
+    fields.push(['eprint', String(ids.arxiv), true]);
+    fields.push(['archivePrefix', 'arXiv', true]);
+  }
+  if (Array.isArray(nw.subjects) && nw.subjects.length) fields.push(['keywords', nw.subjects.join(', '), false]);
   const abstract = normalizeValue(nw.abstract);
   if (abstract) fields.push(['abstract', abstract, false]);
   if (nw.md5) fields.push(['note', `MD5: ${nw.md5}`, false]);

@@ -4,6 +4,7 @@ import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import WorkRelatedList from '../../works/[id]/WorkRelatedList';
 import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
+import { buildIdentifierHref } from '@/lib/identifiers';
 import { formatMetadataAuthors } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
@@ -300,7 +301,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
             {rorId ? (
               <tr>
                 <th scope="row">{t('institutions.detail.ror')}</th>
-                <td className="field-value"><a className="action-link table-link" href={`https://ror.org/${encodeURIComponent(String(rorId))}`} target="_blank" rel="noopener noreferrer">{rorId}</a></td>
+                <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('ror', rorId, 'institution') || undefined} target="_blank" rel="noopener noreferrer">{rorId}</a></td>
               </tr>
             ) : null}
             {gridId ? (
@@ -312,13 +313,13 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
             {wikidataId ? (
               <tr>
                 <th scope="row">{t('institutions.detail.wikidata')}</th>
-                <td className="field-value"><a className="action-link table-link" href={`https://www.wikidata.org/wiki/${encodeURIComponent(String(wikidataId))}`} target="_blank" rel="noopener noreferrer">{wikidataId}</a></td>
+                <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('wikidata', wikidataId, 'institution') || undefined} target="_blank" rel="noopener noreferrer">{wikidataId}</a></td>
               </tr>
             ) : null}
             {openalexId ? (
               <tr>
                 <th scope="row">{t('institutions.detail.openAlex')}</th>
-                <td className="field-value"><a className="action-link table-link" href={`https://openalex.org/${encodeURIComponent(String(openalexId))}`} target="_blank" rel="noopener noreferrer">{openalexId}</a></td>
+                <td className="field-value"><a className="action-link table-link" href={buildIdentifierHref('openalex', openalexId, 'institution') || undefined} target="_blank" rel="noopener noreferrer">{openalexId}</a></td>
               </tr>
             ) : null}
             {website ? (

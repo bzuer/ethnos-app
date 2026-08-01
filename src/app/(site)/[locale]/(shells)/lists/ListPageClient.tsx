@@ -71,7 +71,7 @@ function downloadFile(filename: string, content: Blob | string, type?: string) {
 
 async function fetchWork(id: string | number): Promise<Work | null> {
   try {
-    return await actGetWorkFull(id);
+    return await actGetWorkFull(id, true);
   } catch {
     return null;
   }

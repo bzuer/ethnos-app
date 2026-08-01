@@ -3,7 +3,6 @@ import VenuesList from './VenuesList';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import { getVenuesPage } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
-import VenuesNotice from './VenuesNotice';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
@@ -50,7 +49,6 @@ export default async function VenuesPage(props: { params: Promise<{ locale: stri
   return (
     <div className="page-header" aria-labelledby="page-title">
       <h1 className="page-title" id="page-title">{t('venues.title')}</h1>
-      <VenuesNotice />
       <SectionTabs ariaLabel={t('venues.listSections.navLabel')} tabs={tabs} />
     </div>
   );

@@ -7,6 +7,8 @@
       "search": "Search",
       "journals": "Journals",
       "institutions": "Institutions",
+      "subjects": "Subjects",
+      "explore": "Explore",
       "lists": "List",
       "listCounterLabel": "Items in personal list",
       "ariaLabel": "Main navigation"
@@ -70,6 +72,7 @@
       "query": "Query",
       "parameters": "Parameters",
       "type": "Type",
+      "work": "Work",
       "author": "Author",
       "venue": "Journal",
       "subject": "Subject",
@@ -126,20 +129,14 @@
       "risExported": "RIS exported",
       "bibExported": "BibTeX exported",
       "apaExported": "APA exported",
-      "confirmClear": "Confirm clearing list? This action is irreversible.",
-      "personNotFoundRedirect": "Person page not found. Showing search instead.",
-      "personNotFoundRedirectShort": "Person not found. Showing search.",
-      "workNotFoundRedirect": "Work page not found. Showing search instead.",
-      "workNotFoundRedirectShort": "Work not found. Showing search.",
-      "venueNotFoundRedirect": "Journal page not found. Showing journals instead.",
-      "venueNotFoundRedirectShort": "Journal not found. Showing journals."
+      "confirmClear": "Confirm clearing list? This action is irreversible."
     },
     "entities": {
-    "authorUnknown": "Unknown author",
-    "publisherUnknown": "Unknown publisher",
-    "titleUnavailable": "Title unavailable",
-    "yearUnavailable": "Year unavailable",
-    "nameUnavailable": "Name unavailable",
+      "authorUnknown": "Unknown author",
+      "publisherUnknown": "Unknown publisher",
+      "titleUnavailable": "Title unavailable",
+      "yearUnavailable": "Year unavailable",
+      "nameUnavailable": "Name unavailable",
       "journalNotFound": "Journal not found",
       "institutionNotFound": "Institution not found",
       "personNotFound": "Person not found",
@@ -161,6 +158,7 @@
       "references": "References",
       "worksCount": "{count} works",
       "authorsCount": "{count} authors",
+      "sharedWorksCount": "{count} shared works",
       "termEmpty": "(empty)",
       "ariaSearchForm": "Search form",
       "ariaAdvancedSearchForm": "Advanced search form",
@@ -175,6 +173,28 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "identifiers": {
+    "doi": "DOI",
+    "pmid": "PMID",
+    "pmcid": "PMCID",
+    "arxiv": "arXiv",
+    "wos": "Web of Science",
+    "handle": "Handle",
+    "wikidata": "Wikidata",
+    "openalex": "OpenAlex",
+    "openlibrary": "Open Library",
+    "isbn": "ISBN",
+    "issn": "ISSN",
+    "eissn": "E-ISSN",
+    "issnl": "ISSN-L",
+    "scopus": "Scopus",
+    "orcid": "ORCID",
+    "ror": "ROR",
+    "grid": "GRID",
+    "mag": "MAG",
+    "lattes": "Lattes",
+    "url": "Website"
   },
   "home": {
     "title": "Home",
@@ -248,7 +268,8 @@
       "navLabel": "Venue sections",
       "recent": "Recent",
       "prominent": "Prominent",
-      "first": "First"
+      "first": "First",
+      "authors": "Authors"
     },
     "empty": {
       "recent": "No publications on this page.",
@@ -274,6 +295,19 @@
         "citedBy": "Citations",
         "tools": "Tools",
         "navLabel": "Work sections"
+      },
+      "impact": {
+        "title": "Impact",
+        "uniqueCiting": "Unique citing works",
+        "citationsPerYear": "Citations per year",
+        "citationSpan": "Citation span",
+        "velocity": "Citation velocity",
+        "highlyCited": "Highly cited",
+        "citationTypes": "Citation types",
+        "positive": "Positive",
+        "neutral": "Neutral",
+        "negative": "Negative",
+        "selfCitations": "Self-citations"
       },
       "labels": {
         "id": "ID",
@@ -309,9 +343,6 @@
         "ror": "ROR",
         "url": "URL"
       }
-    },
-    "sphinx": {
-      "title": "Search — Sphinx"
     }
   },
   "persons": {
@@ -347,7 +378,11 @@
       "navLabel": "Author sections",
       "recent": "Recent",
       "prominent": "Prominent",
+      "collaborators": "Collaborators",
       "tools": "Tools"
+    },
+    "expertise": {
+      "title": "Areas of expertise"
     },
     "empty": {
       "recent": "No works to list on this page.",
@@ -386,12 +421,6 @@
     "tryAgain": "Please retry in a few minutes. Saved lists in your browser are not affected.",
     "contact": "If the page stays unavailable, write to the project at",
     "contactEmail": "contact@ethnos.app"
-  },
-  "sphinx": {
-    "title": "Search — Sphinx",
-    "query": "Query",
-    "itemsHeading": "Items",
-    "term": "Term"
   },
   "institutions": {
     "title": "Institutions",
@@ -449,6 +478,21 @@
       "description": "Directory of research institutions and organizations with production, collaborators, and funding for anthropology and sociology.",
       "keywords": "institutions, organizations, universities, funders, anthropology, sociology, Ethnos"
     },
+    "subjects": {
+      "title": "Subjects — Ethnos_APP",
+      "description": "Controlled-vocabulary subjects organizing the anthropology and sociology catalog; each subject lists its works.",
+      "keywords": "subjects, keywords, controlled vocabulary, classification, anthropology, sociology, Ethnos"
+    },
+    "subjectsDetail": {
+      "title": "Subject — Ethnos_APP",
+      "description": "Subject detail with its classified works in the anthropology and sociology catalog.",
+      "keywords": "subject, keyword, works, classification, anthropology, sociology, Ethnos"
+    },
+    "explore": {
+      "title": "Explore — Ethnos_APP",
+      "description": "Corpus-level statistics for venues and subjects across the anthropology and sociology catalog.",
+      "keywords": "statistics, corpus, venues, subjects, indexing, anthropology, sociology, Ethnos"
+    },
     "institutionsDetail": {
       "title": "Institution Details — Ethnos_APP",
       "description": "Institution profile with works, top authors, production trend, funding role, and related organizations.",
@@ -494,10 +538,10 @@
       "description": "Search result list displaying metadata, applied filters, and pagination.",
       "keywords": "search results, anthropology, sociology, bibliographic research"
     },
-    "searchSphinx": {
-      "title": "Search — Sphinx — Ethnos_APP",
-      "description": "Sphinx-powered search engine focused on relevance, full-text queries, and faceted exploration.",
-      "keywords": "Sphinx, relevance ranking, full-text search, faceted search"
+    "searchGlobal": {
+      "title": "Global Search — Ethnos_APP",
+      "description": "Unified search returning works, with related authors and institutions as refinements.",
+      "keywords": "global search, works, authors, institutions, bibliographic research"
     },
     "lists": {
       "title": "My List — Ethnos_APP",
@@ -516,13 +560,64 @@
     },
     "privacy": {
       "title": "Privacy and Cookies — Ethnos_APP",
-      "description": "Privacy and cookies policy covering locale handling, local storage, and API proxy data flow for Ethnos Bibliography.",
-      "keywords": "privacy, cookies, local storage, API proxy, Ethnos Bibliography"
+      "description": "Privacy and cookies policy covering locale handling, local storage, and server-side data fetching for Ethnos Bibliography.",
+      "keywords": "privacy, cookies, local storage, data handling, Ethnos Bibliography"
     },
     "maintenance": {
       "title": "Maintenance — Ethnos_APP",
       "description": "Ethnos Bibliography is temporarily offline for scheduled maintenance.",
       "keywords": "maintenance, scheduled downtime, Ethnos Bibliography"
     }
+  },
+  "searchGlobal": {
+    "title": "Global search",
+    "intro": "Search works across the catalog and jump to related authors and institutions.",
+    "worksHeading": "Works",
+    "authorsHeading": "Related authors",
+    "institutionsHeading": "Related institutions",
+    "seeAllWorks": "See all {count} works",
+    "startPrompt": "Enter a term to search works and discover related authors and institutions.",
+    "noResults": "No works found for this term.",
+    "submit": "Search"
+  },
+  "subjects": {
+    "title": "Subjects",
+    "intro": "Browse the controlled-vocabulary subjects that organize the catalog. Every subject lists the works classified under it.",
+    "overviewHeading": "Overview",
+    "overview": {
+      "total": "Subjects",
+      "relations": "Work–subject relations",
+      "vocabularies": "Vocabularies"
+    },
+    "topHeading": "Most used subjects",
+    "worksHeading": "Works",
+    "detail": {
+      "data": "Subject data",
+      "vocabulary": "Vocabulary",
+      "works": "Works",
+      "courses": "Courses",
+      "children": "Sub-subjects",
+      "parent": "Parent subject"
+    },
+    "empty": {
+      "works": "No works listed for this subject.",
+      "top": "No subjects to list."
+    }
+  },
+  "explore": {
+    "title": "Explore",
+    "intro": "Corpus-level statistics across the bibliographic catalog — venues, subjects, and their indexing coverage.",
+    "venuesHeading": "Venues",
+    "subjectsHeading": "Subjects",
+    "venues": {
+      "total": "Total venues",
+      "journals": "Journals",
+      "doaj": "Indexed in DOAJ",
+      "scielo": "Indexed in SciELO",
+      "scopus": "Indexed in Scopus",
+      "avgImpact": "Average impact factor"
+    },
+    "browseVenues": "Browse venues",
+    "browseSubjects": "Browse subjects"
   }
 }

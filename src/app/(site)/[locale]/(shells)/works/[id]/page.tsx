@@ -8,6 +8,7 @@ import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { getWorkAbstractSnippet, sanitizeWorkAbstract } from '@/lib/works';
+import { buildIdentifierHref, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { notFound } from 'next/navigation';
 import { buildCoins, buildCitationMeta, loadWork, pickReferenceAuthors } from './work-detail';
@@ -204,40 +205,29 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
     });
     if (!existing) targetList.push({ label, values: target });
   };
-  addValues('DOI', work?.doi || publication?.doi, (value) => `https://doi.org/${encodeURIComponent(String(value))}`);
-  addValues('PMID', work?.pmid, (value) => `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(value))}`);
-  addValues('PMCID', work?.pmcid);
-  addValues('arXiv', work?.arxiv, (value) => `https://arxiv.org/abs/${encodeURIComponent(String(value))}`);
-  addValues('WOS ID', work?.wos_id);
-  addValues('Handle', work?.handle, (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`);
-  addValues('Wikidata', work?.wikidata_id, (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`);
-  addValues(t('works.detail.labels.openAlex'), work?.openalex_id, (value) => `https://openalex.org/${encodeURIComponent(String(value))}`);
-  addValues(t('works.detail.labels.openLibraryId'), work?.openlibrary_id, (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`);
-  addValues(t('works.detail.labels.isbn'), work?.isbn);
-  const idLabelMap: Record<string, string> = {
-    openlibrary: t('works.detail.labels.openLibraryId'),
-    openlibraryid: t('works.detail.labels.openLibraryId'),
-    isbn: t('works.detail.labels.isbn')
+  const idLabel = (rawKey: string, fallback?: string) => {
+    const labelKey = identifierLabelKey(rawKey);
+    return labelKey ? t(labelKey) : (fallback || rawKey.toUpperCase());
   };
+  const addId = (rawKey: string, raw: any, targetList: IdentifierEntry[] = ids) => {
+    addValues(idLabel(rawKey), raw, (value) => buildIdentifierHref(rawKey, value, 'work'), targetList);
+  };
+  addId('doi', work?.doi || publication?.doi);
+  addId('pmid', work?.pmid);
+  addId('pmcid', work?.pmcid);
+  addId('arxiv', work?.arxiv);
+  addId('wos', work?.wos_id);
+  addId('handle', work?.handle);
+  addId('wikidata', work?.wikidata_id);
+  addId('openalex', work?.openalex_id);
+  addId('openlibrary', work?.openlibrary_id);
+  addId('isbn', work?.isbn);
   Object.entries(identifiers).forEach(([rawKey, rawValue]) => {
     const key = String(rawKey || '');
     if (!key) return;
-    const normalized = key.replace(/_/g, '').toLowerCase();
-    if (normalized === 'doi' || normalized === 'openalex' || normalized === 'openalexid') return;
-    const label = idLabelMap[normalized] || (normalized.startsWith('isbn') ? t('works.detail.labels.isbn') : key.toUpperCase());
-    addValues(label, rawValue, normalized === 'pmid'
-      ? (value) => `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(value))}`
-      : normalized === 'arxiv'
-        ? (value) => `https://arxiv.org/abs/${encodeURIComponent(String(value))}`
-        : normalized === 'handle'
-          ? (value) => `https://hdl.handle.net/${encodeURIComponent(String(value))}`
-          : normalized === 'openlibrary' || normalized === 'openlibraryid'
-            ? (value) => `https://openlibrary.org/books/${encodeURIComponent(String(value))}`
-            : normalized === 'wikidata' || normalized === 'wikidataid'
-              ? (value) => `https://www.wikidata.org/wiki/${encodeURIComponent(String(value))}`
-              : normalized === 'scopus' || normalized === 'scopusid'
-                ? (value) => `https://www.scopus.com/sourceid/${encodeURIComponent(String(value))}`
-                : undefined);
+    const normalized = normalizeIdentifierKey(key);
+    if (normalized === 'doi' || normalized === 'openalex') return;
+    addValues(idLabel(key), rawValue, (value) => buildIdentifierHref(key, value, 'work'));
   });
   addValues(t('venues.detail.issn'), venueIssn, undefined, venueIds);
   addValues(t('venues.detail.eissn'), venueEissn, undefined, venueIds);
@@ -247,6 +237,21 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const citedBy: any[] = Array.isArray(work?.citations?.cited_by) ? work.citations.cited_by : [];
   const unresolvedRefs = (Array.isArray(work?.citations?.unresolved_references) ? work.citations.unresolved_references : [])
     .map((entry: any) => ({ doi: entry?.cited_doi ?? null, status: entry?.status ?? null }));
+  const subjectsRaw: any[] = Array.isArray(work?.subjects) ? work.subjects : [];
+  const workSubjects = (() => {
+    const seen = new Set<string>();
+    const out: Array<{ id: any; term: string }> = [];
+    for (const s of subjectsRaw) {
+      const sid = s?.subject_id ?? s?.id ?? null;
+      const term = s?.term || s?.display_name || s?.name || '';
+      if (!term) continue;
+      const key = sid != null ? `id:${sid}` : `term:${term.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ id: sid, term: String(term) });
+    }
+    return out;
+  })();
   const authoritativeMetrics: any = work?.authoritative_metrics || {};
   const citationMetrics: any = authoritativeMetrics?.citation_metrics || {};
   const citationsReceived = Number(citationMetrics?.total_citations_received);
@@ -494,6 +499,102 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
           </tbody>
         </table>
       </section>
+
+      {(() => {
+        const cm: any = authoritativeMetrics?.citation_metrics || {};
+        const tm: any = authoritativeMetrics?.temporal_metrics || {};
+        const ii: any = authoritativeMetrics?.impact_indicators || {};
+        const perYear = Number(cm?.citations_per_year);
+        const uniqueCitingWorks = Number(cm?.unique_citing_works);
+        const types: any = cm?.citation_types || {};
+        const typePos = Number(types?.positive) || 0;
+        const typeNeu = Number(types?.neutral) || 0;
+        const typeNeg = Number(types?.negative) || 0;
+        const typeSelf = Number(types?.self) || 0;
+        const hasTypes = typePos + typeNeu + typeNeg + typeSelf > 0;
+        const firstYear = Number(tm?.first_citation_year) || null;
+        const latestYear = Number(tm?.latest_citation_year) || null;
+        const spanYears = Number(tm?.citation_span_years);
+        const highlyCited = typeof ii?.highly_cited === 'boolean' ? ii.highly_cited : null;
+        const velocity = ii?.citation_velocity ? String(ii.citation_velocity).replace(/_/g, ' ') : '';
+        const hasImpact = (Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0)
+          || (Number.isFinite(perYear) && perYear > 0)
+          || (firstYear && latestYear)
+          || highlyCited !== null
+          || !!velocity
+          || hasTypes;
+        if (!hasImpact) return null;
+        return (
+          <section aria-labelledby="impact-block">
+            <h2 className="title-section" id="impact-block">{t('works.detail.impact.title')}</h2>
+            <table className="data-table item-detail-table">
+              <tbody>
+                {Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0 ? (
+                  <tr>
+                    <th scope="row">{t('works.detail.impact.uniqueCiting')}</th>
+                    <td className="field-value">{formatNumber(uniqueCitingWorks)}</td>
+                  </tr>
+                ) : null}
+                {Number.isFinite(perYear) && perYear > 0 ? (
+                  <tr>
+                    <th scope="row">{t('works.detail.impact.citationsPerYear')}</th>
+                    <td className="field-value">{formatNumber(perYear)}</td>
+                  </tr>
+                ) : null}
+                {firstYear && latestYear ? (
+                  <tr>
+                    <th scope="row">{t('works.detail.impact.citationSpan')}</th>
+                    <td className="field-value">{firstYear} - {latestYear}{Number.isFinite(spanYears) && spanYears > 0 ? ` (${formatNumber(spanYears)})` : ''}</td>
+                  </tr>
+                ) : null}
+                {velocity ? (
+                  <tr>
+                    <th scope="row">{t('works.detail.impact.velocity')}</th>
+                    <td className="field-value">{velocity}</td>
+                  </tr>
+                ) : null}
+                {highlyCited !== null ? (
+                  <tr>
+                    <th scope="row">{t('works.detail.impact.highlyCited')}</th>
+                    <td className="field-value">{highlyCited ? t('common.values.yes') : t('common.values.no')}</td>
+                  </tr>
+                ) : null}
+                {hasTypes ? (
+                  <tr>
+                    <th scope="row">{t('works.detail.impact.citationTypes')}</th>
+                    <td className="field-value">
+                      {[
+                        typePos > 0 ? `${t('works.detail.impact.positive')}: ${formatNumber(typePos)}` : '',
+                        typeNeu > 0 ? `${t('works.detail.impact.neutral')}: ${formatNumber(typeNeu)}` : '',
+                        typeNeg > 0 ? `${t('works.detail.impact.negative')}: ${formatNumber(typeNeg)}` : '',
+                        typeSelf > 0 ? `${t('works.detail.impact.selfCitations')}: ${formatNumber(typeSelf)}` : ''
+                      ].filter(Boolean).join(' • ')}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </section>
+        );
+      })()}
+
+      {workSubjects.length > 0 ? (
+        <section aria-labelledby="work-subjects">
+          <h2 className="title-section" id="work-subjects">{t('subjects.title')}</h2>
+          <p className="description">
+            {workSubjects.map((subject, idx) => (
+              <span key={subject.id ?? `${subject.term}-${idx}`}>
+                {subject.id ? (
+                  <LocaleLink prefetch={false} className="action-link" href={`/subjects/${subject.id}`}>{subject.term}</LocaleLink>
+                ) : (
+                  <span>{subject.term}</span>
+                )}
+                {idx < workSubjects.length - 1 ? ' · ' : ''}
+              </span>
+            ))}
+          </p>
+        </section>
+      ) : null}
 
       <WorkSectionTabs
         ariaLabel={t('works.detail.sections.navLabel')}

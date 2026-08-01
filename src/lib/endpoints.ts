@@ -2,7 +2,8 @@ import { cache } from 'react';
 import { fetchJson, isNotFoundError, unwrapData } from './api';
 import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
-import { normalizePersonDetail, normalizePersonWorkItem, normalizeWorkDetail } from './works';
+import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
+import { normalizePersonDetail, normalizePersonWorkItem } from './works';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
   const parsed = Number(limit);
@@ -24,12 +25,6 @@ export async function getHomeRecentWorks(limit = 20) {
   } catch {
     return [];
   }
-}
-
-export async function getVitrinePage(page = 1, limit = 25) {
-  const safeLimit = normalizeLimit(limit, 100);
-  const r: any = await fetchJson(`/works/showcase?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(safeLimit))}`);
-  return r;
 }
 
 export async function getHomeTopVenues(limit = 25, page = 1) {
@@ -90,38 +85,6 @@ export async function searchWorks(params: Record<string, string | number | boole
     );
   }
 }
-
-export const getWork = cache(async (id: string | number, opts?: { includeCitations?: boolean; includeReferences?: boolean }) => {
-  const includeCitations = opts?.includeCitations ?? true;
-  const includeReferences = opts?.includeReferences ?? true;
-  const qs = new URLSearchParams({
-    include_citations: includeCitations ? 'true' : 'false',
-    include_references: includeReferences ? 'true' : 'false'
-  });
-  let envelope: any = null;
-  try {
-    envelope = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}?${qs.toString()}`);
-  } catch {
-    return null;
-  }
-  const raw = envelope?.data || envelope?.work || envelope || null;
-  return raw ? normalizeWorkDetail(raw) : null;
-});
-
-export const getPublication = cache(async (id: string | number, opts?: { includeCitations?: boolean; includeReferences?: boolean }) => {
-  const includeCitations = opts?.includeCitations ?? false;
-  const includeReferences = opts?.includeReferences ?? false;
-  const qs = new URLSearchParams({
-    include_citations: includeCitations ? 'true' : 'false',
-    include_references: includeReferences ? 'true' : 'false'
-  });
-  try {
-    const envelope: any = await fetchJson<any>(`/publications/${encodeURIComponent(String(id))}?${qs.toString()}`);
-    return envelope?.data || envelope?.publication || envelope || null;
-  } catch {
-    return null;
-  }
-});
 
 export type VenuesListSort =
   | 'id' | 'name' | 'type'
@@ -289,4 +252,60 @@ export async function getInstitutionWorks(id: string | number, page = 1, limit =
   const r: any = await fetchJson(`/institutions/${encodeURIComponent(String(id))}/${segment}?${params.join('&')}`);
   if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeInstitutionWorkItem);
   return r;
+}
+
+export const getSubject = cache(async (id: string | number) => {
+  let envelope: any = null;
+  try {
+    envelope = await fetchJson<any>(`/subjects/${encodeURIComponent(String(id))}`);
+  } catch (error) {
+    if (isNotFoundError(error)) return null;
+    throw error;
+  }
+  const raw = unwrapData(envelope);
+  return raw ? normalizeSubject(raw) : null;
+});
+
+export async function getSubjectWorksPage(id: string | number, page = 1, limit = 25) {
+  const params = [
+    `page=${encodeURIComponent(String(page))}`,
+    `limit=${encodeURIComponent(String(normalizeLimit(limit, 100)))}`
+  ];
+  const r: any = await fetchJson(`/subjects/${encodeURIComponent(String(id))}/works?${params.join('&')}`);
+  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeSubjectWorkItem);
+  return r;
+}
+
+export async function getSubjectsStatistics() {
+  try {
+    const r: any = await fetchJson('/subjects/statistics', { cache: 'force-cache' as RequestCache });
+    return unwrapData(r) || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveDoi(doi: string) {
+  const clean = String(doi || '').trim()
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
+    .replace(/^doi:\s*/i, '');
+  if (!clean || !clean.includes('/')) return null;
+  const encoded = clean.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+  let envelope: any = null;
+  try {
+    envelope = await fetchJson<any>(`/${encoded}`);
+  } catch (error) {
+    if (isNotFoundError(error)) return null;
+    throw error;
+  }
+  return unwrapData(envelope) || null;
+}
+
+export async function getVenuesStatistics() {
+  try {
+    const r: any = await fetchJson('/venues/statistics', { cache: 'force-cache' as RequestCache });
+    return unwrapData(r) || null;
+  } catch {
+    return null;
+  }
 }

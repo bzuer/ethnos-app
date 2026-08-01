@@ -1,0 +1,148 @@
+import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import LocaleLink from '@/components/common/LocaleLink';
+import { WorkResultList, type WorkResultLabels } from '@/components/common/WorkResultItem';
+import { getSubject, getSubjectWorksPage } from '@/lib/endpoints';
+import { subjectTerm } from '@/lib/subjects';
+import { formatNumber } from '@/lib/format';
+import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
+import { localizedPath } from '@/i18n/paths';
+import type { Locale } from '@/i18n/config';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+  const { id, locale } = await props.params;
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.subjectsDetail', `/subjects/${id}`);
+  let subject: any = null;
+  try {
+    subject = await getSubject(id);
+  } catch {
+    return base;
+  }
+  if (!subject) return base;
+  const term = subjectTerm(subject, locale);
+  const canonicalUrl = new URL(localizedPath(locale as Locale, `/subjects/${id}`), metadataBase).toString();
+  return {
+    ...base,
+    title: term || base.title,
+    alternates: { canonical: canonicalUrl, languages: base.alternates?.languages }
+  };
+}
+
+export default async function SubjectDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams?: Promise<{ page?: string }> }) {
+  const { id, locale } = await props.params;
+  const subject = await getSubject(id);
+  if (!subject) notFound();
+  const sp = (await props.searchParams) || {};
+  const page = Number(sp.page || '1') || 1;
+  const limit = 25;
+
+  const worksPage: any = await getSubjectWorksPage(id, page, limit).catch(() => null);
+  const works: any[] = worksPage?.data || [];
+  const pagination: any = worksPage?.pagination || {};
+
+  const t = await getTranslations({ locale });
+  const term = subjectTerm(subject, locale) || t('common.entities.nameUnavailable');
+  const vocabulary = subject.vocabulary || '';
+  const subjectType = subject.subject_type || '';
+  const worksCount = subject.works_count;
+  const coursesCount = subject.courses_count;
+  const childrenCount = subject.children_count;
+  const parentId = subject.parent_id;
+  const parentTerm = subject.parent_term || '';
+
+  const listLabels: WorkResultLabels = {
+    titleUnavailable: t('common.entities.titleUnavailable'),
+    authorUnknown: t('common.entities.authorUnknown'),
+    openAccess: t('common.meta.openAccess'),
+    addToList: t('common.actions.addToList'),
+    inList: t('common.actions.inList'),
+    removeFromList: t('common.actions.removeFromList'),
+    added: t('common.messages.added'),
+    itemRemoved: t('common.messages.itemRemoved'),
+    citedBy: t('common.meta.citedBy'),
+    references: t('common.meta.references'),
+    emptyState: t('subjects.empty.works')
+  };
+
+  const canonical = new URL(localizedPath(locale as Locale, `/subjects/${id}`), metadataBase).toString();
+  const jsonLd: Record<string, any> = {
+    '@context': 'https://schema.org',
+    '@type': 'DefinedTerm',
+    name: term,
+    url: canonical,
+    mainEntityOfPage: canonical
+  };
+  if (vocabulary) jsonLd.inDefinedTermSet = vocabulary;
+
+  const pageHref = (target: number) => `/subjects/${id}${target > 1 ? `?page=${target}` : ''}`;
+  const paginationNav = (
+    <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
+      {pagination?.hasPrev || page > 1 ? (
+        <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
+      ) : (
+        <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
+      )}
+      {pagination?.hasNext ? (
+        <LocaleLink className="pagination-btn btn-positive" href={pageHref(page + 1)}>{t('common.actions.next')}</LocaleLink>
+      ) : (
+        <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
+      )}
+    </nav>
+  );
+
+  return (
+    <div className="page-header" aria-labelledby="page-title">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <h1 className="page-title" id="page-title">{term}</h1>
+
+      <section aria-labelledby="subject-info">
+        <h2 className="title-section" id="subject-info">{t('subjects.detail.data')}</h2>
+        <table className="data-table item-detail-table" id="subject-details">
+          <tbody>
+            {vocabulary ? (
+              <tr>
+                <th scope="row">{t('subjects.detail.vocabulary')}</th>
+                <td className="field-value">{vocabulary}{subjectType ? ` (${subjectType})` : ''}</td>
+              </tr>
+            ) : null}
+            {typeof worksCount === 'number' ? (
+              <tr>
+                <th scope="row">{t('subjects.detail.works')}</th>
+                <td className="field-value">{formatNumber(worksCount)}</td>
+              </tr>
+            ) : null}
+            {typeof coursesCount === 'number' && coursesCount > 0 ? (
+              <tr>
+                <th scope="row">{t('subjects.detail.courses')}</th>
+                <td className="field-value">{formatNumber(coursesCount)}</td>
+              </tr>
+            ) : null}
+            {typeof childrenCount === 'number' && childrenCount > 0 ? (
+              <tr>
+                <th scope="row">{t('subjects.detail.children')}</th>
+                <td className="field-value">{formatNumber(childrenCount)}</td>
+              </tr>
+            ) : null}
+            {parentId && parentTerm ? (
+              <tr>
+                <th scope="row">{t('subjects.detail.parent')}</th>
+                <td className="field-value">
+                  <LocaleLink className="action-link table-link" href={`/subjects/${parentId}`}>{parentTerm}</LocaleLink>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </section>
+
+      <section aria-labelledby="subject-works">
+        <h2 className="title-section" id="subject-works">{t('subjects.worksHeading')}</h2>
+        <WorkResultList items={works} labels={listLabels} showAuthors={false} showVenue={false} />
+        {works.length > 0 ? paginationNav : null}
+      </section>
+    </div>
+  );
+}

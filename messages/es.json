@@ -7,6 +7,8 @@
       "search": "Búsqueda",
       "journals": "Revistas",
       "institutions": "Instituciones",
+      "subjects": "Materias",
+      "explore": "Explorar",
       "lists": "Lista",
       "listCounterLabel": "Elementos en la lista personal",
       "ariaLabel": "Navegación principal"
@@ -22,7 +24,7 @@
       "project": "Ethnos_APP",
       "openSource": "Proyecto Open Source",
       "privacy": "Privacidad y Cookies",
-      "license": "Licença MIT",
+      "license": "Licencia MIT",
       "frontendVersion": "Frontend v2.0.0",
       "apiDocs": "Documentación de la API",
       "apiSource": "Código de la API",
@@ -70,13 +72,14 @@
       "query": "Consulta",
       "parameters": "Parámetros",
       "type": "Tipo",
+      "work": "Obra",
       "author": "Autor",
       "venue": "Revista",
       "subject": "Asunto",
       "yearFrom": "Año desde",
       "yearTo": "Año hasta",
       "language": "Idioma",
-      "peerReviewed": "Peer reviewed",
+      "peerReviewed": "Revisado por pares",
       "openAccess": "Open Access",
       "list": "Lista",
       "items": "Elementos",
@@ -126,20 +129,14 @@
       "risExported": "RIS exportado",
       "bibExported": "BibTeX exportado",
       "apaExported": "APA exportado",
-      "confirmClear": "¿Confirmar limpieza de la lista? Esta acción es irreversible.",
-      "personNotFoundRedirect": "Página de persona no encontrada. Mostrando la búsqueda.",
-      "personNotFoundRedirectShort": "Persona no encontrada. Mostrando la búsqueda.",
-      "workNotFoundRedirect": "Página de obra no encontrada. Mostrando la búsqueda.",
-      "workNotFoundRedirectShort": "Obra no encontrada. Mostrando la búsqueda.",
-      "venueNotFoundRedirect": "Página de revista no encontrada. Mostrando las revistas.",
-      "venueNotFoundRedirectShort": "Revista no encontrada. Mostrando las revistas."
+      "confirmClear": "¿Confirmar limpieza de la lista? Esta acción es irreversible."
     },
     "entities": {
-    "authorUnknown": "Autor desconocido",
-    "publisherUnknown": "Editorial no informada",
-    "titleUnavailable": "Título no disponible",
-    "yearUnavailable": "Año no disponible",
-    "nameUnavailable": "Nombre no disponible",
+      "authorUnknown": "Autor desconocido",
+      "publisherUnknown": "Editorial no informada",
+      "titleUnavailable": "Título no disponible",
+      "yearUnavailable": "Año no disponible",
+      "nameUnavailable": "Nombre no disponible",
       "journalNotFound": "Revista no encontrada",
       "institutionNotFound": "Institución no encontrada",
       "personNotFound": "Persona no encontrada",
@@ -152,7 +149,7 @@
       "journal": "Revista",
       "coverage": "Cobertura",
       "publisher": "Editorial",
-      "actions": "X"
+      "actions": "Acciones"
     },
     "meta": {
       "peerReviewed": "Peer Reviewed",
@@ -161,6 +158,7 @@
       "references": "Referencias",
       "worksCount": "{count} obras",
       "authorsCount": "{count} autores",
+      "sharedWorksCount": "{count} trabajos en coautoría",
       "termEmpty": "(vacío)",
       "ariaSearchForm": "Formulario de búsqueda",
       "ariaAdvancedSearchForm": "Formulario de búsqueda avanzada",
@@ -175,6 +173,28 @@
       "yes": "Sí",
       "no": "No"
     }
+  },
+  "identifiers": {
+    "doi": "DOI",
+    "pmid": "PMID",
+    "pmcid": "PMCID",
+    "arxiv": "arXiv",
+    "wos": "Web of Science",
+    "handle": "Handle",
+    "wikidata": "Wikidata",
+    "openalex": "OpenAlex",
+    "openlibrary": "Open Library",
+    "isbn": "ISBN",
+    "issn": "ISSN",
+    "eissn": "E-ISSN",
+    "issnl": "ISSN-L",
+    "scopus": "Scopus",
+    "orcid": "ORCID",
+    "ror": "ROR",
+    "grid": "GRID",
+    "mag": "MAG",
+    "lattes": "Lattes",
+    "url": "Sitio web"
   },
   "home": {
     "title": "Inicio",
@@ -248,7 +268,8 @@
       "navLabel": "Secciones de la revista",
       "recent": "Recientes",
       "prominent": "Prominentes",
-      "first": "Primeras"
+      "first": "Primeras",
+      "authors": "Autores"
     },
     "empty": {
       "recent": "Sin publicaciones en esta página.",
@@ -274,6 +295,19 @@
         "citedBy": "Citaciones",
         "tools": "Herramientas",
         "navLabel": "Secciones de la obra"
+      },
+      "impact": {
+        "title": "Impacto",
+        "uniqueCiting": "Obras citantes distintas",
+        "citationsPerYear": "Citas por año",
+        "citationSpan": "Intervalo de citas",
+        "velocity": "Velocidad de citación",
+        "highlyCited": "Altamente citado",
+        "citationTypes": "Tipos de cita",
+        "positive": "Positivas",
+        "neutral": "Neutras",
+        "negative": "Negativas",
+        "selfCitations": "Autocitas"
       },
       "labels": {
         "id": "ID",
@@ -309,9 +343,6 @@
         "ror": "ROR",
         "url": "URL"
       }
-    },
-    "sphinx": {
-      "title": "Búsqueda — Sphinx"
     }
   },
   "persons": {
@@ -347,7 +378,11 @@
       "navLabel": "Secciones del autor",
       "recent": "Recientes",
       "prominent": "Prominentes",
+      "collaborators": "Colaboradores",
       "tools": "Herramientas"
+    },
+    "expertise": {
+      "title": "Áreas de especialización"
     },
     "empty": {
       "recent": "Sin obras para mostrar en esta página.",
@@ -386,12 +421,6 @@
     "tryAgain": "Vuelve a intentarlo en unos minutos. Las listas guardadas en tu navegador no se ven afectadas.",
     "contact": "Si la página sigue sin estar disponible, escribe al proyecto a",
     "contactEmail": "contact@ethnos.app"
-  },
-  "sphinx": {
-    "title": "Búsqueda — Sphinx",
-    "query": "Consulta",
-    "itemsHeading": "Elementos",
-    "term": "Término"
   },
   "institutions": {
     "title": "Instituciones",
@@ -449,6 +478,21 @@
       "description": "Directorio de instituciones y organizaciones de investigación con producción, colaboradores y financiamiento en antropología y sociología.",
       "keywords": "instituciones, organizaciones, universidades, financiadores, antropología, sociología, Ethnos"
     },
+    "subjects": {
+      "title": "Materias — Ethnos_APP",
+      "description": "Materias de vocabulario controlado que organizan el catálogo de antropología y sociología; cada materia lista sus obras.",
+      "keywords": "materias, palabras clave, vocabulario controlado, clasificación, antropología, sociología, Ethnos"
+    },
+    "subjectsDetail": {
+      "title": "Materia — Ethnos_APP",
+      "description": "Detalle de la materia con sus obras clasificadas en el catálogo de antropología y sociología.",
+      "keywords": "materia, palabra clave, obras, clasificación, antropología, sociología, Ethnos"
+    },
+    "explore": {
+      "title": "Explorar — Ethnos_APP",
+      "description": "Estadísticas del corpus de publicaciones y materias en el catálogo de antropología y sociología.",
+      "keywords": "estadísticas, corpus, publicaciones, materias, indexación, antropología, sociología, Ethnos"
+    },
     "institutionsDetail": {
       "title": "Detalles de la Institución — Ethnos_APP",
       "description": "Perfil de la institución con trabajos, autores principales, tendencia de producción, rol de financiamiento y organizaciones relacionadas.",
@@ -494,10 +538,10 @@
       "description": "Lista de resultados de búsqueda con metadados, filtros aplicados y paginación.",
       "keywords": "resultados de búsqueda, antropología, sociología, investigación bibliográfica"
     },
-    "searchSphinx": {
-      "title": "Búsqueda — Sphinx — Ethnos_APP",
-      "description": "Mecanismo de búsqueda Sphinx enfocado en relevancia, texto integral y facetas exploratorias.",
-      "keywords": "Sphinx, búsqueda por relevancia, texto integral, búsqueda facetada"
+    "searchGlobal": {
+      "title": "Búsqueda Global — Ethnos_APP",
+      "description": "Búsqueda unificada que devuelve obras, con autores e instituciones relacionados como refinamientos.",
+      "keywords": "búsqueda global, obras, autores, instituciones, investigación bibliográfica"
     },
     "lists": {
       "title": "Mi Lista — Ethnos_APP",
@@ -516,13 +560,64 @@
     },
     "privacy": {
       "title": "Privacidad y Cookies — Ethnos_APP",
-      "description": "Política de privacidad y cookies sobre el tratamiento de localidade, almacenamiento local y flujo de datos vía API Proxy.",
-      "keywords": "privacidad, cookies, local storage, API proxy, Ethnos Bibliography"
+      "description": "Política de privacidad y cookies sobre el tratamiento de localidad, almacenamiento local y obtención de datos en el servidor.",
+      "keywords": "privacidad, cookies, local storage, manejo de datos, Ethnos Bibliography"
     },
     "maintenance": {
       "title": "Mantenimiento — Ethnos_APP",
       "description": "Ethnos Bibliography está temporalmente fuera de servicio por mantenimiento programado.",
       "keywords": "mantenimiento, interrupción programada, Ethnos Bibliography"
     }
+  },
+  "searchGlobal": {
+    "title": "Búsqueda global",
+    "intro": "Busque obras en todo el catálogo y navegue a autores e instituciones relacionados.",
+    "worksHeading": "Obras",
+    "authorsHeading": "Autores relacionados",
+    "institutionsHeading": "Instituciones relacionadas",
+    "seeAllWorks": "Ver las {count} obras",
+    "startPrompt": "Escriba un término para buscar obras y descubrir autores e instituciones relacionados.",
+    "noResults": "No se encontraron obras para este término.",
+    "submit": "Buscar"
+  },
+  "subjects": {
+    "title": "Materias",
+    "intro": "Explore las materias de vocabulario controlado que organizan el catálogo. Cada materia lista las obras clasificadas en ella.",
+    "overviewHeading": "Resumen",
+    "overview": {
+      "total": "Materias",
+      "relations": "Relaciones obra–materia",
+      "vocabularies": "Vocabularios"
+    },
+    "topHeading": "Materias más usadas",
+    "worksHeading": "Obras",
+    "detail": {
+      "data": "Datos de la materia",
+      "vocabulary": "Vocabulario",
+      "works": "Obras",
+      "courses": "Cursos",
+      "children": "Submaterias",
+      "parent": "Materia principal"
+    },
+    "empty": {
+      "works": "No hay obras listadas para esta materia.",
+      "top": "No hay materias para mostrar."
+    }
+  },
+  "explore": {
+    "title": "Explorar",
+    "intro": "Estadísticas del corpus en todo el catálogo bibliográfico — publicaciones, materias y su cobertura de indexación.",
+    "venuesHeading": "Publicaciones",
+    "subjectsHeading": "Materias",
+    "venues": {
+      "total": "Total de publicaciones",
+      "journals": "Revistas",
+      "doaj": "Indexadas en DOAJ",
+      "scielo": "Indexadas en SciELO",
+      "scopus": "Indexadas en Scopus",
+      "avgImpact": "Factor de impacto promedio"
+    },
+    "browseVenues": "Ver publicaciones",
+    "browseSubjects": "Ver materias"
   }
 }
