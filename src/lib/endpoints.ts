@@ -205,30 +205,6 @@ export async function getPersonsWorksProminent(personId: string | number, limit 
   }
 }
 
-export type InstitutionsListSort = 'works_count' | 'citations' | 'cited_by_count' | 'h_index' | 'i10_index' | 'researchers_count' | 'name' | 'id';
-export type InstitutionsListOptions = {
-  sortBy?: InstitutionsListSort;
-  sortOrder?: 'ASC' | 'DESC';
-  type?: string;
-  country?: string;
-  q?: string;
-};
-
-export async function getInstitutionsPage(page = 1, limit = 25, opts?: InstitutionsListOptions) {
-  const params = [
-    `page=${encodeURIComponent(String(page))}`,
-    `limit=${encodeURIComponent(String(normalizeLimit(limit, 100)))}`
-  ];
-  if (opts?.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
-  if (opts?.sortOrder) params.push(`sort_order=${encodeURIComponent(opts.sortOrder)}`);
-  if (opts?.type) params.push(`type=${encodeURIComponent(opts.type)}`);
-  if (opts?.country) params.push(`country=${encodeURIComponent(opts.country)}`);
-  if (opts?.q) params.push(`q=${encodeURIComponent(opts.q)}`);
-  const r: any = await fetchJson(`/institutions?${params.join('&')}`, { cache: 'force-cache' as RequestCache });
-  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeInstitution);
-  return r;
-}
-
 export const getInstitution = cache(async (id: string | number) => {
   let envelope: any = null;
   try {
@@ -276,15 +252,6 @@ export async function getSubjectWorksPage(id: string | number, page = 1, limit =
   return r;
 }
 
-export async function getSubjectsStatistics() {
-  try {
-    const r: any = await fetchJson('/subjects/statistics', { cache: 'force-cache' as RequestCache });
-    return unwrapData(r) || null;
-  } catch {
-    return null;
-  }
-}
-
 export async function resolveDoi(doi: string) {
   const clean = String(doi || '').trim()
     .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
@@ -299,13 +266,4 @@ export async function resolveDoi(doi: string) {
     throw error;
   }
   return unwrapData(envelope) || null;
-}
-
-export async function getVenuesStatistics() {
-  try {
-    const r: any = await fetchJson('/venues/statistics', { cache: 'force-cache' as RequestCache });
-    return unwrapData(r) || null;
-  } catch {
-    return null;
-  }
 }

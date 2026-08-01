@@ -6,9 +6,6 @@
       "home": "Home",
       "search": "Search",
       "journals": "Journals",
-      "institutions": "Institutions",
-      "subjects": "Subjects",
-      "explore": "Explore",
       "lists": "List",
       "listCounterLabel": "Items in personal list",
       "ariaLabel": "Main navigation"
@@ -110,9 +107,6 @@
       "loadingJournals": "Loading journals...",
       "unableToLoadWorks": "Unable to load works.",
       "unableToLoadJournals": "Unable to load journals.",
-      "loadingInstitutions": "Loading institutions…",
-      "noInstitutions": "No institutions found.",
-      "unableToLoadInstitutions": "Unable to load institutions.",
       "noJournals": "No journals available.",
       "noPersonWorks": "No works found for this person.",
       "noVenueWorks": "No publications found for this journal.",
@@ -423,13 +417,6 @@
     "contactEmail": "contact@ethnos.app"
   },
   "institutions": {
-    "title": "Institutions",
-    "listSections": {
-      "navLabel": "Institution catalog sections",
-      "prominent": "Most productive",
-      "cited": "Most cited",
-      "hindex": "Top h-index"
-    },
     "detail": {
       "data": "Institution data",
       "type": "Type",
@@ -473,25 +460,10 @@
     }
   },
   "metadata": {
-    "institutions": {
-      "title": "Institutions — Ethnos_APP",
-      "description": "Directory of research institutions and organizations with production, collaborators, and funding for anthropology and sociology.",
-      "keywords": "institutions, organizations, universities, funders, anthropology, sociology, Ethnos"
-    },
-    "subjects": {
-      "title": "Subjects — Ethnos_APP",
-      "description": "Controlled-vocabulary subjects organizing the anthropology and sociology catalog; each subject lists its works.",
-      "keywords": "subjects, keywords, controlled vocabulary, classification, anthropology, sociology, Ethnos"
-    },
     "subjectsDetail": {
       "title": "Subject — Ethnos_APP",
       "description": "Subject detail with its classified works in the anthropology and sociology catalog.",
       "keywords": "subject, keyword, works, classification, anthropology, sociology, Ethnos"
-    },
-    "explore": {
-      "title": "Explore — Ethnos_APP",
-      "description": "Corpus-level statistics for venues and subjects across the anthropology and sociology catalog.",
-      "keywords": "statistics, corpus, venues, subjects, indexing, anthropology, sociology, Ethnos"
     },
     "institutionsDetail": {
       "title": "Institution Details — Ethnos_APP",
@@ -582,14 +554,6 @@
   },
   "subjects": {
     "title": "Subjects",
-    "intro": "Browse the controlled-vocabulary subjects that organize the catalog. Every subject lists the works classified under it.",
-    "overviewHeading": "Overview",
-    "overview": {
-      "total": "Subjects",
-      "relations": "Work–subject relations",
-      "vocabularies": "Vocabularies"
-    },
-    "topHeading": "Most used subjects",
     "worksHeading": "Works",
     "detail": {
       "data": "Subject data",
@@ -600,24 +564,7 @@
       "parent": "Parent subject"
     },
     "empty": {
-      "works": "No works listed for this subject.",
-      "top": "No subjects to list."
+      "works": "No works listed for this subject."
     }
-  },
-  "explore": {
-    "title": "Explore",
-    "intro": "Corpus-level statistics across the bibliographic catalog — venues, subjects, and their indexing coverage.",
-    "venuesHeading": "Venues",
-    "subjectsHeading": "Subjects",
-    "venues": {
-      "total": "Total venues",
-      "journals": "Journals",
-      "doaj": "Indexed in DOAJ",
-      "scielo": "Indexed in SciELO",
-      "scopus": "Indexed in Scopus",
-      "avgImpact": "Average impact factor"
-    },
-    "browseVenues": "Browse venues",
-    "browseSubjects": "Browse subjects"
   }
 }

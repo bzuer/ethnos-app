@@ -6,9 +6,6 @@
       "home": "Início",
       "search": "Busca",
       "journals": "Periódicos",
-      "institutions": "Instituições",
-      "subjects": "Assuntos",
-      "explore": "Explorar",
       "lists": "Lista",
       "listCounterLabel": "Itens na lista pessoal",
       "ariaLabel": "Navegação principal"
@@ -110,9 +107,6 @@
       "loadingJournals": "Carregando periódicos...",
       "unableToLoadWorks": "Não foi possível carregar as obras.",
       "unableToLoadJournals": "Não foi possível carregar os periódicos.",
-      "loadingInstitutions": "Carregando instituições…",
-      "noInstitutions": "Nenhuma instituição encontrada.",
-      "unableToLoadInstitutions": "Não foi possível carregar as instituições.",
       "noJournals": "Nenhum periódico disponível.",
       "noPersonWorks": "Nenhuma obra encontrada para esta pessoa.",
       "noVenueWorks": "Nenhuma publicação encontrada para este periódico.",
@@ -423,13 +417,6 @@
     "contactEmail": "contact@ethnos.app"
   },
   "institutions": {
-    "title": "Instituições",
-    "listSections": {
-      "navLabel": "Seções do catálogo de instituições",
-      "prominent": "Mais produtivas",
-      "cited": "Mais citadas",
-      "hindex": "Maior índice h"
-    },
     "detail": {
       "data": "Dados da instituição",
       "type": "Tipo",
@@ -473,25 +460,10 @@
     }
   },
   "metadata": {
-    "institutions": {
-      "title": "Instituições — Ethnos_APP",
-      "description": "Diretório de instituições e organizações de pesquisa com produção, colaboradores e financiamento em antropologia e sociologia.",
-      "keywords": "instituições, organizações, universidades, financiadores, antropologia, sociologia, Ethnos"
-    },
-    "subjects": {
-      "title": "Assuntos — Ethnos_APP",
-      "description": "Assuntos de vocabulário controlado que organizam o catálogo de antropologia e sociologia; cada assunto lista suas obras.",
-      "keywords": "assuntos, palavras-chave, vocabulário controlado, classificação, antropologia, sociologia, Ethnos"
-    },
     "subjectsDetail": {
       "title": "Assunto — Ethnos_APP",
       "description": "Detalhe do assunto com suas obras classificadas no catálogo de antropologia e sociologia.",
       "keywords": "assunto, palavra-chave, obras, classificação, antropologia, sociologia, Ethnos"
-    },
-    "explore": {
-      "title": "Explorar — Ethnos_APP",
-      "description": "Estatísticas do corpus de veículos e assuntos no catálogo de antropologia e sociologia.",
-      "keywords": "estatísticas, corpus, veículos, assuntos, indexação, antropologia, sociologia, Ethnos"
     },
     "institutionsDetail": {
       "title": "Detalhes da Instituição — Ethnos_APP",
@@ -582,14 +554,6 @@
   },
   "subjects": {
     "title": "Assuntos",
-    "intro": "Explore os assuntos de vocabulário controlado que organizam o catálogo. Cada assunto lista as obras classificadas nele.",
-    "overviewHeading": "Visão geral",
-    "overview": {
-      "total": "Assuntos",
-      "relations": "Relações obra–assunto",
-      "vocabularies": "Vocabulários"
-    },
-    "topHeading": "Assuntos mais usados",
     "worksHeading": "Obras",
     "detail": {
       "data": "Dados do assunto",
@@ -600,24 +564,7 @@
       "parent": "Assunto principal"
     },
     "empty": {
-      "works": "Nenhuma obra listada para este assunto.",
-      "top": "Nenhum assunto para listar."
+      "works": "Nenhuma obra listada para este assunto."
     }
-  },
-  "explore": {
-    "title": "Explorar",
-    "intro": "Estatísticas do corpus em todo o catálogo bibliográfico — veículos, assuntos e sua cobertura de indexação.",
-    "venuesHeading": "Veículos",
-    "subjectsHeading": "Assuntos",
-    "venues": {
-      "total": "Total de veículos",
-      "journals": "Periódicos",
-      "doaj": "Indexados na DOAJ",
-      "scielo": "Indexados na SciELO",
-      "scopus": "Indexados na Scopus",
-      "avgImpact": "Fator de impacto médio"
-    },
-    "browseVenues": "Ver veículos",
-    "browseSubjects": "Ver assuntos"
   }
 }

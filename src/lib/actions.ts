@@ -2,12 +2,8 @@
 
 import { fetchJson } from './api';
 import {
-  getInstitutionsPage,
-  getSubjectWorksPage,
   getVenuesPage,
   searchWorks,
-  type InstitutionsListOptions,
-  type InstitutionsListSort,
   type VenuesListFilters,
   type VenuesListSort,
   type VenuesListSortOrder
@@ -84,10 +80,6 @@ export async function actSearchGlobal(query: string, limit = 10): Promise<Global
   } catch {
     return empty;
   }
-}
-
-export async function actGetSubjectWorksPage(id: string | number, page = 1, limit = 25) {
-  return await getSubjectWorksPage(id, page, limit);
 }
 
 export async function actGetWorkFull(id: string | number, slim = false) {
@@ -179,17 +171,4 @@ export type VenuesPageActionOptions = {
 export async function actGetVenuesPage(page: number, limit: number, opts?: VenuesPageActionOptions) {
   const filters: VenuesListFilters | undefined = opts ? { ...opts } : undefined;
   return await getVenuesPage(page, limit, filters);
-}
-
-export type InstitutionsPageActionOptions = {
-  sortBy?: InstitutionsListSort;
-  sortOrder?: 'ASC' | 'DESC';
-  type?: string;
-  country?: string;
-  q?: string;
-};
-
-export async function actGetInstitutionsPage(page: number, limit: number, opts?: InstitutionsPageActionOptions) {
-  const filters: InstitutionsListOptions | undefined = opts ? { ...opts } : undefined;
-  return await getInstitutionsPage(page, limit, filters);
 }

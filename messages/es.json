@@ -6,9 +6,6 @@
       "home": "Inicio",
       "search": "Búsqueda",
       "journals": "Revistas",
-      "institutions": "Instituciones",
-      "subjects": "Materias",
-      "explore": "Explorar",
       "lists": "Lista",
       "listCounterLabel": "Elementos en la lista personal",
       "ariaLabel": "Navegación principal"
@@ -110,9 +107,6 @@
       "loadingJournals": "Cargando revistas...",
       "unableToLoadWorks": "No se pudieron cargar las obras.",
       "unableToLoadJournals": "No se pudieron cargar las revistas.",
-      "loadingInstitutions": "Cargando instituciones…",
-      "noInstitutions": "No se encontraron instituciones.",
-      "unableToLoadInstitutions": "No se pudieron cargar las instituciones.",
       "noJournals": "No hay revistas disponibles.",
       "noPersonWorks": "No se encontraron obras para esta persona.",
       "noVenueWorks": "No se encontraron publicaciones para esta revista.",
@@ -423,13 +417,6 @@
     "contactEmail": "contact@ethnos.app"
   },
   "institutions": {
-    "title": "Instituciones",
-    "listSections": {
-      "navLabel": "Secciones del catálogo de instituciones",
-      "prominent": "Más productivas",
-      "cited": "Más citadas",
-      "hindex": "Mayor índice h"
-    },
     "detail": {
       "data": "Datos de la institución",
       "type": "Tipo",
@@ -473,25 +460,10 @@
     }
   },
   "metadata": {
-    "institutions": {
-      "title": "Instituciones — Ethnos_APP",
-      "description": "Directorio de instituciones y organizaciones de investigación con producción, colaboradores y financiamiento en antropología y sociología.",
-      "keywords": "instituciones, organizaciones, universidades, financiadores, antropología, sociología, Ethnos"
-    },
-    "subjects": {
-      "title": "Materias — Ethnos_APP",
-      "description": "Materias de vocabulario controlado que organizan el catálogo de antropología y sociología; cada materia lista sus obras.",
-      "keywords": "materias, palabras clave, vocabulario controlado, clasificación, antropología, sociología, Ethnos"
-    },
     "subjectsDetail": {
       "title": "Materia — Ethnos_APP",
       "description": "Detalle de la materia con sus obras clasificadas en el catálogo de antropología y sociología.",
       "keywords": "materia, palabra clave, obras, clasificación, antropología, sociología, Ethnos"
-    },
-    "explore": {
-      "title": "Explorar — Ethnos_APP",
-      "description": "Estadísticas del corpus de publicaciones y materias en el catálogo de antropología y sociología.",
-      "keywords": "estadísticas, corpus, publicaciones, materias, indexación, antropología, sociología, Ethnos"
     },
     "institutionsDetail": {
       "title": "Detalles de la Institución — Ethnos_APP",
@@ -582,14 +554,6 @@
   },
   "subjects": {
     "title": "Materias",
-    "intro": "Explore las materias de vocabulario controlado que organizan el catálogo. Cada materia lista las obras clasificadas en ella.",
-    "overviewHeading": "Resumen",
-    "overview": {
-      "total": "Materias",
-      "relations": "Relaciones obra–materia",
-      "vocabularies": "Vocabularios"
-    },
-    "topHeading": "Materias más usadas",
     "worksHeading": "Obras",
     "detail": {
       "data": "Datos de la materia",
@@ -600,24 +564,7 @@
       "parent": "Materia principal"
     },
     "empty": {
-      "works": "No hay obras listadas para esta materia.",
-      "top": "No hay materias para mostrar."
+      "works": "No hay obras listadas para esta materia."
     }
-  },
-  "explore": {
-    "title": "Explorar",
-    "intro": "Estadísticas del corpus en todo el catálogo bibliográfico — publicaciones, materias y su cobertura de indexación.",
-    "venuesHeading": "Publicaciones",
-    "subjectsHeading": "Materias",
-    "venues": {
-      "total": "Total de publicaciones",
-      "journals": "Revistas",
-      "doaj": "Indexadas en DOAJ",
-      "scielo": "Indexadas en SciELO",
-      "scopus": "Indexadas en Scopus",
-      "avgImpact": "Factor de impacto promedio"
-    },
-    "browseVenues": "Ver publicaciones",
-    "browseSubjects": "Ver materias"
   }
 }

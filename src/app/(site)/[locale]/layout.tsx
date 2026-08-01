@@ -14,9 +14,6 @@ type NavLinks = {
   home: string;
   search: string;
   journals: string;
-  institutions: string;
-  subjects: string;
-  explore: string;
   lists: string;
 };
 
@@ -122,9 +119,6 @@ export default async function LocaleLayout({ children, params }: { children: Rea
     home: t('nav.home'),
     search: t('nav.search'),
     journals: t('nav.journals'),
-    institutions: t('nav.institutions'),
-    subjects: t('nav.subjects'),
-    explore: t('nav.explore'),
     lists: t('nav.lists')
   };
   const footerStrings: FooterStrings = {
@@ -200,12 +194,6 @@ function Header({ navLabel, navLinks, listCounterLabel }: { navLabel: string; na
         <LocaleLink className="nav-breadcrumb" href="/search">{navLinks.search}</LocaleLink>
         <span className="breadcrumb-separator" aria-hidden="true"> • </span>
         <LocaleLink className="nav-breadcrumb" href="/venues">{navLinks.journals}</LocaleLink>
-        <span className="breadcrumb-separator" aria-hidden="true"> • </span>
-        <LocaleLink className="nav-breadcrumb" href="/institutions">{navLinks.institutions}</LocaleLink>
-        <span className="breadcrumb-separator" aria-hidden="true"> • </span>
-        <LocaleLink className="nav-breadcrumb" href="/subjects">{navLinks.subjects}</LocaleLink>
-        <span className="breadcrumb-separator" aria-hidden="true"> • </span>
-        <LocaleLink className="nav-breadcrumb" href="/explore">{navLinks.explore}</LocaleLink>
         <span className="breadcrumb-separator" aria-hidden="true"> • </span>
         <LocaleLink className="nav-breadcrumb" href="/lists" aria-describedby="reading-list-counter">
           {navLinks.lists} <span id="reading-list-counter" className="list-counter" aria-label={listCounterLabel}>0</span>
