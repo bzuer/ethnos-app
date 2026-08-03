@@ -166,6 +166,12 @@
     "values": {
       "yes": "Sim",
       "no": "Não"
+    },
+    "tools": {
+      "exportWorksJson": "Exportar obras (JSON)",
+      "exportWorksBib": "Exportar obras (BibTeX)",
+      "exportWorksRis": "Exportar obras (RIS)",
+      "exportWorksApa": "Exportar obras (APA .docx)"
     }
   },
   "identifiers": {
@@ -263,7 +269,8 @@
       "recent": "Recentes",
       "prominent": "Proeminentes",
       "first": "Primeiros",
-      "authors": "Autores"
+      "authors": "Autores",
+      "tools": "Ferramentas"
     },
     "empty": {
       "recent": "Sem publicações nesta página.",
@@ -276,6 +283,9 @@
       "prominent": "Proeminentes",
       "recent": "Recentes",
       "first": "Primeiros"
+    },
+    "tools": {
+      "exportVenue": "Exportar dados do periódico (JSON)"
     }
   },
   "works": {
@@ -372,6 +382,7 @@
       "navLabel": "Seções do autor",
       "recent": "Recentes",
       "prominent": "Proeminentes",
+      "first": "Primeiros",
       "collaborators": "Colaboradores",
       "tools": "Ferramentas"
     },
@@ -380,14 +391,11 @@
     },
     "empty": {
       "recent": "Sem obras para listar nesta página.",
-      "prominent": "Sem obras proeminentes nesta página."
+      "prominent": "Sem obras proeminentes nesta página.",
+      "first": "Sem obras iniciais nesta página."
     },
     "tools": {
-      "exportPerson": "Exportar dados do autor (JSON)",
-      "exportWorksJson": "Exportar obras (JSON)",
-      "exportWorksBib": "Exportar obras (BibTeX)",
-      "exportWorksRis": "Exportar obras (RIS)",
-      "exportWorksApa": "Exportar obras (APA .docx)"
+      "exportPerson": "Exportar dados do autor (JSON)"
     }
   },
   "lists": {
@@ -446,17 +454,25 @@
     },
     "sections": {
       "navLabel": "Seções da instituição",
-      "works": "Trabalhos",
+      "recent": "Recentes",
+      "prominent": "Proeminentes",
+      "first": "Primeiros",
       "funded": "Financiados",
       "authors": "Autores",
       "production": "Produção",
-      "related": "Relacionadas"
+      "related": "Relacionadas",
+      "tools": "Ferramentas"
     },
     "empty": {
-      "works": "Nenhum trabalho afiliado encontrado para esta instituição.",
+      "recent": "Nenhum trabalho afiliado encontrado para esta instituição.",
+      "prominent": "Sem trabalhos proeminentes nesta página.",
+      "first": "Sem trabalhos iniciais nesta página.",
       "funded": "Nenhum trabalho financiado registrado para esta instituição.",
       "authors": "Nenhum dado de autor disponível.",
       "related": "Nenhuma instituição relacionada registrada."
+    },
+    "tools": {
+      "exportInstitution": "Exportar dados da instituição (JSON)"
     }
   },
   "metadata": {
@@ -554,7 +570,6 @@
   },
   "subjects": {
     "title": "Assuntos",
-    "worksHeading": "Obras",
     "detail": {
       "data": "Dados do assunto",
       "vocabulary": "Vocabulário",
@@ -564,7 +579,19 @@
       "parent": "Assunto principal"
     },
     "empty": {
-      "works": "Nenhuma obra listada para este assunto."
+      "recent": "Nenhuma obra listada para este assunto.",
+      "prominent": "Sem obras proeminentes nesta página.",
+      "first": "Sem obras iniciais nesta página."
+    },
+    "sections": {
+      "navLabel": "Seções do assunto",
+      "recent": "Recentes",
+      "prominent": "Proeminentes",
+      "first": "Primeiras",
+      "tools": "Ferramentas"
+    },
+    "tools": {
+      "exportSubject": "Exportar dados do assunto (JSON)"
     }
   }
 }

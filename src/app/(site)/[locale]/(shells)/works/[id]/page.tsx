@@ -578,38 +578,39 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         );
       })()}
 
-      {workSubjects.length > 0 ? (
-        <section aria-labelledby="work-subjects">
-          <h2 className="title-section" id="work-subjects">{t('subjects.title')}</h2>
-          <p className="description">
-            {workSubjects.map((subject, idx) => (
-              <span key={subject.id ?? `${subject.term}-${idx}`}>
-                {subject.id ? (
-                  <LocaleLink prefetch={false} className="action-link" href={`/subjects/${subject.id}`}>{subject.term}</LocaleLink>
-                ) : (
-                  <span>{subject.term}</span>
-                )}
-                {idx < workSubjects.length - 1 ? ' · ' : ''}
-              </span>
-            ))}
-          </p>
-        </section>
-      ) : null}
-
       <WorkSectionTabs
         ariaLabel={t('works.detail.sections.navLabel')}
         abstractLabel={t('works.detail.sections.abstract')}
-        referencesLabel={t('works.detail.sections.references')}
         citationsLabel={t('works.detail.sections.citedBy')}
+        referencesLabel={t('works.detail.sections.references')}
         toolsLabel={t('works.detail.sections.tools')}
-        abstract={abstractText ? (
-          <p className="description">{abstractText}</p>
-        ) : null}
-        references={(referencesTabTotal > 0 || refs.length > 0) ? (
-          <WorkCitationList workId={id} kind="references" initialItems={refs} initialUnresolved={unresolvedRefs} total={referencesTabTotal} />
+        abstract={(abstractText || workSubjects.length > 0) ? (
+          <>
+            {abstractText ? <p className="description">{abstractText}</p> : null}
+            {workSubjects.length > 0 ? (
+              <section aria-labelledby="work-subjects">
+                <h3 className="title-section" id="work-subjects">{t('subjects.title')}</h3>
+                <p className="description">
+                  {workSubjects.map((subject, idx) => (
+                    <span key={subject.id ?? `${subject.term}-${idx}`}>
+                      {subject.id ? (
+                        <LocaleLink prefetch={false} className="action-link" href={`/subjects/${subject.id}`}>{subject.term}</LocaleLink>
+                      ) : (
+                        <span>{subject.term}</span>
+                      )}
+                      {idx < workSubjects.length - 1 ? ' · ' : ''}
+                    </span>
+                  ))}
+                </p>
+              </section>
+            ) : null}
+          </>
         ) : null}
         citations={(citationsTabTotal > 0 || citedBy.length > 0) ? (
           <WorkCitationList workId={id} kind="citations" initialItems={citedBy} total={citationsTabTotal} />
+        ) : null}
+        references={(referencesTabTotal > 0 || refs.length > 0) ? (
+          <WorkCitationList workId={id} kind="references" initialItems={refs} initialUnresolved={unresolvedRefs} total={referencesTabTotal} />
         ) : null}
         tools={(
           <div className="tools-actions">

@@ -1,8 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
+import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
+import EntityTools from '@/components/common/EntityTools';
 import { WorkResultList, type WorkResultLabels } from '@/components/common/WorkResultItem';
-import { getSubject, getSubjectWorksPage } from '@/lib/endpoints';
+import { getSubject, getSubjectWorksByTerm, getSubjectWorksPage } from '@/lib/endpoints';
 import { subjectTerm } from '@/lib/subjects';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
@@ -39,7 +41,12 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
   const page = Number(sp.page || '1') || 1;
   const limit = 25;
 
-  const worksPage: any = await getSubjectWorksPage(id, page, limit).catch(() => null);
+  const canonicalTerm = subject.term || '';
+  const [worksPage, prominentItems, firstItems] = await Promise.all([
+    getSubjectWorksPage(id, page, limit).catch(() => null),
+    getSubjectWorksByTerm(canonicalTerm, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 }),
+    getSubjectWorksByTerm(canonicalTerm, limit, { sortBy: 'publication_year', sortOrder: 'asc' })
+  ]);
   const works: any[] = worksPage?.data || [];
   const pagination: any = worksPage?.pagination || {};
 
@@ -64,7 +71,7 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
     itemRemoved: t('common.messages.itemRemoved'),
     citedBy: t('common.meta.citedBy'),
     references: t('common.meta.references'),
-    emptyState: t('subjects.empty.works')
+    emptyState: ''
   };
 
   const canonical = new URL(localizedPath(locale as Locale, `/subjects/${id}`), metadataBase).toString();
@@ -76,6 +83,12 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
     mainEntityOfPage: canonical
   };
   if (vocabulary) jsonLd.inDefinedTermSet = vocabulary;
+
+  const toYear = (value: any): number => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const recentItems = [...works].sort((a: any, b: any) => toYear(b?.publication_year || b?.year) - toYear(a?.publication_year || a?.year));
 
   const pageHref = (target: number) => `/subjects/${id}${target > 1 ? `?page=${target}` : ''}`;
   const paginationNav = (
@@ -92,6 +105,34 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
       )}
     </nav>
   );
+
+  const tabs: SectionTabDescriptor[] = [
+    {
+      key: 'recent',
+      label: t('subjects.sections.recent'),
+      content: (
+        <>
+          <WorkResultList items={recentItems} labels={{ ...listLabels, emptyState: t('subjects.empty.recent') }} showAuthors={false} showVenue={false} />
+          {works.length > 0 ? paginationNav : null}
+        </>
+      )
+    },
+    {
+      key: 'prominent',
+      label: t('subjects.sections.prominent'),
+      content: <WorkResultList items={prominentItems} labels={{ ...listLabels, emptyState: t('subjects.empty.prominent') }} />
+    },
+    {
+      key: 'first',
+      label: t('subjects.sections.first'),
+      content: <WorkResultList items={firstItems} labels={{ ...listLabels, emptyState: t('subjects.empty.first') }} />
+    },
+    {
+      key: 'tools',
+      label: t('subjects.sections.tools'),
+      content: <EntityTools kind="subject" entity={subject} works={works} entityExportLabel={t('subjects.tools.exportSubject')} />
+    }
+  ];
 
   return (
     <div className="page-header" aria-labelledby="page-title">
@@ -138,11 +179,7 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
         </table>
       </section>
 
-      <section aria-labelledby="subject-works">
-        <h2 className="title-section" id="subject-works">{t('subjects.worksHeading')}</h2>
-        <WorkResultList items={works} labels={listLabels} showAuthors={false} showVenue={false} />
-        {works.length > 0 ? paginationNav : null}
-      </section>
+      <SectionTabs ariaLabel={t('subjects.sections.navLabel')} tabs={tabs} />
     </div>
   );
 }

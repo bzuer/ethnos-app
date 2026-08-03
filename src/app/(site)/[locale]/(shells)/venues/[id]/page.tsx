@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
+import EntityTools from '@/components/common/EntityTools';
 import VenueWorksList from './VenueWorksList';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
@@ -592,7 +593,12 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                 })}
               </ul>
             )
-          } : null
+          } : null,
+          {
+            key: 'tools',
+            label: t('venues.sections.tools'),
+            content: <EntityTools kind="venue" entity={venue} works={works} entityExportLabel={t('venues.tools.exportVenue')} />
+          }
         ].filter(Boolean) as SectionTabDescriptor[];
 
         return <SectionTabs ariaLabel={t('venues.sections.navLabel')} tabs={tabs} />;

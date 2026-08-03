@@ -166,6 +166,12 @@
     "values": {
       "yes": "Yes",
       "no": "No"
+    },
+    "tools": {
+      "exportWorksJson": "Export works (JSON)",
+      "exportWorksBib": "Export works (BibTeX)",
+      "exportWorksRis": "Export works (RIS)",
+      "exportWorksApa": "Export works (APA .docx)"
     }
   },
   "identifiers": {
@@ -263,7 +269,8 @@
       "recent": "Recent",
       "prominent": "Prominent",
       "first": "First",
-      "authors": "Authors"
+      "authors": "Authors",
+      "tools": "Tools"
     },
     "empty": {
       "recent": "No publications on this page.",
@@ -276,6 +283,9 @@
       "prominent": "Prominent",
       "recent": "Recent",
       "first": "First"
+    },
+    "tools": {
+      "exportVenue": "Export journal data (JSON)"
     }
   },
   "works": {
@@ -372,6 +382,7 @@
       "navLabel": "Author sections",
       "recent": "Recent",
       "prominent": "Prominent",
+      "first": "First",
       "collaborators": "Collaborators",
       "tools": "Tools"
     },
@@ -380,14 +391,11 @@
     },
     "empty": {
       "recent": "No works to list on this page.",
-      "prominent": "No prominent works on this page."
+      "prominent": "No prominent works on this page.",
+      "first": "No early works on this page."
     },
     "tools": {
-      "exportPerson": "Export author data (JSON)",
-      "exportWorksJson": "Export works (JSON)",
-      "exportWorksBib": "Export works (BibTeX)",
-      "exportWorksRis": "Export works (RIS)",
-      "exportWorksApa": "Export works (APA .docx)"
+      "exportPerson": "Export author data (JSON)"
     }
   },
   "lists": {
@@ -446,17 +454,25 @@
     },
     "sections": {
       "navLabel": "Institution sections",
-      "works": "Works",
+      "recent": "Recent",
+      "prominent": "Prominent",
+      "first": "First",
       "funded": "Funded",
       "authors": "Authors",
       "production": "Production",
-      "related": "Related"
+      "related": "Related",
+      "tools": "Tools"
     },
     "empty": {
-      "works": "No affiliated works found for this institution.",
+      "recent": "No affiliated works found for this institution.",
+      "prominent": "No prominent works on this page.",
+      "first": "No early works on this page.",
       "funded": "No funded works recorded for this institution.",
       "authors": "No author data available.",
       "related": "No related institutions recorded."
+    },
+    "tools": {
+      "exportInstitution": "Export institution data (JSON)"
     }
   },
   "metadata": {
@@ -554,7 +570,6 @@
   },
   "subjects": {
     "title": "Subjects",
-    "worksHeading": "Works",
     "detail": {
       "data": "Subject data",
       "vocabulary": "Vocabulary",
@@ -564,7 +579,19 @@
       "parent": "Parent subject"
     },
     "empty": {
-      "works": "No works listed for this subject."
+      "recent": "No works listed for this subject.",
+      "prominent": "No prominent works on this page.",
+      "first": "No early works on this page."
+    },
+    "sections": {
+      "navLabel": "Subject sections",
+      "recent": "Recent",
+      "prominent": "Prominent",
+      "first": "First",
+      "tools": "Tools"
+    },
+    "tools": {
+      "exportSubject": "Export subject data (JSON)"
     }
   }
 }

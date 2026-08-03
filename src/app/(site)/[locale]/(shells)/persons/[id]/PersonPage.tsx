@@ -2,9 +2,9 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
+import EntityTools from '@/components/common/EntityTools';
 import PersonWorksList from './PersonWorksList';
-import PersonTools from './PersonTools';
-import { getPersonsWorks, getPersonsWorksProminent } from '@/lib/endpoints';
+import { getPersonsWorks, getPersonsWorksFirst, getPersonsWorksProminent } from '@/lib/endpoints';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
@@ -169,7 +169,10 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const items: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
   const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
   if (!person) notFound();
-  const prominentItems = await getPersonsWorksProminent(id, 25);
+  const [prominentItems, firstItems] = await Promise.all([
+    getPersonsWorksProminent(id, 25),
+    getPersonsWorksFirst(id, 25)
+  ]);
   const t = await getTranslations({ locale });
 
   const personName = pickPersonName(person) || t('common.entities.personNotFound');
@@ -262,6 +265,11 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
       label: t('persons.sections.prominent'),
       content: <PersonWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('persons.empty.prominent') }} />
     },
+    {
+      key: 'first',
+      label: t('persons.sections.first'),
+      content: <PersonWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('persons.empty.first') }} />
+    },
     topCollaborators.length > 0 ? {
       key: 'collaborators',
       label: t('persons.sections.collaborators'),
@@ -294,7 +302,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
     {
       key: 'tools',
       label: t('persons.sections.tools'),
-      content: <PersonTools person={person} works={items} />
+      content: <EntityTools kind="person" entity={person} works={items} entityExportLabel={t('persons.tools.exportPerson')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 

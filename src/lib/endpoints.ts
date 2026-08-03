@@ -131,7 +131,7 @@ function worksListQuery(opts?: WorksListOptions): string {
   if (!opts) return '';
   const params: string[] = [];
   if (opts.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
-  if (opts.sortOrder) params.push(`sortOrder=${encodeURIComponent(opts.sortOrder)}`);
+  if (opts.sortOrder) params.push(`sort_order=${encodeURIComponent(opts.sortOrder)}`);
   if (typeof opts.citedByMin === 'number' && Number.isFinite(opts.citedByMin)) params.push(`cited_by_min=${encodeURIComponent(String(opts.citedByMin))}`);
   if (typeof opts.citedByMax === 'number' && Number.isFinite(opts.citedByMax)) params.push(`cited_by_max=${encodeURIComponent(String(opts.citedByMax))}`);
   return params.length ? `&${params.join('&')}` : '';
@@ -189,10 +189,10 @@ function dedupeByWorkId(items: any[]): any[] {
   return out;
 }
 
-export async function getPersonsWorksProminent(personId: string | number, limit = 25) {
+async function getPersonsWorksSorted(personId: string | number, limit: number, opts: WorksListOptions) {
   const id = encodeURIComponent(String(personId));
-  const fetchLimit = Math.min(100, limit * 4);
-  const qs = `limit=${encodeURIComponent(String(fetchLimit))}${worksListQuery({ sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 })}`;
+  const fetchLimit = normalizeLimit(limit, 100);
+  const qs = `limit=${encodeURIComponent(String(fetchLimit))}${worksListQuery(opts)}`;
   try {
     const raw: any = await fetchJson<any>(`/persons/${id}/works?${qs}`);
     const items = Array.isArray(raw?.data)
@@ -203,6 +203,14 @@ export async function getPersonsWorksProminent(personId: string | number, limit 
   } catch {
     return [];
   }
+}
+
+export async function getPersonsWorksProminent(personId: string | number, limit = 25) {
+  return getPersonsWorksSorted(personId, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 });
+}
+
+export async function getPersonsWorksFirst(personId: string | number, limit = 25) {
+  return getPersonsWorksSorted(personId, limit, { sortBy: 'publication_year', sortOrder: 'asc' });
 }
 
 export const getInstitution = cache(async (id: string | number) => {
@@ -250,6 +258,24 @@ export async function getSubjectWorksPage(id: string | number, page = 1, limit =
   const r: any = await fetchJson(`/subjects/${encodeURIComponent(String(id))}/works?${params.join('&')}`);
   if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeSubjectWorkItem);
   return r;
+}
+
+export async function getSubjectWorksByTerm(term: string, limit = 25, opts?: WorksListOptions) {
+  const clean = String(term || '').trim();
+  if (!clean) return [];
+  try {
+    const r: any = await searchWorks({
+      subject: clean,
+      limit: normalizeLimit(limit, 100),
+      sort_by: opts?.sortBy,
+      sort_order: opts?.sortOrder,
+      cited_by_min: opts?.citedByMin
+    });
+    const items = r?.data || r?.results || r?.items || [];
+    return Array.isArray(items) ? items.slice(0, limit) : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function resolveDoi(doi: string) {

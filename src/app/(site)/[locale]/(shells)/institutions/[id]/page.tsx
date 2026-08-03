@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
+import EntityTools from '@/components/common/EntityTools';
 import WorkRelatedList from '../../works/[id]/WorkRelatedList';
 import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
 import { buildIdentifierHref } from '@/lib/identifiers';
@@ -42,12 +43,16 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
   const limit = 25;
   const fundedCount = Number(institution?.funding_role?.funded_works_count) || 0;
 
-  const [worksPage, fundedPage] = await Promise.all([
-    getInstitutionWorks(id, page, limit, { sortBy: 'cited_by_count', sortOrder: 'DESC' }).catch(() => null),
+  const [worksPage, prominentPage, firstPage, fundedPage] = await Promise.all([
+    getInstitutionWorks(id, page, limit).catch(() => null),
+    getInstitutionWorks(id, 1, limit, { sortBy: 'cited_by_count', sortOrder: 'DESC' }).catch(() => null),
+    getInstitutionWorks(id, 1, limit, { sortBy: 'publication_year', sortOrder: 'ASC' }).catch(() => null),
     fundedCount > 0 ? getInstitutionWorks(id, 1, limit, { funded: true }).catch(() => null) : Promise.resolve(null)
   ]);
   const works: any[] = worksPage?.data || [];
   const pagination: any = worksPage?.pagination || {};
+  const prominentWorks: any[] = prominentPage?.data || [];
+  const firstWorks: any[] = firstPage?.data || [];
   const fundedWorks: any[] = fundedPage?.data || [];
 
   const t = await getTranslations({ locale });
@@ -124,27 +129,29 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
 
   const tabs: SectionTabDescriptor[] = [
     {
-      key: 'works',
-      label: t('institutions.sections.works'),
+      key: 'recent',
+      label: t('institutions.sections.recent'),
       content: (
         <>
-          {works.length > 0 ? (
-            <WorkRelatedList items={works} pickAuthors={pickAuthors} labels={relatedLabels} />
-          ) : (
-            <p className="result-meta">{t('institutions.empty.works')}</p>
-          )}
+          <WorkRelatedList items={works} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.recent') }} />
           {works.length > 0 ? paginationNav : null}
         </>
       )
     },
+    {
+      key: 'prominent',
+      label: t('institutions.sections.prominent'),
+      content: <WorkRelatedList items={prominentWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.prominent') }} />
+    },
+    {
+      key: 'first',
+      label: t('institutions.sections.first'),
+      content: <WorkRelatedList items={firstWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.first') }} />
+    },
     fundedCount > 0 ? {
       key: 'funded',
       label: t('institutions.sections.funded'),
-      content: fundedWorks.length > 0 ? (
-        <WorkRelatedList items={fundedWorks} pickAuthors={pickAuthors} labels={relatedLabels} />
-      ) : (
-        <p className="result-meta">{t('institutions.empty.funded')}</p>
-      )
+      content: <WorkRelatedList items={fundedWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.funded') }} />
     } : null,
     topAuthors.length > 0 ? {
       key: 'authors',
@@ -232,7 +239,12 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
           ))}
         </div>
       )
-    } : null
+    } : null,
+    {
+      key: 'tools',
+      label: t('institutions.sections.tools'),
+      content: <EntityTools kind="institution" entity={institution} works={works} entityExportLabel={t('institutions.tools.exportInstitution')} />
+    }
   ].filter(Boolean) as SectionTabDescriptor[];
 
   return (

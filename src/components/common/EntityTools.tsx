@@ -5,9 +5,13 @@ import { useTranslations } from 'next-intl';
 import { showNotification } from '@/lib/notify';
 import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
+export type EntityKind = 'person' | 'venue' | 'institution' | 'subject';
+
 type Props = {
-  person: any;
+  kind: EntityKind;
+  entity: any;
   works: any[];
+  entityExportLabel: string;
 };
 
 function download(filename: string, content: string, type: string) {
@@ -26,39 +30,53 @@ function downloadBlob(filename: string, content: Blob) {
   URL.revokeObjectURL(url);
 }
 
-function personFilename(person: any): string {
-  const id = person?.id ? String(person.id) : 'person';
-  const name = person?.preferred_name || person?.name || [person?.given_names, person?.family_name].filter(Boolean).join(' ') || '';
-  const slug = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
-  return slug ? `${slug}-${id}` : `person-${id}`;
+function entityName(entity: any): string {
+  if (!entity) return '';
+  const candidate = entity?.preferred_name
+    || entity?.name
+    || entity?.term
+    || entity?.title
+    || [entity?.given_names, entity?.family_name].filter(Boolean).join(' ');
+  return candidate ? String(candidate) : '';
 }
 
-export default function PersonTools({ person, works }: Props) {
+function entityFilename(entity: any, kind: EntityKind): string {
+  const id = entity?.id ? String(entity.id) : kind;
+  const slug = entityName(entity)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  return slug ? `${slug}-${id}` : `${kind}-${id}`;
+}
+
+export default function EntityTools({ kind, entity, works, entityExportLabel }: Props) {
   const t = useTranslations();
   const hasWorks = Array.isArray(works) && works.length > 0;
-  const base = personFilename(person);
+  const base = entityFilename(entity, kind);
 
-  const onExportPerson = useCallback(() => {
+  const onExportEntity = useCallback(() => {
     const payload = JSON.stringify({
       exported_at: new Date().toISOString(),
-      person
+      [kind]: entity
     }, null, 2);
     download(`${base}.json`, payload, 'application/json');
     showNotification(t('common.messages.jsonExported'), 'success');
-  }, [base, person, t]);
+  }, [base, entity, kind, t]);
 
   const onExportWorksJson = useCallback(() => {
     if (!hasWorks) return;
     const normalized = works.map((w) => normWork(w)).filter(Boolean);
     const payload = JSON.stringify({
       exported_at: new Date().toISOString(),
-      person_id: person?.id ?? null,
+      [`${kind}_id`]: entity?.id ?? null,
       count: normalized.length,
       works: normalized
     }, null, 2);
     download(`${base}-works.json`, payload, 'application/json');
     showNotification(t('common.messages.jsonExported'), 'success');
-  }, [base, hasWorks, person, t, works]);
+  }, [base, entity, hasWorks, kind, t, works]);
 
   const onExportWorksBib = useCallback(() => {
     if (!hasWorks) return;
@@ -93,11 +111,11 @@ export default function PersonTools({ person, works }: Props) {
 
   return (
     <div className="tools-actions">
-      <button type="button" className="action-btn btn-positive" onClick={onExportPerson}>{t('persons.tools.exportPerson')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksJson} disabled={!hasWorks}>{t('persons.tools.exportWorksJson')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksBib} disabled={!hasWorks}>{t('persons.tools.exportWorksBib')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksRis} disabled={!hasWorks}>{t('persons.tools.exportWorksRis')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksApa} disabled={!hasWorks}>{t('persons.tools.exportWorksApa')}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportEntity}>{entityExportLabel}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportWorksJson} disabled={!hasWorks}>{t('common.tools.exportWorksJson')}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportWorksBib} disabled={!hasWorks}>{t('common.tools.exportWorksBib')}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportWorksRis} disabled={!hasWorks}>{t('common.tools.exportWorksRis')}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportWorksApa} disabled={!hasWorks}>{t('common.tools.exportWorksApa')}</button>
     </div>
   );
 }
