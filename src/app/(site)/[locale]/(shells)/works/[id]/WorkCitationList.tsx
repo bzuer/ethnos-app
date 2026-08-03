@@ -6,13 +6,10 @@ import WorkRelatedList from './WorkRelatedList';
 import { actGetWorkCitations, actGetWorkReferences } from '@/lib/actions';
 import { formatMetadataAuthors } from '@/lib/works';
 
-type UnresolvedRef = { doi: string | null; status?: string | null };
-
 type Props = {
   workId: string;
   kind: 'citations' | 'references';
   initialItems: any[];
-  initialUnresolved?: UnresolvedRef[];
   total: number;
 };
 
@@ -21,22 +18,9 @@ const idOf = (item: any) => {
   return id !== null && id !== undefined ? String(id) : '';
 };
 
-const mergeUnresolved = (prev: UnresolvedRef[], next: UnresolvedRef[]) => {
-  const seen = new Set(prev.map((entry) => String(entry.doi || '')));
-  const merged = [...prev];
-  next.forEach((entry) => {
-    const key = String(entry.doi || '');
-    if (key && seen.has(key)) return;
-    if (key) seen.add(key);
-    merged.push(entry);
-  });
-  return merged;
-};
-
-export default function WorkCitationList({ workId, kind, initialItems, initialUnresolved = [], total }: Props) {
+export default function WorkCitationList({ workId, kind, initialItems, total }: Props) {
   const t = useTranslations();
   const [items, setItems] = useState<any[]>(initialItems);
-  const [unresolved, setUnresolved] = useState<UnresolvedRef[]>(initialUnresolved);
   const [nextPage, setNextPage] = useState(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -82,9 +66,6 @@ export default function WorkCitationList({ workId, kind, initialItems, initialUn
         return true;
       });
       setItems((prev) => [...prev, ...fresh]);
-      if (kind === 'references' && Array.isArray(res?.unresolved)) {
-        setUnresolved((prev) => mergeUnresolved(prev, res.unresolved));
-      }
       setNextPage((prev) => prev + 1);
       if (!res?.hasNext || incoming.length === 0) setExhausted(true);
     } catch {
@@ -97,20 +78,6 @@ export default function WorkCitationList({ workId, kind, initialItems, initialUn
   return (
     <>
       <WorkRelatedList items={items} labels={relatedLabels} pickAuthors={pickAuthors} />
-      {kind === 'references' && unresolved.length > 0 ? (
-        <section className="unresolved-references" aria-label={t('works.detail.unresolvedReferences')}>
-          <h3 className="title-section">{t('works.detail.unresolvedReferences')}</h3>
-          <ul className="results-list">
-            {unresolved.map((entry, index) => (
-              <li className="result-item" key={`${entry.doi || 'unresolved'}-${index}`}>
-                {entry.doi ? (
-                  <a className="action-link" href={`https://doi.org/${encodeURIComponent(entry.doi)}`} target="_blank" rel="noopener noreferrer">{entry.doi}</a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
       {error ? (
         <p className="temporary-message temporary-message-error" role="status" aria-live="polite">{t('common.states.unableToLoadWorks')}</p>
       ) : null}

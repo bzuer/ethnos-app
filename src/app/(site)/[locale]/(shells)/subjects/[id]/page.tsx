@@ -5,6 +5,7 @@ import SectionTabs, { type SectionTabDescriptor } from '@/components/common/Sect
 import EntityTools from '@/components/common/EntityTools';
 import { WorkResultList, type WorkResultLabels } from '@/components/common/WorkResultItem';
 import { getSubject, getSubjectWorksByTerm, getSubjectWorksPage } from '@/lib/endpoints';
+import { mergeWorkLists } from '@/lib/entity-export';
 import { subjectTerm } from '@/lib/subjects';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
@@ -130,7 +131,7 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
     {
       key: 'tools',
       label: t('subjects.sections.tools'),
-      content: <EntityTools kind="subject" entity={subject} works={works} entityExportLabel={t('subjects.tools.exportSubject')} />
+      content: <EntityTools kind="subject" entity={subject} works={mergeWorkLists(recentItems, prominentItems, firstItems)} entityExportLabel={t('subjects.tools.exportSubject')} />
     }
   ];
 

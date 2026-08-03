@@ -152,7 +152,6 @@
       "references": "Referencias",
       "worksCount": "{count} obras",
       "authorsCount": "{count} autores",
-      "sharedWorksCount": "{count} trabajos en coautoría",
       "termEmpty": "(vacío)",
       "ariaSearchForm": "Formulario de búsqueda",
       "ariaAdvancedSearchForm": "Formulario de búsqueda avanzada",
@@ -260,16 +259,14 @@
       "openAccess": "Open Access",
       "indexedScopus": "Indexada en Scopus",
       "doaj": "Indexada en DOAJ",
-      "description": "Resumen",
-      "subjects": "Temas",
       "publications": "Publicaciones en esta revista"
     },
     "sections": {
       "navLabel": "Secciones de la revista",
+      "summary": "Resumen",
       "recent": "Recientes",
       "prominent": "Prominentes",
       "first": "Primeras",
-      "authors": "Autores",
       "tools": "Herramientas"
     },
     "empty": {
@@ -291,11 +288,11 @@
   "works": {
     "detail": {
       "titleFallback": "Detalles de la Obra",
-      "unresolvedReferences": "Referencias no resueltas",
       "sections": {
         "bibliographic": "Datos Bibliográficos",
         "abstract": "Resumen",
         "references": "Referencias",
+        "impact": "Impacto",
         "citedBy": "Citaciones",
         "tools": "Herramientas",
         "navLabel": "Secciones de la obra"
@@ -383,11 +380,8 @@
       "recent": "Recientes",
       "prominent": "Prominentes",
       "first": "Primeras",
-      "collaborators": "Colaboradores",
+      "expertise": "Especialidades",
       "tools": "Herramientas"
-    },
-    "expertise": {
-      "title": "Áreas de especialización"
     },
     "empty": {
       "recent": "Sin obras para mostrar en esta página.",
@@ -445,12 +439,7 @@
       "website": "Sitio web",
       "alternativeNames": "También conocida como",
       "production": "Producción por tipo",
-      "trend": "Tendencia de publicación",
-      "relationships": "Instituciones relacionadas",
-      "parents": "Superior",
-      "children": "Subordinada",
-      "related": "Relacionada",
-      "topAuthors": "Autores principales"
+      "trend": "Tendencia de publicación"
     },
     "sections": {
       "navLabel": "Secciones de la institución",
@@ -458,9 +447,7 @@
       "prominent": "Prominentes",
       "first": "Primeras",
       "funded": "Financiados",
-      "authors": "Autores",
       "production": "Producción",
-      "related": "Relacionadas",
       "tools": "Herramientas"
     },
     "empty": {

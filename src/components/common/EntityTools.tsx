@@ -3,9 +3,16 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { showNotification } from '@/lib/notify';
+import { EXPORT_MIME, downloadBlob, downloadJson, downloadText } from '@/lib/download';
+import {
+  buildEntityExport,
+  buildWorksExport,
+  exportFilename,
+  type EntityKind
+} from '@/lib/entity-export';
 import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
-export type EntityKind = 'person' | 'venue' | 'institution' | 'subject';
+export type { EntityKind };
 
 type Props = {
   kind: EntityKind;
@@ -14,87 +21,39 @@ type Props = {
   entityExportLabel: string;
 };
 
-function download(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type });
-  downloadBlob(filename, blob);
-}
-
-function downloadBlob(filename: string, content: Blob) {
-  const url = URL.createObjectURL(content);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function entityName(entity: any): string {
-  if (!entity) return '';
-  const candidate = entity?.preferred_name
-    || entity?.name
-    || entity?.term
-    || entity?.title
-    || [entity?.given_names, entity?.family_name].filter(Boolean).join(' ');
-  return candidate ? String(candidate) : '';
-}
-
-function entityFilename(entity: any, kind: EntityKind): string {
-  const id = entity?.id ? String(entity.id) : kind;
-  const slug = entityName(entity)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase();
-  return slug ? `${slug}-${id}` : `${kind}-${id}`;
-}
-
 export default function EntityTools({ kind, entity, works, entityExportLabel }: Props) {
   const t = useTranslations();
   const hasWorks = Array.isArray(works) && works.length > 0;
-  const base = entityFilename(entity, kind);
+  const base = exportFilename(kind, entity);
 
   const onExportEntity = useCallback(() => {
-    const payload = JSON.stringify({
-      exported_at: new Date().toISOString(),
-      [kind]: entity
-    }, null, 2);
-    download(`${base}.json`, payload, 'application/json');
+    downloadJson(`${base}.json`, buildEntityExport(kind, entity));
     showNotification(t('common.messages.jsonExported'), 'success');
   }, [base, entity, kind, t]);
 
   const onExportWorksJson = useCallback(() => {
     if (!hasWorks) return;
-    const normalized = works.map((w) => normWork(w)).filter(Boolean);
-    const payload = JSON.stringify({
-      exported_at: new Date().toISOString(),
-      [`${kind}_id`]: entity?.id ?? null,
-      count: normalized.length,
-      works: normalized
-    }, null, 2);
-    download(`${base}-works.json`, payload, 'application/json');
+    downloadJson(`${base}-works.json`, buildWorksExport(works, { kind, entity }));
     showNotification(t('common.messages.jsonExported'), 'success');
   }, [base, entity, hasWorks, kind, t, works]);
 
   const onExportWorksBib = useCallback(() => {
     if (!hasWorks) return;
-    const entries = works.map((w) => {
-      const nw = normWork(w);
-      return nw ? toBibTeX(nw) : '';
+    const entries = works.map((work) => {
+      const normalized = normWork(work);
+      return normalized ? toBibTeX(normalized) : '';
     }).filter(Boolean);
-    download(`${base}-works.bib`, entries.join('\n\n'), 'application/x-bibtex');
+    downloadText(`${base}-works.bib`, entries.join('\n\n'), EXPORT_MIME.bibtex);
     showNotification(t('common.messages.bibExported'), 'success');
   }, [base, hasWorks, t, works]);
 
   const onExportWorksRis = useCallback(() => {
     if (!hasWorks) return;
-    const entries = works.map((w) => {
-      const nw = normWork(w);
-      return nw ? toRIS(nw) : '';
+    const entries = works.map((work) => {
+      const normalized = normWork(work);
+      return normalized ? toRIS(normalized) : '';
     }).filter(Boolean);
-    download(`${base}-works.ris`, entries.join('\n\n'), 'application/x-research-info-systems');
+    downloadText(`${base}-works.ris`, entries.join('\n\n'), EXPORT_MIME.ris);
     showNotification(t('common.messages.risExported'), 'success');
   }, [base, hasWorks, t, works]);
 

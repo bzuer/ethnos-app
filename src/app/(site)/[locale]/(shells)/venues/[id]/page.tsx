@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
+import SubjectLinks from '@/components/common/SubjectLinks';
 import VenueWorksList from './VenueWorksList';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
 import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
+import { mergeWorkLists } from '@/lib/entity-export';
 import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
@@ -276,16 +278,15 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     : (Array.isArray((venue as any)?.summary_snapshot?.subjects) ? (venue as any).summary_snapshot.subjects : []);
   const venueSubjectItems = (() => {
     const seen = new Set<string>();
-    const out: Array<{ id: any; term: string }> = [];
+    const out: Array<{ term: string }> = [];
     for (const s of venueSubjectsRaw) {
       if (!s || typeof s !== 'object') continue;
-      const sid = s.subject_id ?? s.id ?? null;
       const term = s.term || s.display_name || s.name || s.label || '';
       if (!term) continue;
-      const key = sid != null ? `id:${sid}` : `term:${String(term).toLowerCase()}`;
+      const key = String(term).toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ id: sid, term: String(term) });
+      out.push({ term: String(term) });
     }
     return out;
   })();
@@ -456,36 +457,6 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
         </section>
       )}
 
-      {descriptionText ? (
-        <section aria-labelledby="venue-description">
-          <h2 className="title-section" id="venue-description">{t('venues.detail.description')}</h2>
-          <p className="description">{descriptionText}</p>
-        </section>
-      ) : null}
-
-      {venueSubjectItems.length > 0 ? (
-        <section aria-labelledby="venue-subjects">
-          <h2 className="title-section" id="venue-subjects">{t('venues.detail.subjects')}</h2>
-          <p className="description">
-            {venueSubjectItems.map((subject, idx) => (
-              <span key={subject.id ?? `${subject.term}-${idx}`}>
-                {subject.id ? (
-                  <LocaleLink prefetch={false} className="action-link" href={`/subjects/${subject.id}`}>{subject.term}</LocaleLink>
-                ) : (
-                  <span>{subject.term}</span>
-                )}
-                {idx < venueSubjectItems.length - 1 ? ' · ' : ''}
-              </span>
-            ))}
-          </p>
-        </section>
-      ) : subjectsText ? (
-        <section aria-labelledby="venue-subjects">
-          <h2 className="title-section" id="venue-subjects">{t('venues.detail.subjects')}</h2>
-          <p className="description">{subjectsText}</p>
-        </section>
-      ) : null}
-
       {(() => {
         const listLabels = {
           titleUnavailable: t('common.entities.titleUnavailable'),
@@ -524,7 +495,6 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
         const recentItems = [...works].sort(byRecency);
         const firstItems = [...oldestWorks].sort(byOldest);
         const prominentItems = prominentWorks;
-        const topAuthors: any[] = Array.isArray((venue as any)?.top_authors) ? (venue as any).top_authors : [];
 
         const pageHref = (target: number) => `/venues/${id}${target > 1 ? `?page=${target}` : ''}`;
         const paginationNav = (
@@ -542,7 +512,21 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
           </nav>
         );
 
+        const summaryPanel = (descriptionText || venueSubjectItems.length > 0 || subjectsText) ? (
+          <>
+            {descriptionText ? <p className="description">{descriptionText}</p> : null}
+            {venueSubjectItems.length > 0
+              ? <SubjectLinks subjects={venueSubjectItems} filters={{ venue: name }} />
+              : (subjectsText ? <p className="description subject-list">{subjectsText}</p> : null)}
+          </>
+        ) : null;
+
         const tabs: SectionTabDescriptor[] = [
+          summaryPanel ? {
+            key: 'summary',
+            label: t('venues.sections.summary'),
+            content: summaryPanel
+          } : null,
           {
             key: 'recent',
             label: t('venues.sections.recent'),
@@ -565,39 +549,10 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
               <VenueWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} />
             )
           },
-          topAuthors.length > 0 ? {
-            key: 'authors',
-            label: t('venues.sections.authors'),
-            content: (
-              <ul className="results-list">
-                {topAuthors.map((author: any, idx: number) => {
-                  const authorId = author?.person_id ?? author?.id;
-                  const authorName = author?.preferred_name || author?.name || t('common.entities.authorUnknown');
-                  const authorWorks = Number(author?.works_count) || 0;
-                  return (
-                    <li className="result-item" key={authorId || idx}>
-                      <h3 className="result-title">
-                        {authorId ? (
-                          <LocaleLink prefetch={false} className="result-link" href={`/persons/${authorId}`}>{authorName}</LocaleLink>
-                        ) : (
-                          <span className="field-value">{authorName}</span>
-                        )}
-                      </h3>
-                      {authorWorks > 0 ? (
-                        <p className="result-meta">
-                          <span className="result-total">{t('common.meta.worksCount', { count: authorWorks })}</span>
-                        </p>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )
-          } : null,
           {
             key: 'tools',
             label: t('venues.sections.tools'),
-            content: <EntityTools kind="venue" entity={venue} works={works} entityExportLabel={t('venues.tools.exportVenue')} />
+            content: <EntityTools kind="venue" entity={venue} works={mergeWorkLists(recentItems, prominentItems, firstItems)} entityExportLabel={t('venues.tools.exportVenue')} />
           }
         ].filter(Boolean) as SectionTabDescriptor[];
 

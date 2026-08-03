@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import { actGetWorkFull } from '@/lib/actions';
+import { EXPORT_MIME, downloadBlob, downloadJson, downloadText } from '@/lib/download';
+import { buildWorksExport } from '@/lib/entity-export';
 import { showNotification } from '@/lib/notify';
 import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
@@ -57,18 +59,6 @@ function formatAuthorsForDisplay(authors: any, fallback: string): string {
   return fallback;
 }
 
-function downloadFile(filename: string, content: Blob | string, type?: string) {
-  const blob = typeof content === 'string' ? new Blob([content], { type: type || 'text/plain;charset=utf-8' }) : content;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 async function fetchWork(id: string | number): Promise<Work | null> {
   try {
     return await actGetWorkFull(id, true);
@@ -92,7 +82,11 @@ async function resolveWorksForExport(list: SavedItem[]) {
 async function exportApaDocx(items: any[], filename: string, fallbackAuthor: string) {
   const { buildApaDocxBlob } = await import('@/lib/work-export-docx');
   const blob = await buildApaDocxBlob(items, fallbackAuthor, { spacing: true });
-  downloadFile(filename, blob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  downloadBlob(filename, blob);
+}
+
+function exportStamp() {
+  return new Date().toISOString().split('T')[0];
 }
 
 export default function ListPageClient() {
@@ -133,36 +127,27 @@ export default function ListPageClient() {
 
   const exportJson = async () => {
     const resolved = await resolveWorksForExport(items);
-    const works = resolved.map(normWork).filter(Boolean);
-    const payload = JSON.stringify({
-      exported_at: new Date().toISOString(),
-      count: works.length,
-      works
-    }, null, 2);
-    downloadFile(`reading-list-${new Date().toISOString().split('T')[0]}.json`, payload, 'application/json');
+    downloadJson(`reading-list-${exportStamp()}.json`, buildWorksExport(resolved));
     showNotification(t('common.messages.jsonExported'), 'success');
   };
 
   const exportRIS = async () => {
     const resolved = await resolveWorksForExport(items);
     const works = resolved.map(normWork).filter(Boolean);
-    const content = works.map(toRIS).join('\n\n');
-    downloadFile(`references-${new Date().toISOString().split('T')[0]}.ris`, content || ' ', 'application/x-research-info-systems');
+    downloadText(`references-${exportStamp()}.ris`, works.map(toRIS).join('\n\n'), EXPORT_MIME.ris);
     showNotification(t('common.messages.risExported'), 'success');
   };
 
   const exportBib = async () => {
     const resolved = await resolveWorksForExport(items);
     const works = resolved.map(normWork).filter(Boolean);
-    const content = works.map(toBibTeX).join('\n\n');
-    downloadFile(`references-${new Date().toISOString().split('T')[0]}.bib`, content || ' ', 'application/x-bibtex');
+    downloadText(`references-${exportStamp()}.bib`, works.map(toBibTeX).join('\n\n'), EXPORT_MIME.bibtex);
     showNotification(t('common.messages.bibExported'), 'success');
   };
 
   const exportApa = async () => {
     const resolved = await resolveWorksForExport(items);
-    const works = resolved.map(normWork).filter(Boolean);
-    await exportApaDocx(works, `references-apa-${new Date().toISOString().split('T')[0]}.docx`, t('common.entities.authorUnknown'));
+    await exportApaDocx(resolved, `references-apa-${exportStamp()}.docx`, t('common.entities.authorUnknown'));
     showNotification(t('common.messages.apaExported'), 'success');
   };
 

@@ -47,10 +47,12 @@ export function normalizeDoi(value: any) {
   return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
 }
 
+export const SITE_ORIGIN = 'https://ethnos.app';
+
 export function buildAccessUrl(id: string | number | null | undefined) {
   if (id === null || id === undefined) return '';
   const value = String(id).trim();
-  return value ? `https://ethnos.app/works/${encodeURIComponent(value)}` : '';
+  return value ? `${SITE_ORIGIN}/works/${encodeURIComponent(value)}` : '';
 }
 
 export function buildDoiUrl(doi: string | null | undefined) {

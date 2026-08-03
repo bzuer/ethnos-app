@@ -152,7 +152,6 @@
       "references": "Referências",
       "worksCount": "{count} obras",
       "authorsCount": "{count} autores",
-      "sharedWorksCount": "{count} trabalhos em coautoria",
       "termEmpty": "(vazio)",
       "ariaSearchForm": "Formulário de busca",
       "ariaAdvancedSearchForm": "Formulário de busca avançada",
@@ -260,16 +259,14 @@
       "openAccess": "Open Access",
       "indexedScopus": "Scopus",
       "doaj": "DOAJ",
-      "description": "Resumo",
-      "subjects": "Assuntos",
       "publications": "Número de publicações"
     },
     "sections": {
       "navLabel": "Seções do periódico",
+      "summary": "Resumo",
       "recent": "Recentes",
       "prominent": "Proeminentes",
       "first": "Primeiros",
-      "authors": "Autores",
       "tools": "Ferramentas"
     },
     "empty": {
@@ -291,11 +288,11 @@
   "works": {
     "detail": {
       "titleFallback": "Detalhes da Obra",
-      "unresolvedReferences": "Referências não resolvidas",
       "sections": {
         "bibliographic": "Dados Bibliográficos",
         "abstract": "Resumo",
         "references": "Referências",
+        "impact": "Impacto",
         "citedBy": "Citações",
         "tools": "Ferramentas",
         "navLabel": "Seções da obra"
@@ -383,11 +380,8 @@
       "recent": "Recentes",
       "prominent": "Proeminentes",
       "first": "Primeiros",
-      "collaborators": "Colaboradores",
+      "expertise": "Especialidades",
       "tools": "Ferramentas"
-    },
-    "expertise": {
-      "title": "Áreas de atuação"
     },
     "empty": {
       "recent": "Sem obras para listar nesta página.",
@@ -445,12 +439,7 @@
       "website": "Site",
       "alternativeNames": "Também conhecida como",
       "production": "Produção por tipo",
-      "trend": "Tendência de publicação",
-      "relationships": "Instituições relacionadas",
-      "parents": "Superior",
-      "children": "Subordinada",
-      "related": "Relacionada",
-      "topAuthors": "Principais autores"
+      "trend": "Tendência de publicação"
     },
     "sections": {
       "navLabel": "Seções da instituição",
@@ -458,9 +447,7 @@
       "prominent": "Proeminentes",
       "first": "Primeiros",
       "funded": "Financiados",
-      "authors": "Autores",
       "production": "Produção",
-      "related": "Relacionadas",
       "tools": "Ferramentas"
     },
     "empty": {

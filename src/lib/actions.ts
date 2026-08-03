@@ -146,13 +146,10 @@ export async function actGetWorkReferences(id: string | number, page = 1) {
   const env: any = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}/references?${qs.toString()}`, { retries: 1, timeoutMs: 10000 });
   const data = env?.data || {};
   const resolved = Array.isArray(data.referenced_works) ? data.referenced_works : [];
-  const unresolvedRaw = Array.isArray(data.unresolved_references) ? data.unresolved_references : [];
   const counts = data.counts || {};
   const pagination = env?.pagination || {};
   return {
     items: resolved.map(mapRelatedRow),
-    unresolved: unresolvedRaw.map((r: any) => ({ doi: r?.cited_doi ?? null, status: r?.status ?? null })),
-    counts: { total: Number(counts.total) || 0, resolved: Number(counts.resolved) || 0, unresolved: Number(counts.unresolved) || 0 },
     total: Number(counts.total ?? pagination.total) || resolved.length,
     page: Number(pagination.page) || 1,
     hasNext: !!pagination.hasNext

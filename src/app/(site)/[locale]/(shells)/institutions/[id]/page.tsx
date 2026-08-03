@@ -5,6 +5,7 @@ import SectionTabs, { type SectionTabDescriptor } from '@/components/common/Sect
 import EntityTools from '@/components/common/EntityTools';
 import WorkRelatedList from '../../works/[id]/WorkRelatedList';
 import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
+import { mergeWorkLists } from '@/lib/entity-export';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import { formatMetadataAuthors } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
@@ -78,14 +79,6 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
   const altNames: string[] = Array.isArray(institution?.names?.alternative_names) ? institution.names.alternative_names.filter(Boolean) : [];
   const byType: any[] = Array.isArray(institution?.production_summary?.by_work_type) ? institution.production_summary.by_work_type : [];
   const trend: any[] = Array.isArray(institution?.production_summary?.publication_trend) ? institution.production_summary.publication_trend : [];
-  const topAuthors: any[] = Array.isArray(institution?.top_authors) ? institution.top_authors : [];
-  const relationships = institution?.relationships || {};
-  const relatedGroups: Array<{ key: string; label: string; rows: any[] }> = [
-    { key: 'parents', label: t('institutions.detail.parents'), rows: Array.isArray(relationships.parents) ? relationships.parents : [] },
-    { key: 'children', label: t('institutions.detail.children'), rows: Array.isArray(relationships.children) ? relationships.children : [] },
-    { key: 'related', label: t('institutions.detail.related'), rows: Array.isArray(relationships.related) ? relationships.related : [] }
-  ].filter((group) => group.rows.length > 0);
-
   const relatedLabels = {
     titleUnavailable: t('common.entities.titleUnavailable'),
     authorUnknown: t('common.entities.authorUnknown'),
@@ -153,34 +146,6 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
       label: t('institutions.sections.funded'),
       content: <WorkRelatedList items={fundedWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.funded') }} />
     } : null,
-    topAuthors.length > 0 ? {
-      key: 'authors',
-      label: t('institutions.sections.authors'),
-      content: (
-        <ul className="results-list">
-          {topAuthors.map((author: any, idx: number) => (
-            <li className="result-item" key={author?.person_id || idx}>
-              <h3 className="result-title">
-                {author?.person_id ? (
-                  <LocaleLink className="result-link" href={`/persons/${author.person_id}`}>{author?.preferred_name || author?.name || t('common.entities.authorUnknown')}</LocaleLink>
-                ) : (
-                  <span className="field-value">{author?.preferred_name || author?.name || t('common.entities.authorUnknown')}</span>
-                )}
-              </h3>
-              <p className="result-meta">
-                <span className="result-total">{t('institutions.detail.works')}: {formatNumber(Number(author?.works_count) || 0)}</span>
-                {author?.latest_publication_year ? (
-                  <>
-                    <span className="meta-separator" aria-hidden="true"> • </span>
-                    <span className="result-year">{author.latest_publication_year}</span>
-                  </>
-                ) : null}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )
-    } : null,
     (byType.length > 0 || trend.length > 0) ? {
       key: 'production',
       label: t('institutions.sections.production'),
@@ -213,37 +178,10 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
         </div>
       )
     } : null,
-    relatedGroups.length > 0 ? {
-      key: 'related',
-      label: t('institutions.sections.related'),
-      content: (
-        <div>
-          {relatedGroups.map((group) => (
-            <section key={group.key} aria-label={group.label}>
-              <h3 className="title-section">{group.label}</h3>
-              <ul className="results-list">
-                {group.rows.map((row: any, idx: number) => (
-                  <li className="result-item" key={row?.id || idx}>
-                    <h4 className="result-title">
-                      {row?.id ? (
-                        <LocaleLink className="result-link" href={`/institutions/${row.id}`}>{row?.name || t('common.entities.nameUnavailable')}</LocaleLink>
-                      ) : (
-                        <span className="field-value">{row?.name || t('common.entities.nameUnavailable')}</span>
-                      )}
-                    </h4>
-                    {row?.country_code ? <p className="result-meta"><span className="result-country">{String(row.country_code).toUpperCase()}</span></p> : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )
-    } : null,
     {
       key: 'tools',
       label: t('institutions.sections.tools'),
-      content: <EntityTools kind="institution" entity={institution} works={works} entityExportLabel={t('institutions.tools.exportInstitution')} />
+      content: <EntityTools kind="institution" entity={institution} works={mergeWorkLists(works, prominentWorks, firstWorks, fundedWorks)} entityExportLabel={t('institutions.tools.exportInstitution')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 

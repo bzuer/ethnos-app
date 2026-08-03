@@ -152,7 +152,6 @@
       "references": "References",
       "worksCount": "{count} works",
       "authorsCount": "{count} authors",
-      "sharedWorksCount": "{count} shared works",
       "termEmpty": "(empty)",
       "ariaSearchForm": "Search form",
       "ariaAdvancedSearchForm": "Advanced search form",
@@ -260,16 +259,14 @@
       "openAccess": "Open Access",
       "indexedScopus": "Scopus indexed",
       "doaj": "DOAJ indexed",
-      "description": "Summary",
-      "subjects": "Subjects",
       "publications": "Publications in this journal"
     },
     "sections": {
       "navLabel": "Venue sections",
+      "summary": "Summary",
       "recent": "Recent",
       "prominent": "Prominent",
       "first": "First",
-      "authors": "Authors",
       "tools": "Tools"
     },
     "empty": {
@@ -291,11 +288,11 @@
   "works": {
     "detail": {
       "titleFallback": "Work Details",
-      "unresolvedReferences": "Unresolved references",
       "sections": {
         "bibliographic": "Bibliographic Data",
         "abstract": "Abstract",
         "references": "References",
+        "impact": "Impact",
         "citedBy": "Citations",
         "tools": "Tools",
         "navLabel": "Work sections"
@@ -383,11 +380,8 @@
       "recent": "Recent",
       "prominent": "Prominent",
       "first": "First",
-      "collaborators": "Collaborators",
+      "expertise": "Expertise",
       "tools": "Tools"
-    },
-    "expertise": {
-      "title": "Areas of expertise"
     },
     "empty": {
       "recent": "No works to list on this page.",
@@ -445,12 +439,7 @@
       "website": "Website",
       "alternativeNames": "Also known as",
       "production": "Production by type",
-      "trend": "Publication trend",
-      "relationships": "Related institutions",
-      "parents": "Parent",
-      "children": "Child",
-      "related": "Related",
-      "topAuthors": "Top authors"
+      "trend": "Publication trend"
     },
     "sections": {
       "navLabel": "Institution sections",
@@ -458,9 +447,7 @@
       "prominent": "Prominent",
       "first": "First",
       "funded": "Funded",
-      "authors": "Authors",
       "production": "Production",
-      "related": "Related",
       "tools": "Tools"
     },
     "empty": {

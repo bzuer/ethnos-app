@@ -181,6 +181,26 @@ body::before {
     line-height: 1.5;
     margin-top: var(--spacing-xl);
 }
+.subject-list {
+    margin-top: var(--spacing-md);
+}
+.subject-link {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    text-transform: none;
+    color: var(--primary-blue);
+    text-decoration: none;
+}
+.subject-link:hover {
+    font-weight: 600;
+    text-decoration: none;
+}
+.subject-count {
+    font-size: 12px;
+    color: var(--subtle-gray);
+}
 :where(
 h1,
 h2,

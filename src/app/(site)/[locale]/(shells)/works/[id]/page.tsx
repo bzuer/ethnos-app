@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
 import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/common/GroupedIdentifiers';
+import SubjectLinks from '@/components/common/SubjectLinks';
 import ClientActions from './work-actions';
 import WorkCitationList from './WorkCitationList';
 import WorkSectionTabs from './WorkSectionTabs';
@@ -235,20 +236,17 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const cleanedAbstract = sanitizeWorkAbstract(abstractText);
   const refs: any[] = Array.isArray(work?.citations?.references) ? work.citations.references : [];
   const citedBy: any[] = Array.isArray(work?.citations?.cited_by) ? work.citations.cited_by : [];
-  const unresolvedRefs = (Array.isArray(work?.citations?.unresolved_references) ? work.citations.unresolved_references : [])
-    .map((entry: any) => ({ doi: entry?.cited_doi ?? null, status: entry?.status ?? null }));
   const subjectsRaw: any[] = Array.isArray(work?.subjects) ? work.subjects : [];
   const workSubjects = (() => {
     const seen = new Set<string>();
-    const out: Array<{ id: any; term: string }> = [];
+    const out: Array<{ term: string }> = [];
     for (const s of subjectsRaw) {
-      const sid = s?.subject_id ?? s?.id ?? null;
       const term = s?.term || s?.display_name || s?.name || '';
       if (!term) continue;
-      const key = sid != null ? `id:${sid}` : `term:${term.toLowerCase()}`;
+      const key = String(term).toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ id: sid, term: String(term) });
+      out.push({ term: String(term) });
     }
     return out;
   })();
@@ -268,6 +266,82 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
     : (citationsCountDisplay || citedBy.length);
   const referencesTabTotal = referencesCountDisplay || refs.length;
   const coins = buildCoins(work, locale, id);
+
+  const impactPanel = (() => {
+    const cm: any = authoritativeMetrics?.citation_metrics || {};
+    const tm: any = authoritativeMetrics?.temporal_metrics || {};
+    const ii: any = authoritativeMetrics?.impact_indicators || {};
+    const perYear = Number(cm?.citations_per_year);
+    const uniqueCitingWorks = Number(cm?.unique_citing_works);
+    const types: any = cm?.citation_types || {};
+    const typePos = Number(types?.positive) || 0;
+    const typeNeu = Number(types?.neutral) || 0;
+    const typeNeg = Number(types?.negative) || 0;
+    const typeSelf = Number(types?.self) || 0;
+    const hasTypes = typePos + typeNeu + typeNeg + typeSelf > 0;
+    const firstYear = Number(tm?.first_citation_year) || null;
+    const latestYear = Number(tm?.latest_citation_year) || null;
+    const spanYears = Number(tm?.citation_span_years);
+    const highlyCited = typeof ii?.highly_cited === 'boolean' ? ii.highly_cited : null;
+    const velocity = ii?.citation_velocity ? String(ii.citation_velocity).replace(/_/g, ' ') : '';
+    const hasImpact = (Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0)
+      || (Number.isFinite(perYear) && perYear > 0)
+      || (firstYear && latestYear)
+      || highlyCited !== null
+      || !!velocity
+      || hasTypes;
+    if (!hasImpact) return null;
+    return (
+      <table className="data-table item-detail-table">
+        <tbody>
+          {Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0 ? (
+            <tr>
+              <th scope="row">{t('works.detail.impact.uniqueCiting')}</th>
+              <td className="field-value">{formatNumber(uniqueCitingWorks)}</td>
+            </tr>
+          ) : null}
+          {Number.isFinite(perYear) && perYear > 0 ? (
+            <tr>
+              <th scope="row">{t('works.detail.impact.citationsPerYear')}</th>
+              <td className="field-value">{formatNumber(perYear)}</td>
+            </tr>
+          ) : null}
+          {firstYear && latestYear ? (
+            <tr>
+              <th scope="row">{t('works.detail.impact.citationSpan')}</th>
+              <td className="field-value">{firstYear} - {latestYear}{Number.isFinite(spanYears) && spanYears > 0 ? ` (${formatNumber(spanYears)})` : ''}</td>
+            </tr>
+          ) : null}
+          {velocity ? (
+            <tr>
+              <th scope="row">{t('works.detail.impact.velocity')}</th>
+              <td className="field-value">{velocity}</td>
+            </tr>
+          ) : null}
+          {highlyCited !== null ? (
+            <tr>
+              <th scope="row">{t('works.detail.impact.highlyCited')}</th>
+              <td className="field-value">{highlyCited ? t('common.values.yes') : t('common.values.no')}</td>
+            </tr>
+          ) : null}
+          {hasTypes ? (
+            <tr>
+              <th scope="row">{t('works.detail.impact.citationTypes')}</th>
+              <td className="field-value">
+                {[
+                  typePos > 0 ? `${t('works.detail.impact.positive')}: ${formatNumber(typePos)}` : '',
+                  typeNeu > 0 ? `${t('works.detail.impact.neutral')}: ${formatNumber(typeNeu)}` : '',
+                  typeNeg > 0 ? `${t('works.detail.impact.negative')}: ${formatNumber(typeNeg)}` : '',
+                  typeSelf > 0 ? `${t('works.detail.impact.selfCitations')}: ${formatNumber(typeSelf)}` : ''
+                ].filter(Boolean).join(' • ')}
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+    );
+  })();
+
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
   const jsonLd: Record<string, any> = {
     '@context': 'https://schema.org',
@@ -500,118 +574,26 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         </table>
       </section>
 
-      {(() => {
-        const cm: any = authoritativeMetrics?.citation_metrics || {};
-        const tm: any = authoritativeMetrics?.temporal_metrics || {};
-        const ii: any = authoritativeMetrics?.impact_indicators || {};
-        const perYear = Number(cm?.citations_per_year);
-        const uniqueCitingWorks = Number(cm?.unique_citing_works);
-        const types: any = cm?.citation_types || {};
-        const typePos = Number(types?.positive) || 0;
-        const typeNeu = Number(types?.neutral) || 0;
-        const typeNeg = Number(types?.negative) || 0;
-        const typeSelf = Number(types?.self) || 0;
-        const hasTypes = typePos + typeNeu + typeNeg + typeSelf > 0;
-        const firstYear = Number(tm?.first_citation_year) || null;
-        const latestYear = Number(tm?.latest_citation_year) || null;
-        const spanYears = Number(tm?.citation_span_years);
-        const highlyCited = typeof ii?.highly_cited === 'boolean' ? ii.highly_cited : null;
-        const velocity = ii?.citation_velocity ? String(ii.citation_velocity).replace(/_/g, ' ') : '';
-        const hasImpact = (Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0)
-          || (Number.isFinite(perYear) && perYear > 0)
-          || (firstYear && latestYear)
-          || highlyCited !== null
-          || !!velocity
-          || hasTypes;
-        if (!hasImpact) return null;
-        return (
-          <section aria-labelledby="impact-block">
-            <h2 className="title-section" id="impact-block">{t('works.detail.impact.title')}</h2>
-            <table className="data-table item-detail-table">
-              <tbody>
-                {Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0 ? (
-                  <tr>
-                    <th scope="row">{t('works.detail.impact.uniqueCiting')}</th>
-                    <td className="field-value">{formatNumber(uniqueCitingWorks)}</td>
-                  </tr>
-                ) : null}
-                {Number.isFinite(perYear) && perYear > 0 ? (
-                  <tr>
-                    <th scope="row">{t('works.detail.impact.citationsPerYear')}</th>
-                    <td className="field-value">{formatNumber(perYear)}</td>
-                  </tr>
-                ) : null}
-                {firstYear && latestYear ? (
-                  <tr>
-                    <th scope="row">{t('works.detail.impact.citationSpan')}</th>
-                    <td className="field-value">{firstYear} - {latestYear}{Number.isFinite(spanYears) && spanYears > 0 ? ` (${formatNumber(spanYears)})` : ''}</td>
-                  </tr>
-                ) : null}
-                {velocity ? (
-                  <tr>
-                    <th scope="row">{t('works.detail.impact.velocity')}</th>
-                    <td className="field-value">{velocity}</td>
-                  </tr>
-                ) : null}
-                {highlyCited !== null ? (
-                  <tr>
-                    <th scope="row">{t('works.detail.impact.highlyCited')}</th>
-                    <td className="field-value">{highlyCited ? t('common.values.yes') : t('common.values.no')}</td>
-                  </tr>
-                ) : null}
-                {hasTypes ? (
-                  <tr>
-                    <th scope="row">{t('works.detail.impact.citationTypes')}</th>
-                    <td className="field-value">
-                      {[
-                        typePos > 0 ? `${t('works.detail.impact.positive')}: ${formatNumber(typePos)}` : '',
-                        typeNeu > 0 ? `${t('works.detail.impact.neutral')}: ${formatNumber(typeNeu)}` : '',
-                        typeNeg > 0 ? `${t('works.detail.impact.negative')}: ${formatNumber(typeNeg)}` : '',
-                        typeSelf > 0 ? `${t('works.detail.impact.selfCitations')}: ${formatNumber(typeSelf)}` : ''
-                      ].filter(Boolean).join(' • ')}
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </section>
-        );
-      })()}
-
       <WorkSectionTabs
         ariaLabel={t('works.detail.sections.navLabel')}
         abstractLabel={t('works.detail.sections.abstract')}
         citationsLabel={t('works.detail.sections.citedBy')}
         referencesLabel={t('works.detail.sections.references')}
+        impactLabel={t('works.detail.sections.impact')}
         toolsLabel={t('works.detail.sections.tools')}
         abstract={(abstractText || workSubjects.length > 0) ? (
           <>
             {abstractText ? <p className="description">{abstractText}</p> : null}
-            {workSubjects.length > 0 ? (
-              <section aria-labelledby="work-subjects">
-                <h3 className="title-section" id="work-subjects">{t('subjects.title')}</h3>
-                <p className="description">
-                  {workSubjects.map((subject, idx) => (
-                    <span key={subject.id ?? `${subject.term}-${idx}`}>
-                      {subject.id ? (
-                        <LocaleLink prefetch={false} className="action-link" href={`/subjects/${subject.id}`}>{subject.term}</LocaleLink>
-                      ) : (
-                        <span>{subject.term}</span>
-                      )}
-                      {idx < workSubjects.length - 1 ? ' · ' : ''}
-                    </span>
-                  ))}
-                </p>
-              </section>
-            ) : null}
+            <SubjectLinks subjects={workSubjects} />
           </>
         ) : null}
         citations={(citationsTabTotal > 0 || citedBy.length > 0) ? (
           <WorkCitationList workId={id} kind="citations" initialItems={citedBy} total={citationsTabTotal} />
         ) : null}
         references={(referencesTabTotal > 0 || refs.length > 0) ? (
-          <WorkCitationList workId={id} kind="references" initialItems={refs} initialUnresolved={unresolvedRefs} total={referencesTabTotal} />
+          <WorkCitationList workId={id} kind="references" initialItems={refs} total={referencesTabTotal} />
         ) : null}
+        impact={impactPanel}
         tools={(
           <div className="tools-actions">
             <ClientActions work={work} />

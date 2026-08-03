@@ -2,7 +2,17 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { showNotification } from '@/lib/notify';
-import { normWork, toBibTeX } from '@/lib/work-export';
+import { EXPORT_MIME, downloadBlob, downloadJson, downloadText } from '@/lib/download';
+import { buildWorkExport, exportFilename } from '@/lib/entity-export';
+import {
+  buildFileOpenAccessUrl,
+  normWork,
+  pickLibgenFile,
+  pickOpenAccessFile,
+  pickScimagFile,
+  toBibTeX,
+  toRIS
+} from '@/lib/work-export';
 
 type Props = { work: any };
 
@@ -44,32 +54,10 @@ function toSavedItem(work: any) {
   };
 }
 
-function download(filename: string, content: string, type?: string) {
-  const blob = new Blob([content], { type: type || 'application/octet-stream' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function downloadBlob(filename: string, content: Blob) {
-  const url = URL.createObjectURL(content);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 export default function ClientActions({ work }: Props) {
   const t = useTranslations();
   const files = Array.isArray(work?.files) ? work.files : [];
+  const base = exportFilename('work', work);
 
   const onAdd = useCallback(() => {
     const list = readList();
@@ -85,48 +73,42 @@ export default function ClientActions({ work }: Props) {
     showNotification(t('common.messages.added'), 'success');
   }, [work, t]);
 
-  const onExportBib = useCallback(() => {
-    const nw = normWork(work);
-    const content = nw ? toBibTeX(nw) : '';
-    download(`work-${work?.id || 'data'}.bib`, content || ' ', 'application/x-bibtex');
-    showNotification(t('common.messages.bibExported'), 'success');
-  }, [work, t]);
-
   const onExportJson = useCallback(() => {
-    const nw = normWork(work);
-    const works = nw ? [nw] : [];
-    const payload = JSON.stringify({
-      exported_at: new Date().toISOString(),
-      count: works.length,
-      works
-    }, null, 2);
-    download(`work-${work?.id || 'data'}.json`, payload, 'application/json');
+    downloadJson(`${base}.json`, buildWorkExport(work));
     showNotification(t('common.messages.jsonExported'), 'success');
-  }, [work, t]);
+  }, [base, work, t]);
+
+  const onExportBib = useCallback(() => {
+    const normalized = normWork(work);
+    downloadText(`${base}.bib`, normalized ? toBibTeX(normalized) : '', EXPORT_MIME.bibtex);
+    showNotification(t('common.messages.bibExported'), 'success');
+  }, [base, work, t]);
+
+  const onExportRis = useCallback(() => {
+    const normalized = normWork(work);
+    downloadText(`${base}.ris`, normalized ? toRIS(normalized) : '', EXPORT_MIME.ris);
+    showNotification(t('common.messages.risExported'), 'success');
+  }, [base, work, t]);
 
   const onExportApa = useCallback(() => {
     const run = async () => {
       const { buildApaDocxBlob } = await import('@/lib/work-export-docx');
       const blob = await buildApaDocxBlob([work], t('common.entities.authorUnknown'));
-      downloadBlob(`work-${work?.id || 'data'}-apa.docx`, blob);
+      downloadBlob(`${base}-apa.docx`, blob);
       showNotification(t('common.messages.apaExported'), 'success');
     };
     void run();
-  }, [work, t]);
+  }, [base, work, t]);
 
   const doi = work?.doi || work?.publication?.doi;
-  const scimagFile = files.find((file: any) => file?.scimag_id);
-  const openAccessFile = files.find((file: any) => file?.best_oa_url || file?.best_oa?.url || file?.openacess_id || file?.openaccess_id);
-  const libgenFile = files.find((file: any) => file?.md5 && file?.libgen_id);
+  const scimagFile = pickScimagFile(files);
+  const openAccessFile = pickOpenAccessFile(files);
+  const libgenFile = pickLibgenFile(files);
   const doiHref = doi ? `https://doi.org/${encodeURIComponent(String(doi))}` : undefined;
   const scihubTarget = scimagFile ? (scimagFile?.doi || doi) : null;
-  const scihubHref = scimagFile && scihubTarget ? `https://sci-hub.st/${encodeURIComponent(String(scihubTarget))}` : undefined;
-  const openAccessIdRaw = openAccessFile?.openacess_id || openAccessFile?.openaccess_id;
-  const openAccessIdDoi = openAccessIdRaw && /^doi:/i.test(String(openAccessIdRaw))
-    ? String(openAccessIdRaw).replace(/^doi:\s*/i, '').trim()
-    : '';
-  const openAccessHref = openAccessFile?.best_oa_url || openAccessFile?.best_oa?.url || openAccessFile?.url || (openAccessIdDoi ? `https://doi.org/${openAccessIdDoi}` : '');
-  const libgenHref = libgenFile?.md5 ? `https://libgen.la/ads.php?md5=${encodeURIComponent(String(libgenFile.md5))}` : undefined;
+  const scihubHref = scihubTarget ? `https://sci-hub.st/${encodeURIComponent(String(scihubTarget))}` : undefined;
+  const openAccessHref = buildFileOpenAccessUrl(openAccessFile);
+  const libgenHref = libgenFile ? `https://libgen.la/ads.php?md5=${encodeURIComponent(String(libgenFile.md5))}` : undefined;
 
   const onOpenDoi = useCallback(() => {
     if (!doiHref) return;
@@ -169,6 +151,7 @@ export default function ClientActions({ work }: Props) {
       ) : null}
       <button type="button" className="action-btn btn-positive" onClick={onExportJson}>{t('common.actions.exportJson')}</button>
       <button type="button" className="action-btn btn-positive" onClick={onExportBib}>{t('common.actions.exportBib')}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportRis}>{t('common.actions.exportRis')}</button>
       <button type="button" className="action-btn btn-positive" onClick={onExportApa}>{t('common.actions.exportApa')}</button>
     </>
   );

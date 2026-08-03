@@ -3,8 +3,10 @@ import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
+import SubjectLinks from '@/components/common/SubjectLinks';
 import PersonWorksList from './PersonWorksList';
 import { getPersonsWorks, getPersonsWorksFirst, getPersonsWorksProminent } from '@/lib/endpoints';
+import { mergeWorkLists } from '@/lib/entity-export';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
@@ -191,7 +193,11 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const metrics = person?.metrics || {};
   const profile = person?.authorship_profile || {};
   const subjectExpertise: any[] = Array.isArray(person?.subject_expertise) ? person.subject_expertise : [];
-  const topCollaborators: any[] = Array.isArray(person?.top_collaborators) ? person.top_collaborators : [];
+  const expertiseItems = subjectExpertise.map((subject: any) => {
+    const term = subject?.term || subject?.display_name || subject?.name || '';
+    const works = Number(subject?.works_count) || 0;
+    return { term: String(term || ''), note: works > 0 ? t('common.meta.worksCount', { count: works }) : undefined };
+  }).filter((subject) => subject.term);
   const affiliationsRaw: any = person?.affiliations || person?.affiliation || person?.current_affiliation || [];
   const affiliationSource: any[] = Array.isArray(affiliationsRaw) ? affiliationsRaw : (affiliationsRaw ? [affiliationsRaw] : []);
   const affiliationEntries = affiliationSource.map((a: any) => {
@@ -270,39 +276,15 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
       label: t('persons.sections.first'),
       content: <PersonWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('persons.empty.first') }} />
     },
-    topCollaborators.length > 0 ? {
-      key: 'collaborators',
-      label: t('persons.sections.collaborators'),
-      content: (
-        <ul className="results-list">
-          {topCollaborators.map((collab: any, idx: number) => {
-            const collabId = collab?.person_id ?? collab?.id;
-            const collabName = collab?.preferred_name || collab?.name || t('common.entities.authorUnknown');
-            const shared = Number(collab?.shared_works_count ?? collab?.shared_works) || 0;
-            return (
-              <li className="result-item" key={collabId || idx}>
-                <h3 className="result-title">
-                  {collabId ? (
-                    <LocaleLink prefetch={false} className="result-link" href={`/persons/${collabId}`}>{collabName}</LocaleLink>
-                  ) : (
-                    <span className="field-value">{collabName}</span>
-                  )}
-                </h3>
-                {shared > 0 ? (
-                  <p className="result-meta">
-                    <span className="result-total">{t('common.meta.sharedWorksCount', { count: shared })}</span>
-                  </p>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )
+    expertiseItems.length > 0 ? {
+      key: 'expertise',
+      label: t('persons.sections.expertise'),
+      content: <SubjectLinks subjects={expertiseItems} filters={{ author: personName }} />
     } : null,
     {
       key: 'tools',
       label: t('persons.sections.tools'),
-      content: <EntityTools kind="person" entity={person} works={items} entityExportLabel={t('persons.tools.exportPerson')} />
+      content: <EntityTools kind="person" entity={person} works={mergeWorkLists(recentItems, prominentItems, firstItems)} entityExportLabel={t('persons.tools.exportPerson')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 
@@ -459,28 +441,6 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
           </table>
         </section>
       )}
-
-      {subjectExpertise.length > 0 ? (
-        <section aria-labelledby="person-expertise">
-          <h2 className="title-section" id="person-expertise">{t('persons.expertise.title')}</h2>
-          <p className="description">
-            {subjectExpertise.map((subject: any, idx: number) => {
-              const term = subject?.term || subject?.display_name || subject?.name || '';
-              if (!term) return null;
-              const sid = subject?.subject_id ?? subject?.id ?? null;
-              const works = Number(subject?.works_count) || 0;
-              const href = sid ? `/subjects/${sid}` : `/search/results?subject=${encodeURIComponent(String(term))}`;
-              return (
-                <span key={sid || `${term}-${idx}`}>
-                  <LocaleLink prefetch={false} className="action-link" href={href}>{term}</LocaleLink>
-                  {works > 0 ? <span className="result-total"> ({t('common.meta.worksCount', { count: works })})</span> : null}
-                  {idx < subjectExpertise.length - 1 ? ' · ' : ''}
-                </span>
-              );
-            })}
-          </p>
-        </section>
-      ) : null}
 
       <SectionTabs ariaLabel={t('persons.sections.navLabel')} tabs={tabs} />
     </div>
