@@ -10,6 +10,19 @@ import {
 export type ExportKind = 'work' | 'person' | 'venue' | 'institution' | 'subject';
 export type EntityKind = Exclude<ExportKind, 'work'>;
 
+export type EntityExportScope = {
+  works: 'all' | 'current_year' | 'first_page';
+  year: number | null;
+  limit: number | null;
+  truncated: boolean;
+};
+
+export type EntityExportWorks = {
+  works: any[];
+  total: number;
+  scope: EntityExportScope;
+};
+
 const ENTITY_SEGMENTS: Record<ExportKind, string> = {
   work: 'works',
   person: 'persons',
@@ -146,12 +159,13 @@ export function buildEntityExport(kind: EntityKind, entity: any) {
   };
 }
 
-export function buildWorksExport(works: any[], context?: { kind: EntityKind; entity: any }) {
+export function buildWorksExport(works: any[], context?: { kind: EntityKind; entity: any; scope?: any }) {
   const records = (Array.isArray(works) ? works : []).map(buildWorkRecord).filter(Boolean);
   const envelope: Record<string, any> = { exported_at: new Date().toISOString() };
   if (context) {
     envelope.source = buildEntityUrl(context.kind, context.entity?.id) || null;
     envelope[`${context.kind}_id`] = context.entity?.id ?? null;
+    if (context.scope) envelope.scope = context.scope;
   }
   envelope.count = records.length;
   envelope.works = records;

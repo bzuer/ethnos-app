@@ -2,12 +2,14 @@
 
 import { fetchJson } from './api';
 import {
+  getEntityExportWorks,
   getVenuesPage,
   searchWorks,
   type VenuesListFilters,
   type VenuesListSort,
   type VenuesListSortOrder
 } from './endpoints';
+import type { EntityExportWorks, EntityKind } from './entity-export';
 
 export type Primitive = string | number | boolean;
 export type ParamRecord = Record<string, Primitive | undefined | null>;
@@ -154,6 +156,10 @@ export async function actGetWorkReferences(id: string | number, page = 1) {
     page: Number(pagination.page) || 1,
     hasNext: !!pagination.hasNext
   };
+}
+
+export async function actGetEntityExportWorks(kind: EntityKind, id: string | number): Promise<EntityExportWorks> {
+  return await getEntityExportWorks(kind, id);
 }
 
 export type VenuesPageActionOptions = {

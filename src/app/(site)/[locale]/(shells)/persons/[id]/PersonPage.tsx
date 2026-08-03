@@ -6,7 +6,6 @@ import EntityTools from '@/components/common/EntityTools';
 import SubjectLinks from '@/components/common/SubjectLinks';
 import PersonWorksList from './PersonWorksList';
 import { getPersonsWorks, getPersonsWorksFirst, getPersonsWorksProminent } from '@/lib/endpoints';
-import { mergeWorkLists } from '@/lib/entity-export';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
@@ -192,6 +191,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const isVerified = !!person?.is_verified;
   const metrics = person?.metrics || {};
   const profile = person?.authorship_profile || {};
+  const personWorksCount = Number(person?.metrics?.works_count ?? person?.authorship_profile?.works_count ?? pagination?.total) || 0;
   const subjectExpertise: any[] = Array.isArray(person?.subject_expertise) ? person.subject_expertise : [];
   const expertiseItems = subjectExpertise.map((subject: any) => {
     const term = subject?.term || subject?.display_name || subject?.name || '';
@@ -284,7 +284,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
     {
       key: 'tools',
       label: t('persons.sections.tools'),
-      content: <EntityTools kind="person" entity={person} works={mergeWorkLists(recentItems, prominentItems, firstItems)} entityExportLabel={t('persons.tools.exportPerson')} />
+      content: <EntityTools kind="person" entity={person} worksCount={personWorksCount} entityExportLabel={t('persons.tools.exportPerson')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 

@@ -8,7 +8,6 @@ import VenueWorksList from './VenueWorksList';
 import { getVenue } from '@/lib/api';
 import type { Venue } from '@/lib/api';
 import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
-import { mergeWorkLists } from '@/lib/entity-export';
 import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
@@ -552,7 +551,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
           {
             key: 'tools',
             label: t('venues.sections.tools'),
-            content: <EntityTools kind="venue" entity={venue} works={mergeWorkLists(recentItems, prominentItems, firstItems)} entityExportLabel={t('venues.tools.exportVenue')} />
+            content: <EntityTools kind="venue" entity={venue} worksCount={Number((venue as any)?.works_count) || 0} entityExportLabel={t('venues.tools.exportVenue')} />
           }
         ].filter(Boolean) as SectionTabDescriptor[];
 

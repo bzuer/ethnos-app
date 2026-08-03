@@ -123,7 +123,10 @@
       "risExported": "RIS exportado",
       "bibExported": "BibTeX exportado",
       "apaExported": "APA exportado",
-      "confirmClear": "¿Confirmar limpieza de la lista? Esta acción es irreversible."
+      "confirmClear": "¿Confirmar limpieza de la lista? Esta acción es irreversible.",
+      "noWorksToExport": "No hay obras disponibles para exportar",
+      "noWorksForYear": "No hay obras publicadas en {year}",
+      "exportTruncated": "Exportación limitada a {count} obras"
     },
     "entities": {
       "authorUnknown": "Autor desconocido",

@@ -4,6 +4,7 @@ import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
 import { normalizePersonDetail, normalizePersonWorkItem } from './works';
+import { mergeWorkLists, type EntityExportWorks, type EntityKind } from './entity-export';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
   const parsed = Number(limit);
@@ -292,4 +293,72 @@ export async function resolveDoi(doi: string) {
     throw error;
   }
   return unwrapData(envelope) || null;
+}
+
+const EXPORT_PAGE_SIZE = 100;
+const EXPORT_MAX_PAGES = 50;
+
+function pickItems(raw: any): any[] {
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.results)) return raw.results;
+  if (Array.isArray(raw?.items)) return raw.items;
+  return [];
+}
+
+async function collectAllPages(loadPage: (page: number) => Promise<any>) {
+  const pages: any[][] = [];
+  let total = 0;
+  let truncated = false;
+  for (let page = 1; page <= EXPORT_MAX_PAGES; page += 1) {
+    const raw = await loadPage(page);
+    const items = pickItems(raw);
+    const pagination = raw?.pagination || {};
+    const reported = Number(pagination.total);
+    if (Number.isFinite(reported) && reported > 0) total = reported;
+    if (items.length) pages.push(items);
+    const totalPages = Number(pagination.totalPages);
+    const hasNext = pagination.hasNext === true || (Number.isFinite(totalPages) && totalPages > page);
+    if (!items.length || !hasNext) break;
+    if (page === EXPORT_MAX_PAGES) truncated = true;
+  }
+  const works = mergeWorkLists(...pages);
+  return { works, total: total || works.length, truncated };
+}
+
+export async function getEntityExportWorks(kind: EntityKind, id: string | number): Promise<EntityExportWorks> {
+  if (kind === 'person') {
+    const safeId = encodeURIComponent(String(id));
+    const collected = await collectAllPages((page) => fetchJson<any>(
+      `/persons/${safeId}/works?page=${page}&limit=${EXPORT_PAGE_SIZE}`
+    ));
+    return {
+      works: collected.works.map(normalizePersonWorkItem),
+      total: collected.total,
+      scope: { works: 'all', year: null, limit: null, truncated: collected.truncated }
+    };
+  }
+
+  if (kind === 'venue') {
+    const safeId = encodeURIComponent(String(id));
+    const year = new Date().getFullYear();
+    const collected = await collectAllPages((page) => fetchJson<any>(
+      `/venues/${safeId}/works?page=${page}&limit=${EXPORT_PAGE_SIZE}&year=${year}`
+    ));
+    return {
+      works: collected.works,
+      total: collected.total,
+      scope: { works: 'current_year', year, limit: null, truncated: collected.truncated }
+    };
+  }
+
+  const raw = kind === 'institution'
+    ? await getInstitutionWorks(id, 1, EXPORT_PAGE_SIZE)
+    : await getSubjectWorksPage(id, 1, EXPORT_PAGE_SIZE);
+  const items = pickItems(raw);
+  const reported = Number(raw?.pagination?.total);
+  return {
+    works: items,
+    total: Number.isFinite(reported) && reported > 0 ? reported : items.length,
+    scope: { works: 'first_page', year: null, limit: EXPORT_PAGE_SIZE, truncated: items.length < (Number.isFinite(reported) ? reported : items.length) }
+  };
 }

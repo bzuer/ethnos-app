@@ -5,7 +5,6 @@ import SectionTabs, { type SectionTabDescriptor } from '@/components/common/Sect
 import EntityTools from '@/components/common/EntityTools';
 import WorkRelatedList from '../../works/[id]/WorkRelatedList';
 import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
-import { mergeWorkLists } from '@/lib/entity-export';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import { formatMetadataAuthors } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
@@ -181,7 +180,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
     {
       key: 'tools',
       label: t('institutions.sections.tools'),
-      content: <EntityTools kind="institution" entity={institution} works={mergeWorkLists(works, prominentWorks, firstWorks, fundedWorks)} entityExportLabel={t('institutions.tools.exportInstitution')} />
+      content: <EntityTools kind="institution" entity={institution} worksCount={Number(worksCount) || 0} entityExportLabel={t('institutions.tools.exportInstitution')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 
