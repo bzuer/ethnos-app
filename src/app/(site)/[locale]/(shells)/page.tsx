@@ -59,7 +59,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
             </tbody>
           </table>
           <div className="action-links">
-            <LocaleLink href="/search/results?q=*" className="action-btn btn-positive">{t('common.actions.browseWorks')}</LocaleLink>
+            <LocaleLink href="/search/results" className="action-btn btn-positive">{t('common.actions.browseWorks')}</LocaleLink>
           </div>
         </div>
       </section>

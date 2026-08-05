@@ -1006,6 +1006,30 @@ a.action-btn {
     width: 10%;
 }
 
+.recent-items-container,
+.venues-container {
+    display: block;
+    width: 100%;
+}
+.recent-items-container .data-table,
+.venues-container .data-table {
+    margin: var(--spacing-md) 0 0 0;
+}
+.recent-items-container .action-links,
+.venues-container .action-links {
+    display: block;
+    width: 100%;
+    padding: var(--spacing-sm) 0 var(--spacing-lg) 0;
+}
+.recent-items-container .action-links .action-btn,
+.venues-container .action-links .action-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
 .recent-items-table th:nth-child(1),
 .recent-items-table td:nth-child(1) {
     width: 45%;
