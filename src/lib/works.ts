@@ -159,14 +159,72 @@ export function truncateMetadataText(value: any, maxChars: number = METADATA_TEX
   return `${slice}…`;
 }
 
-function pickAuthorName(entry: any) {
+export const CONTRIBUTOR_ROLES = ['AUTHOR', 'EDITOR', 'TRANSLATOR', 'REVIEWER', 'OTHER'] as const;
+
+export type ContributorRole = typeof CONTRIBUTOR_ROLES[number];
+
+export type ContributorGroup = { role: ContributorRole; contributors: any[] };
+
+export function formatContributorName(entry: any) {
   if (!entry) return '';
   if (typeof entry === 'string') return normalizeText(entry);
   return normalizeText(entry?.preferred_name || entry?.name || [entry?.given_names, entry?.family_name].filter(Boolean).join(' '));
 }
 
+export function normalizeContributorRole(raw: any): ContributorRole {
+  const value = normalizeText(raw).toUpperCase();
+  if (!value) return 'AUTHOR';
+  return (CONTRIBUTOR_ROLES as readonly string[]).includes(value) ? (value as ContributorRole) : 'OTHER';
+}
+
+export function groupContributorsByRole(raw: any): ContributorGroup[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const buckets = new Map<ContributorRole, any[]>();
+  const seen = new Map<ContributorRole, Set<string>>();
+  list.forEach((entry: any, index: number) => {
+    const name = formatContributorName(entry);
+    const personId = entry && typeof entry === 'object' ? (entry.person_id ?? entry.id ?? null) : null;
+    if (!name && personId === null) return;
+    const role = normalizeContributorRole(entry && typeof entry === 'object' ? entry.role : '');
+    const key = personId !== null ? `id:${personId}` : `name:${name.toLowerCase()}`;
+    const roleSeen = seen.get(role) || new Set<string>();
+    if (roleSeen.has(key)) return;
+    roleSeen.add(key);
+    seen.set(role, roleSeen);
+    const bucket = buckets.get(role) || [];
+    const position = Number(entry && typeof entry === 'object' ? entry.position : NaN);
+    bucket.push({ entry, index, position: Number.isFinite(position) ? position : Number.MAX_SAFE_INTEGER });
+    buckets.set(role, bucket);
+  });
+  return CONTRIBUTOR_ROLES
+    .map((role) => ({
+      role,
+      contributors: (buckets.get(role) || [])
+        .sort((a, b) => (a.position - b.position) || (a.index - b.index))
+        .map((item) => item.entry)
+    }))
+    .filter((group) => group.contributors.length > 0);
+}
+
+export function pickContributorsByRole(raw: any, role: ContributorRole) {
+  return groupContributorsByRole(raw).find((group) => group.role === role)?.contributors || [];
+}
+
+export function pickPrimaryContributors(raw: any) {
+  const groups = groupContributorsByRole(raw);
+  if (!groups.length) return [];
+  const preferred = groups.find((group) => group.role === 'AUTHOR')
+    || groups.find((group) => group.role === 'EDITOR')
+    || groups[0];
+  return preferred.contributors;
+}
+
+function pickAuthorName(entry: any) {
+  return formatContributorName(entry);
+}
+
 function pickAuthorList(item: any) {
-  if (Array.isArray(item?.authors) && item.authors.length) return item.authors;
+  if (Array.isArray(item?.authors) && item.authors.length) return pickPrimaryContributors(item.authors);
   if (Array.isArray(item?.authors_preview) && item.authors_preview.length) return item.authors_preview;
   return [];
 }

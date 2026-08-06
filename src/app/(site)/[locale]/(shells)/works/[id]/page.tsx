@@ -4,11 +4,12 @@ import { type IdentifierEntry, renderGroupedIdentifiers } from '@/components/com
 import SubjectLinks from '@/components/common/SubjectLinks';
 import ClientActions from './work-actions';
 import WorkCitationList from './WorkCitationList';
+import WorkContributorRows from './WorkContributorRows';
 import WorkSectionTabs from './WorkSectionTabs';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
-import { getWorkAbstractSnippet, sanitizeWorkAbstract } from '@/lib/works';
+import { formatContributorName, getWorkAbstractSnippet, groupContributorsByRole, pickContributorsByRole, sanitizeWorkAbstract } from '@/lib/works';
 import { buildIdentifierHref, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { notFound } from 'next/navigation';
@@ -57,12 +58,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     return acc;
   };
   const abstractSnippet = cleanedAbstract ? buildDescription(cleanedAbstract) : buildDescription(getWorkAbstractSnippet(work, 220));
-  const authorNames = Array.isArray(work?.authors)
-    ? work.authors
-        .filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role)
-        .map((a: any) => a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' '))
-        .filter(Boolean)
-    : [];
+  const authorNames = pickContributorsByRole(work?.authors, 'AUTHOR').map(formatContributorName).filter(Boolean);
   const authorSummary = pickReferenceAuthors(work);
   const descriptionRaw = abstractSnippet || [fullTitle || titleBase, authorSummary, year].filter(Boolean).join('. ');
   const description = descriptionRaw && !/[.!?…]$/.test(descriptionRaw) ? `${descriptionRaw}.` : descriptionRaw;
@@ -136,9 +132,18 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const work = await loadWork(id);
   if (!work || !work.id) notFound();
   const t = await getTranslations({ locale });
-  const authorsArr = Array.isArray(work?.authors) ? work.authors : [];
-  const onlyAuthors = authorsArr.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role);
-  const editors = authorsArr.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'EDITOR');
+  const contributorGroups = groupContributorsByRole(work?.authors);
+  const contributorLabels = {
+    roles: {
+      AUTHOR: t('works.detail.labels.authors'),
+      EDITOR: t('works.detail.labels.editors'),
+      TRANSLATOR: t('works.detail.labels.translators'),
+      REVIEWER: t('works.detail.labels.reviewers'),
+      OTHER: t('works.detail.labels.contributors')
+    },
+    unknownName: t('common.entities.authorUnknown'),
+    corresponding: t('works.detail.labels.corresponding')
+  };
   const publication = work?.publication || {};
   const year = publication?.year || work?.publication_year || work?.year;
   const volume = publication?.volume || work?.volume;
@@ -172,10 +177,12 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const identifiers = work?.identifiers && typeof work.identifiers === 'object' ? work.identifiers : {};
   const workTitle = work?.title || t('works.detail.titleFallback');
   const fullTitle = work?.subtitle ? `${workTitle}: ${work.subtitle}` : workTitle;
-  const authorNames = onlyAuthors.map((a: any) => {
-    const name = a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' ');
-    return name ? String(name) : '';
-  }).filter(Boolean);
+  const namesForRole = (role: 'AUTHOR' | 'EDITOR' | 'TRANSLATOR' | 'REVIEWER' | 'OTHER') =>
+    (contributorGroups.find((group) => group.role === role)?.contributors || []).map(formatContributorName).filter(Boolean);
+  const authorNames = namesForRole('AUTHOR');
+  const editorNames = namesForRole('EDITOR');
+  const translatorNames = namesForRole('TRANSLATOR');
+  const otherContributorNames = [...namesForRole('REVIEWER'), ...namesForRole('OTHER')];
   const ids: IdentifierEntry[] = [];
   const venueIds: IdentifierEntry[] = [];
   const addValues = (
@@ -353,7 +360,11 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   };
   if (publicationDateFormatted) jsonLd.datePublished = publicationDateFormatted;
   if (language) jsonLd.inLanguage = String(language);
-  if (authorNames.length) jsonLd.author = authorNames.map((name: string) => ({ '@type': 'Person', name }));
+  const toPersonNodes = (names: string[]) => names.map((name: string) => ({ '@type': 'Person', name }));
+  if (authorNames.length) jsonLd.author = toPersonNodes(authorNames);
+  if (editorNames.length) jsonLd.editor = toPersonNodes(editorNames);
+  if (translatorNames.length) jsonLd.translator = toPersonNodes(translatorNames);
+  if (otherContributorNames.length) jsonLd.contributor = toPersonNodes(otherContributorNames);
   if (publisherName) jsonLd.publisher = { '@type': 'Organization', name: publisherName };
   if (doi) jsonLd.identifier = { '@type': 'PropertyValue', propertyID: 'DOI', value: String(doi) };
   if (venueName && !isBookType) {
@@ -385,66 +396,14 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               <th scope="row">{t('works.detail.labels.id')}</th>
               <td className="field-value">{id}</td>
             </tr>
-            <tr>
-              <th scope="row">{t('works.detail.labels.authors')}</th>
-              <td className="field-value">
-                {onlyAuthors.length > 0 ? (
-                  onlyAuthors.map((a: any, idx: number) => {
-                    const name = a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' ');
-                    const pid = a?.person_id || a?.id;
-                    const href = pid ? `/persons/${pid}` : undefined;
-                    const affRaw = a?.affiliation || (Array.isArray(a?.affiliations) ? a.affiliations[0] : undefined) || null;
-                    const affName = affRaw ? (typeof affRaw === 'string' ? affRaw : (affRaw?.name || '')) : '';
-                    const affId = affRaw && typeof affRaw === 'object' ? (affRaw.id ?? null) : null;
-                    const orcid = a?.identifiers?.orcid || a?.orcid || '';
-                    const hasExtra = !!(orcid || affName);
-                    return (
-                      <span key={pid || idx}>
-                        {href ? (
-                          <LocaleLink prefetch={false} className="action-link table-link" href={href}>{name || t('common.entities.authorUnknown')}</LocaleLink>
-                        ) : (
-                          <span className="field-value">{name || t('common.entities.authorUnknown')}</span>
-                        )}
-                        {hasExtra ? ' (' : ''}
-                        {orcid ? <span>{orcid}</span> : null}
-                        {orcid && affName ? ', ' : ''}
-                        {affName ? (
-                          affId ? (
-                            <LocaleLink prefetch={false} className="action-link table-link" href={`/institutions/${affId}`}>{affName}</LocaleLink>
-                          ) : (
-                            <span>{affName}</span>
-                          )
-                        ) : null}
-                        {hasExtra ? ')' : ''}
-                        {idx < onlyAuthors.length - 1 ? ', ' : ''}
-                      </span>
-                    );
-                  })
-                ) : t('common.entities.authorUnknown')}
-              </td>
-            </tr>
-            {editors.length > 0 ? (
+            {contributorGroups.length > 0 ? (
+              <WorkContributorRows groups={contributorGroups} labels={contributorLabels} />
+            ) : (
               <tr>
-                <th scope="row">{t('works.detail.labels.editors')}</th>
-                <td className="field-value">
-                  {editors.map((a: any, idx: number) => {
-                    const name = a?.preferred_name || a?.name || [a?.given_names, a?.family_name].filter(Boolean).join(' ');
-                    const pid = a?.person_id || a?.id;
-                    const href = pid ? `/persons/${pid}` : undefined;
-                    return (
-                      <span key={pid || idx}>
-                        {href ? (
-                          <LocaleLink prefetch={false} className="action-link table-link" href={href}>{name || t('common.entities.authorUnknown')}</LocaleLink>
-                        ) : (
-                          <span className="field-value">{name || t('common.entities.authorUnknown')}</span>
-                        )}
-                        {idx < editors.length - 1 ? ', ' : ''}
-                      </span>
-                    );
-                  })}
-                </td>
+                <th scope="row">{t('works.detail.labels.authors')}</th>
+                <td className="field-value">{t('common.entities.authorUnknown')}</td>
               </tr>
-            ) : null}
+            )}
             {year ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.year')}</th>

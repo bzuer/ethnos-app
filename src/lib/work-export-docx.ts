@@ -5,7 +5,7 @@ function buildApaParagraph(work: any, fallbackAuthor: string, spacing: boolean):
   const typeRaw = (work?.work_type || work?.type || '').toString().toLowerCase();
   const isBook = typeRaw === 'book';
   const isArticle = typeRaw === 'article' || typeRaw === 'journal';
-  const authors = Array.isArray(work?.authors) ? work.authors.map((item: any) => {
+  const apaNames = (list: any) => (Array.isArray(list) ? list : []).map((item: any) => {
     if (!item) return '';
     if (typeof item === 'string') return item;
     const family = item?.family_name || item?.name || '';
@@ -13,14 +13,24 @@ function buildApaParagraph(work: any, fallbackAuthor: string, spacing: boolean):
     const initials = given
       ? given.split(/\s+/).filter(Boolean).map((part: string) => part.charAt(0).toUpperCase() + '.').join(' ')
       : '';
-    const name = family ? `${family}${initials ? `, ${initials}` : ''}` : (item?.preferred_name || '');
-    return name;
-  }).filter(Boolean) : [];
-  let authorText = '';
-  if (authors.length === 1) authorText = authors[0];
-  else if (authors.length === 2) authorText = `${authors[0]} & ${authors[1]}`;
-  else if (authors.length > 2) authorText = `${authors.slice(0, -1).join(', ')}, & ${authors[authors.length - 1]}`;
+    return family ? `${family}${initials ? `, ${initials}` : ''}` : (item?.preferred_name || '');
+  }).filter(Boolean);
+  const joinApaNames = (names: string[]) => {
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} & ${names[1]}`;
+    if (names.length > 2) return `${names.slice(0, -1).join(', ')}, & ${names[names.length - 1]}`;
+    return '';
+  };
+  const authors = apaNames(work?.authors);
+  const editors = apaNames(work?.editors);
+  const translators = apaNames(work?.translators);
+  let authorText = joinApaNames(authors);
+  if (!authorText && editors.length) authorText = `${joinApaNames(editors)} (${editors.length > 1 ? 'Eds.' : 'Ed.'})`;
   if (!authorText) authorText = fallbackAuthor;
+  const editorNote = authorText && authors.length && editors.length
+    ? `${joinApaNames(editors)} (${editors.length > 1 ? 'Eds.' : 'Ed.'})`
+    : '';
+  const translatorNote = translators.length ? `${joinApaNames(translators)}, Trans.` : '';
   const year = work?.publication?.year || work?.publication_year || work?.year || '';
   const title = normalizeValue(work?.title);
   const subtitle = normalizeValue(work?.subtitle);
@@ -36,7 +46,10 @@ function buildApaParagraph(work: any, fallbackAuthor: string, spacing: boolean):
   const children: TextRun[] = [];
   if (authorText) children.push(new TextRun({ text: authorText }));
   if (year) children.push(new TextRun({ text: ` (${year}).` }));
-  if (titleText) children.push(new TextRun({ text: ` ${titleText}.`, italics: isBook }));
+  if (titleText) children.push(new TextRun({ text: ` ${titleText}`, italics: isBook }));
+  if (titleText && translatorNote) children.push(new TextRun({ text: ` (${translatorNote})` }));
+  if (titleText) children.push(new TextRun({ text: '.' }));
+  if (editorNote) children.push(new TextRun({ text: ` In ${editorNote},` }));
   if (isArticle && venue) {
     children.push(new TextRun({ text: ` ${venue}`, italics: true }));
     if (volume) children.push(new TextRun({ text: `, ${volume}`, italics: true }));

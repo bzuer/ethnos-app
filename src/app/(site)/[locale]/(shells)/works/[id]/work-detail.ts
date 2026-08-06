@@ -3,7 +3,15 @@ import { cache } from 'react';
 import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { fetchJson, isNotFoundError } from '@/lib/api';
-import { formatMetadataAuthors, normalizeWorkDetail, sanitizeWorkAbstract } from '@/lib/works';
+import {
+  formatContributorName,
+  formatMetadataAuthors,
+  groupContributorsByRole,
+  normalizeWorkDetail,
+  pickPrimaryContributors,
+  sanitizeWorkAbstract,
+  type ContributorRole
+} from '@/lib/works';
 
 const workDetailQuery = 'include_citations=true&include_references=true';
 
@@ -89,12 +97,6 @@ function pickFulltextUrls(work: any) {
   return { pdf, fulltext };
 }
 
-function toAuthorName(author: any) {
-  if (!author) return '';
-  if (typeof author === 'string') return author.trim();
-  return author?.preferred_name || author?.name || [author?.given_names, author?.family_name].filter(Boolean).join(' ');
-}
-
 function normalizeAuthorKey(name: string) {
   const parts = name.split(/\s+/).map((part) => part.trim()).filter(Boolean);
   if (!parts.length) return '';
@@ -121,20 +123,13 @@ function uniqueAuthorNames(names: string[]) {
 }
 
 function pickAuthorNames(authors: any[]) {
-  const list = Array.isArray(authors) ? authors : [];
-  const onlyAuthors = list.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'AUTHOR' || !a?.role);
-  const names = onlyAuthors.map(toAuthorName).filter(Boolean);
-  const fallback = list.map(toAuthorName).filter(Boolean);
-  const picked = names.length ? names : fallback;
-  return uniqueAuthorNames(picked);
+  return uniqueAuthorNames(pickPrimaryContributors(authors).map(formatContributorName).filter(Boolean));
 }
 
-function pickEditorNames(authors: any[]) {
-  const list = Array.isArray(authors) ? authors : [];
-  const names = list.filter((a: any) => (a?.role || '').toString().toUpperCase() === 'EDITOR')
-    .map(toAuthorName)
-    .filter(Boolean);
-  return uniqueAuthorNames(names);
+function pickRoleNames(authors: any[], ...roles: ContributorRole[]) {
+  const groups = groupContributorsByRole(authors);
+  const names = roles.flatMap((role) => (groups.find((group) => group.role === role)?.contributors || []).map(formatContributorName));
+  return uniqueAuthorNames(names.filter(Boolean));
 }
 
 export function buildCitationMeta(work: any, locale: string, id: string) {
@@ -147,7 +142,9 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   const subtitle = work?.subtitle ? String(work.subtitle) : '';
   const fullTitle = subtitle ? `${title}: ${subtitle}` : title;
   const authors = pickAuthorNames(work?.authors);
-  const editors = pickEditorNames(work?.authors);
+  const editors = pickRoleNames(work?.authors, 'EDITOR');
+  const translators = pickRoleNames(work?.authors, 'TRANSLATOR');
+  const otherContributors = pickRoleNames(work?.authors, 'REVIEWER', 'OTHER');
   const year = publication?.year || work?.publication_year || work?.year;
   const publicationDate = publication?.publication_date || work?.publication_date;
   const volume = publication?.volume || work?.volume;
@@ -203,6 +200,8 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   }
   if (fullTitle) other['dc.title'] = fullTitle;
   if (authors.length) other['dc.creator'] = authors;
+  const dcContributors = [...editors, ...translators, ...otherContributors];
+  if (dcContributors.length) other['dc.contributor'] = uniqueList(dcContributors);
   if (publicationDateFormatted) other['dc.date'] = publicationDateFormatted;
   if (doi) other['dc.identifier'] = `https://doi.org/${encodeURIComponent(String(doi))}`;
   if (publisherName) other['dc.publisher'] = String(publisherName);

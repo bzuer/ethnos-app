@@ -1,4 +1,4 @@
-import { normalizeWorkDetail } from './works';
+import { groupContributorsByRole, normalizeWorkDetail } from './works';
 import { buildIdentifierHref } from './identifiers';
 
 const WORK_TYPE_FORMATS: Record<string, { bibtex: string; ris: string }> = {
@@ -123,8 +123,13 @@ export function normWork(source: any) {
   const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)
     || (source?.primary_publication && typeof source.primary_publication === 'object');
   const raw = needsNormalization ? normalizeWorkDetail(source) : source;
-  let authors = Array.isArray(raw.authors) ? raw.authors.map(normAuthor).filter(Boolean) : [];
-  if (!authors.length) {
+  const groups = Array.isArray(raw.authors) ? groupContributorsByRole(raw.authors) : [];
+  const byRole = (role: string) => (groups.find((group) => group.role === role)?.contributors || []).map(normAuthor).filter(Boolean);
+  const editors = byRole('EDITOR');
+  const translators = byRole('TRANSLATOR');
+  const reviewers = [...byRole('REVIEWER'), ...byRole('OTHER')];
+  let authors = byRole('AUTHOR');
+  if (!authors.length && !groups.length) {
     let names: any[] = Array.isArray(raw.authors_preview) ? raw.authors_preview : [];
     if (!names.length) {
       const authorString = (raw.authors && typeof raw.authors === 'object' && !Array.isArray(raw.authors) ? raw.authors.author_string : '')
@@ -214,7 +219,10 @@ export function normWork(source: any) {
       openalex_id: publisher.openalex_id || null,
       url: publisher.url || null
     },
-    authors
+    authors,
+    editors,
+    translators,
+    reviewers
   };
 }
 
@@ -237,10 +245,17 @@ function escBibVerbatim(value: any): string {
   return String(value).replace(/\\/g, '\\textbackslash{}').replace(/([{}])/g, '\\$1');
 }
 
+function leadContributor(nw: any) {
+  const lists = [nw.authors, nw.editors, nw.translators, nw.reviewers];
+  for (const list of lists) {
+    if (Array.isArray(list) && list[0]) return list[0];
+  }
+  return null;
+}
+
 function bibKey(nw: any): string {
-  const first = Array.isArray(nw.authors) && nw.authors[0]
-    ? (nw.authors[0].family_name || nw.authors[0].preferred_name || 'work')
-    : 'work';
+  const lead = leadContributor(nw);
+  const first = lead ? (lead.family_name || lead.preferred_name || 'work') : 'work';
   const slug = String(first).toLowerCase().replace(/[^a-z0-9]/g, '') || 'ref';
   const year = nw.publication?.year ? String(nw.publication.year) : '';
   const idPart = nw.id !== null && nw.id !== undefined ? String(nw.id) : '';
@@ -262,15 +277,16 @@ export function toRIS(nw: any): string {
   lines.push(`TY  - ${risType}`);
   if (nw.title) lines.push(`TI  - ${nw.title}`);
   if (nw.subtitle) lines.push(`T2  - ${nw.subtitle}`);
-  if (Array.isArray(nw.authors)) {
-    nw.authors.forEach((a: any) => {
-      const fam = a.family_name || '';
-      const giv = a.given_names || '';
-      const p = a.preferred_name || '';
-      const v = fam && giv ? `${fam}, ${giv}` : (p || fam || giv);
-      if (v) lines.push(`AU  - ${v}`);
-    });
-  }
+  const risNames = (list: any) => (Array.isArray(list) ? list : []).map((a: any) => {
+    const fam = a.family_name || '';
+    const giv = a.given_names || '';
+    const p = a.preferred_name || '';
+    return fam && giv ? `${fam}, ${giv}` : (p || fam || giv);
+  }).filter(Boolean);
+  risNames(nw.authors).forEach((v: string) => lines.push(`AU  - ${v}`));
+  risNames(nw.editors).forEach((v: string) => lines.push(`A2  - ${v}`));
+  risNames(nw.translators).forEach((v: string) => lines.push(`A4  - ${v}`));
+  risNames(nw.reviewers).forEach((v: string) => lines.push(`A3  - ${v}`));
   if (nw.publication?.year) lines.push(`PY  - ${nw.publication.year}`);
   if (nw.publication?.date) {
     const da = String(nw.publication.date).slice(0, 10).replace(/-/g, '/');
@@ -328,10 +344,14 @@ export function toBibTeX(nw: any): string {
   const lines: string[] = [`@${bt}{${key},`];
   const fields: Array<[string, string, boolean]> = [];
 
-  if (Array.isArray(nw.authors) && nw.authors.length) {
-    const s = bibAuthors(nw.authors);
-    if (s) fields.push(['author', s, false]);
-  }
+  const pushNames = (field: string, list: any) => {
+    if (!Array.isArray(list) || !list.length) return;
+    const s = bibAuthors(list);
+    if (s) fields.push([field, s, false]);
+  };
+  pushNames('author', nw.authors);
+  pushNames('editor', nw.editors);
+  pushNames('translator', nw.translators);
   const fullTitle = nw.subtitle ? `${nw.title || ''}: ${nw.subtitle}` : (nw.title || '');
   if (fullTitle) fields.push(['title', fullTitle, false]);
   if (nw.publication?.year) fields.push(['year', String(nw.publication.year), false]);
