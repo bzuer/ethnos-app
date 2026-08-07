@@ -103,4 +103,47 @@ Arquivos alterados nesta fase: `src/services/{metrics,autocomplete,subjects,publ
 
 ---
 
+## Bloco E — Papéis de autoria (`authorships`) — RESOLVIDO 2026-08-06
+
+Origem: reporte do frontend sobre duas anomalias em `/works/{id}`. A investigação confirmou ambas e revelou defeitos da mesma família em 12 outros pontos do read path.
+
+### P18 · 🟢 `position` é 1-based **por papel** → ordenação intercalava papéis
+- **Problema (reportado):** no work 23816563, autor e tradutor apareciam com `position` sobreposto; a ordenação da lista de autoria não era determinística.
+- **Causa raiz:** `authorships` tem PK `(work_id, person_id, role)` e `position` é numerado **dentro do papel**, não dentro do work. **162.546 works** têm colisão de `position` entre papéis. Todo o read path ordenava por `ORDER BY a.position` (ou `.sort((a,b) => a.position - b.position)`), então os papéis se intercalavam de forma arbitrária. Exemplo real, work 2052052: `AUTHOR 1 Rokne, AUTHOR 2 Alhajj, EDITOR 1 Alhajj, EDITOR 2 Rokne` era servido como `AUTHOR 1, EDITOR 1, EDITOR 2, AUTHOR 2`.
+- **Solução:** novo primitivo puro `authorshipRoleOrderSql(alias)` em `src/dto/helpers.js` (`COALESCE(NULLIF(FIELD(role,'AUTHOR','EDITOR','TRANSLATOR','REVIEWER'),0),5)` — papéis desconhecidos vão para o fim) aplicado a **todas as 10 leituras de autoria**: `src/utils/hydration.js`, `works.service.js` (detalhe), `venues.service.js` (×2), `persons.service.js`, `organizations.service.js`, `courses.service.js`, `bibliography.service.js`, `instructors.service.js`. No lado JS, `compareContributors`/`sortContributors` aplicam a mesma ordem (papel → position → person_id), tornando o desempate determinístico.
+- **Validação (1210):** work 2052052 → `AUTHOR 1, AUTHOR 2, EDITOR 1, EDITOR 2` (blocos por papel, position ascendente dentro do papel). 24 works com repetição entre papéis verificados contra o banco: 0 defeitos.
+
+### P19 · 🟢 Mesma pessoa em papéis distintos inflava contagens e repetia nomes
+- **Problema (reportado):** o work 19894551 devolvia **6 entradas para 3 pessoas** (o mesmo trio como `AUTHOR` e como `EDITOR`).
+- **Causa raiz:** o dado é legítimo (**111.760 works** creditam alguém em mais de um papel — tipicamente quem escreveu *e* organizou o volume) e a API é consumer-only, então não cabe reescrevê-lo. O defeito era a API **tratar linha de autoria como pessoa**: `COUNT(*) FROM authorships` (8 pontos), `authors.length` (5 pontos) e listas de nomes sem deduplicação.
+- **Impacto medido antes da correção:** `/publications?work_id=19894551` → `author_count: 6` (eram 3 pessoas). `/persons/182363/works` → **63 linhas para 58 works** (o work repetia uma vez por papel) e `author_string` = `"Gyan Prakash; Gyan Prakash; Michael Laffan; Michael Laffan; …"`.
+- **Solução — fidelidade preservada, redundância explicitada:** `authors[]` no detalhe continua **linha-por-autoria** (suprimir esconderia o caso legítimo de autor-e-organizador). O que mudou:
+  - contagens passam a contar **pessoas distintas**: `COUNT(DISTINCT a.person_id)` no SQL (8 pontos) e `countDistinctContributors()` no JS (5 pontos);
+  - nomes deduplicam por `person_id` — nunca por nome, para não fundir homônimos que são pessoas distintas (`contributorNames()`);
+  - o papel duplo é **exposto**, não escondido: o detalhe ganha `contributors[]` (uma entrada por pessoa, com `roles[]`), `authors_count` e `contributor_roles`;
+  - `/persons/{id}/works` passa a `GROUP BY w.id` (+ `COUNT(DISTINCT w.id)` no total), com `authorship.role` = papel de maior precedência e `authorship.roles[]` listando todos. Cache key `v2→v3`.
+- **Validação (1210):** work 19894551 → `authors[]` com 6 linhas (fiel), `authors_count: 3`, `contributor_roles {AUTHOR:3, EDITOR:3}`, `contributors[]` com 3 entradas cada uma com `roles: ["AUTHOR","EDITOR"]`. `/persons/182363/works` → **58 linhas / 58 distintas**, `author_string` sem repetição.
+
+### P20 · 🟢 `first_author` podia ser o **tradutor**
+- **Problema:** derivado como "primeiro da lista", que sob ordenação por `position` podia ser qualquer papel.
+- **Impacto medido:** work 2096820 (`AUTHOR 1 Giora Sternberg` + `TRANSLATOR 1 Lise Garond`) → `/publications` servia `first_author: {"name": "Lise Garond"}` — o tradutor apresentado como autor.
+- **Solução:** `pickPrimaryAuthor()` resolve sempre para um contribuidor de papel `AUTHOR`, caindo para o papel de maior precedência só quando o work não credita nenhum autor (volume só-organizadores). Aplicado em `work.dto.js` e `publication.dto.js`.
+- **Validação (1210):** work 2096820 → `first_author: {"person_id": 291446, "name": "Giora Sternberg"}`.
+
+### P21 · 🟢 Listagens não distinguiam tradutor de autor (limitação reportada pelo frontend)
+- **Problema:** `/works`, `/works/showcase`, `/search/works` e `/search/advanced` devolviam `authors_preview[]` como strings puras, sem papel — nos resultados de busca o tradutor era indistinguível do autor, e o frontend não tinha como corrigir isso.
+- **Solução:** as listagens passam a expor `contributors_preview[]` (`{person_id, name, role, roles[], position}`) ao lado de `authors_preview[]`, que permanece string[] (agora deduplicado e com autores primeiro) para não quebrar consumidores. Schemas OpenAPI novos: `ContributorPreview` e `WorkContributor` (101 → 103 schemas; 78 operações/78 paths inalterados).
+- **Validação (1210):** `/search/works` sobre o work 2096820 → `contributors_preview: [{… "role":"AUTHOR" …}, {… "role":"TRANSLATOR" …}]`.
+
+### P22 · 🟢 `author_count` das listagens era truncado pelo cap de preview
+- **Problema (achado durante a varredura, não reportado):** `/works` e `/search/works` hidratam no máximo 5 pessoas por work para montar o preview e derivavam `author_count` desse array truncado — um work de 11 ou 15 autores reportava `5`.
+- **Solução:** novo `hydrateAuthorCountsByWork()` em `src/utils/hydration.js` — um `COUNT(DISTINCT person_id) … GROUP BY work_id` index-only (coberto por `idx_authorships_work_person`) por página, em paralelo com a hidratação existente. O preview segue capado; a contagem passa a ser verdadeira.
+- **Validação (1210):** works 23815630 e 9288167 → `author_count` 11 e 15 (antes 5 e 5), com o preview ainda em 3 nomes.
+
+**Cobertura de testes:** 11 testes unitários novos em `tests/api.endpoints.test.js` (ordem por papel, tradutor nunca à frente do autor, volume só-organizadores, contagem distinta, homônimos não fundidos, papéis desconhecidos por último) — **47/47 verdes**; 3 asserções de contrato SQL novas em `tests/integration.smoke.test.js` (agrupamento por papel no detalhe, papel presente nas listagens, uma linha por work em `/persons/{id}/works`) — **35/35 verdes** contra MariaDB real.
+
+**Nota de dados (operador):** parte da repetição entre papéis parece ruído de ingestão do Crossref (trio idêntico como `AUTHOR` e `EDITOR` do mesmo volume). A API é consumer-only e não reescreve `authorships`; o saneamento, se desejado, é operador-side. Enquanto isso a resposta é fiel **e** não-redundante, via `contributors[]`.
+
+---
+
 _As divergências puramente de documentação (schemas swagger obsoletos, params não-documentados, enums faltantes, descrições estale) são tratadas na fase de reconstrução do swagger; inventário completo em `scratchpad/reports/verification.json`._

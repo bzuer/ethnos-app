@@ -6,6 +6,26 @@ Search routing: the default browse and pure structured-filter paths (`type`, `la
 
 Related domains: publications (`../publications.md`, navigate via each row's `publication_id`), persons (`../persons.md`, via `first_author.person_id` / authors), venues (`../venues.md`), institutions (`../institutions.md`, via author affiliations), subjects (`../subjects.md`), and courses/bibliographies (`../bibliographies.md`, the reverse of `/works/{id}/bibliographies`). Global response envelope, pagination (`page/limit` + `offset/limit`), auth, rate limiting, error codes, boolean/date normalization, and the shared citation/sort params are documented once in `../00-conventions.md` — this chapter only covers what is specific to works.
 
+## Contributor roles and positions
+
+A work credits people through `authorships`, which is keyed `(work_id, person_id, role)`. Two consequences shape every authors field in this chapter.
+
+**`position` is 1-based per role, not per work.** An `AUTHOR` at position 1 and a `TRANSLATOR` at position 1 coexist on the same work (~163k works in the corpus). Sorting contributors by `position` alone interleaves the roles; the API therefore orders by role first — `AUTHOR`, `EDITOR`, `TRANSLATOR`, `REVIEWER` — then by position, then by `person_id`. Clients should preserve the order the API returns rather than re-sorting on `position`.
+
+**The same person can hold several roles on one work.** About 112k works credit a person twice, typically as both `AUTHOR` and `EDITOR` of an edited volume. This is the stored data, not a bug in the response, and the API does not suppress it — collapsing it would hide the legitimate case of someone who both wrote in and edited the same volume. It is surfaced three ways:
+
+| field | endpoint | meaning |
+|---|---|---|
+| `authors[]` | `GET /works/{id}` | faithful, one entry per authorship row — a dual-role person appears twice. Role-grouped, so the AUTHOR block precedes the EDITOR block. |
+| `contributors[]` | `GET /works/{id}` | the same people collapsed to one entry each, with `roles[]` listing every role held. Render this to avoid two visually identical blocks. |
+| `contributor_roles` | `GET /works/{id}` | per-role tallies of the authorship rows, e.g. `{"AUTHOR": 3, "EDITOR": 3}`. |
+
+Counts follow the person, not the row: `authors_count` (detail) and `author_count` (listings) report **distinct people**, so the three-person volume above reports `3`, not `6`.
+
+On listings, `authors_preview[]` stays an array of plain strings (deduplicated, AUTHOR first) for backward compatibility, and `contributors_preview[]` carries the same people with their `role` — so a translator is distinguishable from an author in search results. `first_author` always resolves to an `AUTHOR`-role contributor, falling back to the highest-ranked role only when the work credits no author at all.
+
+---
+
 Endpoints in this domain:
 
 | Endpoint | Purpose |
@@ -92,6 +112,9 @@ GET /works?venue_name=mana&limit=20
         "openalex_id": "S30381306"
       },
       "authors_preview": ["Sarah Riccardi-Swartz"],
+      "contributors_preview": [
+        { "person_id": 3892437, "name": "Sarah Riccardi-Swartz", "role": "AUTHOR", "roles": ["AUTHOR"], "position": 1 }
+      ],
       "author_count": 1,
       "first_author": { "person_id": 3892437, "name": "Sarah Riccardi-Swartz" },
       "first_author_id": 3892437,
@@ -135,9 +158,10 @@ On the Manticore path (`q=kinship`) each row instead carries `data_source: "sear
 | `open_access` | bool \| null | |
 | `peer_reviewed` | bool \| null | |
 | `venue` | object \| null | see venue sub-table. |
-| `authors_preview` | string[] | up to 3 preferred author names. |
-| `author_count` | int | total authors on the work. |
-| `first_author` | object \| null | `{ person_id:int, name:string }`. |
+| `authors_preview` | string[] | up to 3 contributor names, deduplicated by person and ordered AUTHOR first. Plain strings, no role — use `contributors_preview` to tell an author from a translator. |
+| `contributors_preview` | object[] | the same people carrying their role: `{ person_id, name, role, roles[], position }`. See [Contributor roles and positions](#contributor-roles-and-positions). |
+| `author_count` | int | distinct people credited across every role; someone credited as both AUTHOR and EDITOR counts once. |
+| `first_author` | object \| null | `{ person_id:int, name:string }`. Always an `AUTHOR`-role contributor — never an editor or translator that happens to sit at position 1. |
 | `first_author_id` | int \| null | duplicate of `first_author.person_id`. |
 | `first_author_identifiers` | object \| null | always `null` on list rows (populated only on detail authors). |
 | `cited_by_count` | int | incoming citations = `works.citation_count`; defaults 0. |
@@ -217,6 +241,10 @@ GET /works/showcase?year_from=2020&year_to=2023&sort_by=cited_by_count
       "peer_reviewed": true,
       "venue": { "id": 1343355, "name": "Macroeconomic Effects of Market Structure Distortions", "abbreviated_name": null, "type": "SOURCE_BOOK", "issn": null, "eissn": null, "scopus_id": null, "wikidata_id": null, "openalex_id": null },
       "authors_preview": ["Flavien Moreau", "Ludovic Panon"],
+      "contributors_preview": [
+        { "person_id": 6044943, "name": "Flavien Moreau", "role": "AUTHOR", "roles": ["AUTHOR"], "position": 1 },
+        { "person_id": 6044944, "name": "Ludovic Panon", "role": "AUTHOR", "roles": ["AUTHOR"], "position": 2 }
+      ],
       "author_count": 2,
       "first_author": { "person_id": 6044943, "name": "Flavien Moreau" },
       "first_author_id": 6044943,
@@ -341,8 +369,17 @@ GET /works/22519667?include_citations=false&include_references=false
         "identifiers": { "orcid": "0000-0002-3435-091X", "scopus_id": null, "lattes_id": null },
         "role": "AUTHOR", "position": 1, "is_corresponding": true, "affiliation": null
       }
-      // ... (N total)
+      // ... (N total, one entry per authorship row, role-grouped)
     ],
+    "authors_count": 1,
+    "contributors": [
+      {
+        "person_id": 7922, "preferred_name": "Braun", "given_names": null, "family_name": "Braun",
+        "identifiers": { "orcid": "0000-0002-3435-091X", "scopus_id": null, "lattes_id": null },
+        "roles": ["AUTHOR"], "position": 1, "is_corresponding": true, "affiliation": null
+      }
+    ],
+    "contributor_roles": { "AUTHOR": 1 },
     "subjects": [
       { "subject_id": 341989, "term": "Cartography", "vocabulary": "Keyword", "lang": "en", "relevance_score": 1, "assigned_by": "AUTHOR" }
       // ... (17 total)
@@ -488,8 +525,8 @@ GET /works/22519667?include_citations=false&include_references=false
 | `preferred_name` | string | |
 | `given_names` / `family_name` | string \| null | |
 | `identifiers` | object | `{ orcid, scopus_id, lattes_id }`, each string or null. |
-| `role` | string | default `AUTHOR`. |
-| `position` | int | 1-based author order. |
+| `role` | string | `AUTHOR` \| `EDITOR` \| `TRANSLATOR` \| `REVIEWER`, default `AUTHOR`. |
+| `position` | int | 1-based **within the role**, not within the work. An `AUTHOR` at position 1 and a `TRANSLATOR` at position 1 coexist. |
 | `is_corresponding` | bool | |
 | `affiliation` | object \| null | `{ id, name, type, country, _links.self }` (`_links.self` → `/institutions/{id}`); null when no affiliation. |
 

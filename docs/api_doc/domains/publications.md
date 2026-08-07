@@ -172,8 +172,8 @@ For a full-text query, `meta` looks like: `{"engine":"Manticore","pagination_tot
 | `venue` | object \| null | see venue sub-table. |
 | `publisher` | object \| null | null when there is no publisher; see publisher sub-table. |
 | `identifiers` | object | 12 keys, all string \| null — see identifiers sub-table. |
-| `first_author` | object \| null | `{ person_id: int, name: string }`; null if the work has no hydrated author. |
-| `author_count` | int | count of hydrated authorships on the work. |
+| `first_author` | object \| null | `{ person_id: int, name: string }`; null if the work has no hydrated author. Always an `AUTHOR`-role contributor — never an editor or translator that happens to sit at position 1. |
+| `author_count` | int | distinct people credited on the parent work across every role; someone credited as both `AUTHOR` and `EDITOR` counts once. See [works › Contributor roles and positions](./works.md#contributor-roles-and-positions). |
 | `citation_count` | int | parent work incoming-citation count (default 0). |
 | `reference_count` | int | parent work outgoing-reference count (default 0). |
 | `download_count` | int | this publication's download count (default 0). |

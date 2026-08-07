@@ -84,6 +84,9 @@ GET /search/works?author=silva&subject=anthropology&limit=10                    
         "openalex_id": "S149853692"
       },
       "authors_preview": ["Hortense J Spillers"],
+      "contributors_preview": [
+        { "person_id": 374840, "name": "Hortense J Spillers", "role": "AUTHOR", "roles": ["AUTHOR"], "position": 1 }
+      ],
       "author_count": 1,
       "first_author": { "person_id": 374840, "name": "Hortense J Spillers" },
       "first_author_id": 374840,
@@ -143,9 +146,10 @@ GET /search/works?author=silva&subject=anthropology&limit=10                    
 | `venue.scopus_id` | string \| null | |
 | `venue.wikidata_id` | string \| null | |
 | `venue.openalex_id` | string \| null | |
-| `authors_preview` | string[] | Up to a few author display names. |
-| `author_count` | int | Total authors on the work. |
-| `first_author` | object \| null | `{ person_id, name }`. |
+| `authors_preview` | string[] | Up to 3 contributor display names, deduplicated by person and ordered AUTHOR first. Plain strings, no role — use `contributors_preview` to tell an author from a translator. |
+| `contributors_preview` | object[] | The same people carrying their role: `{ person_id, name, role, roles[], position }`. See [works › Contributor roles and positions](./works.md#contributor-roles-and-positions). |
+| `author_count` | int | Distinct people credited across every role; someone credited as both `AUTHOR` and `EDITOR` counts once. |
+| `first_author` | object \| null | `{ person_id, name }`. Always an `AUTHOR`-role contributor. |
 | `first_author.person_id` | int | |
 | `first_author.name` | string | |
 | `first_author_id` | int \| null | Duplicate of `first_author.person_id`. |

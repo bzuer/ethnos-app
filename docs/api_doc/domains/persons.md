@@ -312,7 +312,7 @@ Works authored or edited by a person, paginated. Honours the **shared work sort/
 | `page` | integer | 1 | ≥ 1 | |
 | `limit` | integer | 20 | 1..100 | |
 | `offset` | integer | — | ≥ 0 | alternative to `page`. |
-| `role` | string | — | `AUTHOR` \| `EDITOR` (case-insensitive, upper-cased) | filter by authorship role. `role=EDITOR` on an author-only person → total 0. |
+| `role` | string | — | `AUTHOR` \| `EDITOR` \| `TRANSLATOR` \| `REVIEWER` (case-insensitive, upper-cased) | filter by authorship role. `role=EDITOR` on an author-only person → total 0. |
 | `year_from` | integer | — | ≥ 1000 | inclusive lower bound on publication year. |
 | `year_to` | integer | — | ≥ 1000 | inclusive upper bound. |
 | `cited_by_min` | integer | — | ≥ 0 | inclusive lower bound on `cited_by_count` (against `works.citation_count`). Alias `citation_count_min`. |
@@ -347,7 +347,7 @@ GET /persons/3589585/works?cited_by_min=100&sort_by=cited_by_count
       "open_access": false,
       "cited_by_count": 201,
       "references_count": 0,
-      "authorship": { "role": "AUTHOR", "position": 1, "is_corresponding": false },
+      "authorship": { "role": "AUTHOR", "roles": ["AUTHOR"], "position": 1, "is_corresponding": false },
       "publication": {
         "year": 1984,
         "journal": "Foreign Affairs",
@@ -360,6 +360,7 @@ GET /persons/3589585/works?cited_by_min=100&sort_by=cited_by_count
         "total_count": 3,
         "author_string": "John C Campbell; Hedley Bull; Adam Watson"
       },
+
       "created_at": "2026-04-08T04:20:07.000Z"
     }
   ],
@@ -389,8 +390,9 @@ GET /persons/3589585/works?cited_by_min=100&sort_by=cited_by_count
 | `open_access` | boolean | top-level OA flag. |
 | `cited_by_count` | integer | from `works.citation_count`; present on every row. |
 | `references_count` | integer | from `works.reference_count`. |
-| `authorship.role` | string | `AUTHOR` \| `EDITOR` — this person's role on the work. |
-| `authorship.position` | integer \| null | this person's author position. |
+| `authorship.role` | string | `AUTHOR` \| `EDITOR` \| `TRANSLATOR` \| `REVIEWER` — the highest-ranked role this person holds on the work. |
+| `authorship.roles` | string[] | every role this person holds on the work, e.g. `["AUTHOR","EDITOR"]` for someone who both wrote in and edited the volume. The work is still returned as a **single row**. |
+| `authorship.position` | integer \| null | this person's position **within the primary role** (1-based per role, not per work). |
 | `authorship.is_corresponding` | boolean | corresponding-author flag. |
 | `publication.year` | integer \| null | year of the displayed publication. |
 | `publication.journal` | string \| null | venue name. |
@@ -398,8 +400,8 @@ GET /persons/3589585/works?cited_by_min=100&sort_by=cited_by_count
 | `publication.issue` | string \| null | |
 | `publication.pages` | string \| null | |
 | `publication.open_access` | boolean | OA flag of the displayed publication. |
-| `authors.total_count` | integer | total authorship rows on the work. |
-| `authors.author_string` | string \| null | `; `-joined author display names (all authors, not just this person). |
+| `authors.total_count` | integer | distinct people credited on the work across every role (a person credited twice counts once). |
+| `authors.author_string` | string \| null | `; `-joined display names of all contributors (not just this person), deduplicated by person and ordered AUTHOR first. |
 | `created_at` | string (ISO date-time) | work record creation timestamp. |
 
 **Notes / caveats**
