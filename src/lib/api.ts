@@ -120,23 +120,89 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export interface VenueMetrics {
+  impact_factor?: number | string | null;
+  citescore?: number | string | null;
+  sjr?: number | string | null;
+  sjr_best_quartile?: string | null;
+  snip?: number | string | null;
+  h_index?: number | null;
+  i10_index?: number | null;
+  two_yr_mean_citedness?: number | null;
+  overton?: number | null;
+  female_share?: number | null;
+}
+
+export interface VenueIdentifiers {
+  issn?: string | null;
+  eissn?: string | null;
+  isbn13?: string | null;
+  scopus_id?: string | null;
+  wikidata_id?: string | null;
+  openalex_id?: string | null;
+  scielo_id?: string | null;
+  mag_id?: string | null;
+  openlibrary_work?: string | null;
+}
+
+export interface VenueIndexing {
+  is_in_doaj?: boolean | null;
+  is_in_scielo?: boolean | null;
+  is_indexed_in_scopus?: boolean | null;
+  is_oa_diamond?: boolean | null;
+  validation_status?: string | null;
+}
+
+export interface VenuePublisher {
+  id?: string | number;
+  name?: string;
+  type?: string;
+  country_code?: string;
+  url?: string | null;
+  identifiers?: { ror_id?: string | null; grid_id?: string | null; wikidata_id?: string | null; openalex_id?: string | null } | null;
+  _links?: { self?: string | null } | null;
+}
+
 export interface Venue {
   id: string | number;
   name?: string;
   abbreviated_name?: string;
   type?: string;
+  aggregation_type?: string | null;
+  language?: string | null;
+  open_access?: boolean | null;
   issn?: string;
   eissn?: string;
+  isbn13?: string | null;
+  openlibrary_work?: string | null;
+  mag_id?: string | null;
   works_count?: number;
+  cited_by_count?: number;
   coverage_start_year?: number;
   coverage_end_year?: number;
   country_code?: string;
-  publisher?: { name?: string; country_code?: string } | null;
-  metrics?: { sjr?: number | string; snip?: number | string; citescore?: number | string } | null;
-  legacy_metrics?: { sjr?: number | string; snip?: number | string; citescore?: number | string } | null;
+  homepage_url?: string | null;
+  publisher?: VenuePublisher | null;
+  identifiers?: VenueIdentifiers | null;
+  indexing?: VenueIndexing | null;
+  metrics?: VenueMetrics | null;
+  legacy_metrics?: VenueMetrics | null;
+  ranking?: { score?: number | null; components?: Record<string, number | null>; llm?: { relevance?: number | null; justification?: string | null } | null } | null;
   sjr?: number | string | null;
   snip?: number | string | null;
   citescore?: number | string | null;
+  impact_factor?: number | string | null;
+  sjr_best_quartile?: string | null;
+  h_index?: number | null;
+  i10_index?: number | null;
+  two_yr_mean_citedness?: number | null;
+  overton?: number | null;
+  female_share?: number | null;
+  is_in_doaj?: boolean | null;
+  is_in_scielo?: boolean | null;
+  is_indexed_in_scopus?: boolean | null;
+  is_oa_diamond?: boolean | null;
+  validation_status?: string | null;
   summary_snapshot?: {
     name?: string;
     abbreviated_name?: string;
@@ -146,10 +212,20 @@ export interface Venue {
     subjects?: Array<string | { name?: string; display_name?: string; label?: string }>;
     subjects_string?: string;
   } | null;
-  subjects?: Array<string | { name?: string; display_name?: string; label?: string }>;
+  subjects?: Array<string | { subject_id?: number; term?: string; score?: number; vocabulary?: string; lang?: string; name?: string; display_name?: string; label?: string }>;
   subjects_string?: string | null;
   description?: string | null;
   summary?: string | null;
+  summary_truncated?: boolean | null;
+  summary_updated_at?: string | null;
+  publication_summary?: {
+    first_publication_year?: number | null;
+    latest_publication_year?: number | null;
+    total_works_count?: number;
+    open_access_works_count?: number;
+    open_access_percentage?: number | null;
+    publication_trend?: Array<{ year?: number | null; works_count?: number; oa_works_count?: number }>;
+  } | null;
 }
 
 type ApiEnvelope<T> = { data?: T } | { venue?: T } | T;

@@ -36,7 +36,7 @@ const normalizeText = (value: any, limit = 420) => {
   return `${text.slice(0, limit)}…`;
 };
 
-const pickIdentifier = (item: any, key: 'issn' | 'eissn') => {
+const pickIdentifier = (item: any, key: 'issn' | 'eissn' | 'isbn13') => {
   const fromSummary = item?.summary_snapshot && item.summary_snapshot[key];
   const direct = item?.[key];
   const nested = item?.identifiers && item.identifiers[key];
@@ -62,6 +62,14 @@ const pickSubjectsText = (v: any): string => {
   if (summary && typeof summary === 'string' && summary.trim()) return summary.trim();
   const joined = subjectsToText(v?.summary_snapshot?.subjects || v?.subjects);
   return joined;
+};
+
+const pickSummaryText = (v: any): string => {
+  const candidates = [v?.summary, v?.summary_snapshot?.summary, v?.summary_snapshot?.description, v?.description];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  }
+  return '';
 };
 
 type MetaSegment = {
@@ -152,13 +160,17 @@ export default function VenuesList({
             const impactFactor = typeof v.impact_factor === 'number' ? v.impact_factor : (typeof v.summary_snapshot?.impact_factor === 'number' ? v.summary_snapshot.impact_factor : null);
             const issn = pickIdentifier(v, 'issn');
             const eissn = pickIdentifier(v, 'eissn');
+            const isbn13 = pickIdentifier(v, 'isbn13');
+            const quartile = (v.sjr_best_quartile || v.metrics?.sjr_best_quartile || '').toString().toUpperCase();
             const country = (v.summary_snapshot?.country_code || v.country_code || v.publisher?.country_code || '').toString().toUpperCase();
             const type = (v.summary_snapshot?.type || v.type || '').toString().toUpperCase();
             const isOpenAccess = isTrue(v.open_access) || Number(v.summary_snapshot?.open_access_percentage ?? v.open_access_percentage ?? 0) >= 90;
+            const isDiamond = isTrue(v.is_oa_diamond) || isTrue(v.indexing?.is_oa_diamond);
             const inDoaj = isTrue(v.is_in_doaj) || isTrue(v.summary_snapshot?.is_in_doaj);
             const inScielo = isTrue(v.is_in_scielo) || isTrue(v.summary_snapshot?.is_in_scielo);
             const inScopus = isTrue(v.is_indexed_in_scopus) || isTrue(v.summary_snapshot?.is_indexed_in_scopus);
-            const summary = normalizeText(pickSubjectsText(v));
+            const subjectsText = normalizeText(pickSubjectsText(v));
+            const summary = normalizeText(pickSummaryText(v)) || subjectsText;
             const metaSegments: MetaSegment[] = [];
             const publisherValue = publisher || tc('entities.publisherUnknown');
             if (type) metaSegments.push({ className: 'result-type', text: type });
@@ -166,10 +178,12 @@ export default function VenuesList({
             if (coverage) metaSegments.push({ className: 'result-coverage', text: coverage });
             if (issn) metaSegments.push({ className: 'result-issn', text: `${tv('issn')} ${issn}` });
             if (eissn && eissn !== issn) metaSegments.push({ className: 'result-eissn', text: `${tv('eissn')} ${eissn}` });
+            if (!issn && !eissn && isbn13) metaSegments.push({ className: 'result-isbn', text: `${tv('isbn13')} ${isbn13}` });
             if (works) metaSegments.push({ className: 'result-total', text: tc('meta.worksCount', { count: works }) });
             if (cited) metaSegments.push({ className: 'result-cited', text: `${tc('meta.citedBy')}: ${cited}` });
             if (typeof hIndex === 'number' && hIndex > 0) metaSegments.push({ className: 'result-hindex', text: `${tv('hIndexLabel')}: ${hIndex}` });
             if (typeof impactFactor === 'number' && impactFactor > 0) metaSegments.push({ className: 'result-impact', text: `${tv('impact')}: ${impactFactor.toFixed(2)}` });
+            if (quartile) metaSegments.push({ className: 'result-quartile', text: `${tv('sjr')} ${quartile}` });
             if (country) metaSegments.push({ className: 'result-country', text: country });
             return (
               <li className="result-item" key={v.id}>
@@ -186,9 +200,10 @@ export default function VenuesList({
                     ))}
                   </p>
                 ) : null}
-                {(isOpenAccess || inDoaj || inScielo || inScopus) ? (
+                {(isOpenAccess || isDiamond || inDoaj || inScielo || inScopus) ? (
                   <p className="result-meta result-badges">
                     {isOpenAccess ? <span className="badge open-acess">{tc('meta.openAccess')}</span> : null}
+                    {isDiamond ? <span className="badge diamond">{tv('oaDiamond')}</span> : null}
                     {inDoaj ? <span className="badge doaj">{tv('doaj')}</span> : null}
                     {inScielo ? <span className="badge scielo">SciELO</span> : null}
                     {inScopus ? <span className="badge scopus">{tv('indexedScopus')}</span> : null}

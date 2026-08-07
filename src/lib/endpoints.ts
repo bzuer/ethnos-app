@@ -89,10 +89,15 @@ export async function searchWorks(params: Record<string, string | number | boole
 
 export type VenuesListSort =
   | 'id' | 'name' | 'type'
-  | 'impact_factor' | 'works_count'
-  | 'score' | 'ranking' | 'h_index' | 'cited_by_count'
-  | 'oldest' | 'newest';
+  | 'score' | 'ranking' | 'works_count' | 'cited_by_count'
+  | 'impact_factor' | 'citescore' | 'sjr' | 'snip'
+  | 'h_index' | 'i10_index' | 'two_yr_mean_citedness'
+  | 'overton' | 'female_share'
+  | 'coverage_start_year' | 'coverage_end_year' | 'oldest' | 'newest'
+  | 'created_at' | 'updated_at';
 export type VenuesListSortOrder = 'ASC' | 'DESC';
+export type VenuesListQuartile = 'Q1' | 'Q2' | 'Q3' | 'Q4';
+export type VenuesListValidationStatus = 'PENDING' | 'VALIDATED' | 'NOT_FOUND' | 'FAILED';
 export type VenuesListFilters = {
   sortBy?: VenuesListSort;
   sortOrder?: VenuesListSortOrder;
@@ -100,7 +105,58 @@ export type VenuesListFilters = {
   coverageFrom?: number;
   coverageTo?: number;
   activeInYear?: number;
+  country?: string;
+  language?: string;
+  aggregationType?: string;
+  publisherId?: number;
+  sjrBestQuartile?: VenuesListQuartile;
+  validationStatus?: VenuesListValidationStatus;
+  openAccess?: boolean;
+  isInDoaj?: boolean;
+  isInScielo?: boolean;
+  isIndexedInScopus?: boolean;
+  isOaDiamond?: boolean;
+  hasIssn?: boolean;
+  hasIsbn13?: boolean;
+  hasSummary?: boolean;
+  worksMin?: number;
+  worksMax?: number;
+  citedByMin?: number;
+  citedByMax?: number;
+  impactFactorMin?: number;
+  impactFactorMax?: number;
+  hIndexMin?: number;
+  scoreMin?: number;
 };
+
+const VENUES_FILTER_PARAMS: Array<[keyof VenuesListFilters, string]> = [
+  ['type', 'type'],
+  ['country', 'country'],
+  ['language', 'language'],
+  ['aggregationType', 'aggregation_type'],
+  ['sjrBestQuartile', 'sjr_best_quartile'],
+  ['validationStatus', 'validation_status'],
+  ['coverageFrom', 'coverage_from'],
+  ['coverageTo', 'coverage_to'],
+  ['activeInYear', 'active_in_year'],
+  ['publisherId', 'publisher_id'],
+  ['worksMin', 'works_min'],
+  ['worksMax', 'works_max'],
+  ['citedByMin', 'cited_by_min'],
+  ['citedByMax', 'cited_by_max'],
+  ['impactFactorMin', 'impact_factor_min'],
+  ['impactFactorMax', 'impact_factor_max'],
+  ['hIndexMin', 'h_index_min'],
+  ['scoreMin', 'score_min'],
+  ['openAccess', 'open_access'],
+  ['isInDoaj', 'is_in_doaj'],
+  ['isInScielo', 'is_in_scielo'],
+  ['isIndexedInScopus', 'is_indexed_in_scopus'],
+  ['isOaDiamond', 'is_oa_diamond'],
+  ['hasIssn', 'has_issn'],
+  ['hasIsbn13', 'has_isbn13'],
+  ['hasSummary', 'has_summary']
+];
 
 export async function getVenuesPage(page = 1, limit = 50, opts?: VenuesListFilters) {
   const params = [
@@ -109,10 +165,12 @@ export async function getVenuesPage(page = 1, limit = 50, opts?: VenuesListFilte
   ];
   if (opts?.sortBy) params.push(`sortBy=${encodeURIComponent(opts.sortBy)}`);
   if (opts?.sortOrder) params.push(`sortOrder=${encodeURIComponent(opts.sortOrder)}`);
-  if (opts?.type) params.push(`type=${encodeURIComponent(opts.type)}`);
-  if (typeof opts?.coverageFrom === 'number' && Number.isFinite(opts.coverageFrom)) params.push(`coverage_from=${encodeURIComponent(String(opts.coverageFrom))}`);
-  if (typeof opts?.coverageTo === 'number' && Number.isFinite(opts.coverageTo)) params.push(`coverage_to=${encodeURIComponent(String(opts.coverageTo))}`);
-  if (typeof opts?.activeInYear === 'number' && Number.isFinite(opts.activeInYear)) params.push(`active_in_year=${encodeURIComponent(String(opts.activeInYear))}`);
+  VENUES_FILTER_PARAMS.forEach(([key, param]) => {
+    const value = opts?.[key];
+    if (value === undefined || value === null || value === '') return;
+    if (typeof value === 'number' && !Number.isFinite(value)) return;
+    params.push(`${param}=${encodeURIComponent(String(value))}`);
+  });
   const r: any = await fetchJson(
     `/venues?${params.join('&')}`,
     { cache: 'force-cache' as RequestCache }

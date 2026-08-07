@@ -55,11 +55,11 @@ const formatSubjectList = (value: unknown) => {
 const getVenueDescription = (venue?: Venue | null) => {
   if (!venue) return '';
   return pickText([
+    venue.summary,
     venue.summary_snapshot?.summary,
     venue.summary_snapshot?.description,
     venue.summary_snapshot?.focus,
-    venue.description,
-    venue.summary
+    venue.description
   ]);
 };
 
@@ -101,12 +101,17 @@ const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTit
     ...toStringList(venue?.eissn),
     ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
   ]);
+  const isbnValues = uniqueList([
+    ...toStringList((venue as any)?.isbn13),
+    ...toStringList((venue as any)?.identifiers?.isbn13)
+  ]);
   const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/venues/${id}`)}`;
   const subjectsText = getVenueSubjectsText(venue);
   const titles = uniqueList(workTitles);
   const identifiers = uniqueList([
     publicUrl,
-    ...issnValues
+    ...issnValues,
+    ...isbnValues
   ]);
   const other: Record<string, string | string[]> = {};
   if (titles.length === 1) other.citation_title = titles[0];
@@ -119,6 +124,8 @@ const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTit
   }
   if (publisherName) other.citation_publisher = publisherName;
   if (issnValues.length) other.citation_issn = issnValues;
+  if (isbnValues.length) other.citation_isbn = isbnValues;
+  if (venue?.language) other['dc.language'] = String(venue.language);
   if (publicUrl) other.citation_public_url = publicUrl;
   if (name) other['dc.title'] = name;
   if (publisherName) other['dc.publisher'] = publisherName;
@@ -295,22 +302,49 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
   ]);
   const canonical = new URL(localizedPath(locale as Locale, `/venues/${id}`), metadataBase).toString();
+  const venueIsbn13 = pickText([(venue as any)?.isbn13, (venue as any)?.identifiers?.isbn13]);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Periodical',
     name,
+    alternateName: venue?.abbreviated_name && venue.abbreviated_name !== name ? venue.abbreviated_name : undefined,
     issn: issnValues.length ? issnValues : undefined,
+    isbn: venueIsbn13 || undefined,
     publisher: venue?.publisher?.name ? { '@type': 'Organization', name: venue.publisher.name } : undefined,
     url: canonical,
     mainEntityOfPage: canonical,
-    inLanguage: locale,
+    inLanguage: venue?.language || locale,
     description: descriptionText || undefined
   };
 
   const metrics = venue?.metrics || venue?.legacy_metrics || null;
-  const sjr = (metrics && (metrics as any).sjr) ?? venue?.sjr;
-  const snip = (metrics && (metrics as any).snip) ?? venue?.snip;
-  const citescore = (metrics && (metrics as any).citescore) ?? venue?.citescore;
+  const metricValue = (key: string) => {
+    const fromRoot = (venue as any)?.[key];
+    if (fromRoot !== undefined && fromRoot !== null) return fromRoot;
+    const fromBlock = metrics ? (metrics as any)[key] : null;
+    return fromBlock === undefined ? null : fromBlock;
+  };
+  const sjr = metricValue('sjr');
+  const snip = metricValue('snip');
+  const citescore = metricValue('citescore');
+  const impactFactor = metricValue('impact_factor');
+  const sjrQuartile = metricValue('sjr_best_quartile');
+  const hIndex = metricValue('h_index');
+  const i10Index = metricValue('i10_index');
+  const meanCitedness = metricValue('two_yr_mean_citedness');
+  const overton = metricValue('overton');
+  const femaleShare = metricValue('female_share');
+  const accessLabels = [
+    venue?.open_access ? t('common.meta.openAccess') : '',
+    venue?.is_oa_diamond ? t('venues.detail.oaDiamond') : ''
+  ].filter(Boolean);
+  const indexingLabels = [
+    venue?.is_in_doaj ? t('venues.detail.doaj') : '',
+    venue?.is_in_scielo ? 'SciELO' : '',
+    venue?.is_indexed_in_scopus ? t('venues.detail.indexedScopus') : ''
+  ].filter(Boolean);
+  const citedByCount = Number(venue?.cited_by_count);
+  const publisherId = venue?.publisher?.id;
   const identifierEntries: IdentifierEntry[] = [];
   const venueIdentifiers = (venue as any)?.identifiers;
   let venueIssn = venue?.issn;
@@ -373,7 +407,11 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                 <tr>
                   <th scope="row">{t('venues.detail.publisher')}</th>
                   <td className="field-value">
-                    {venue.publisher.name}
+                    {publisherId ? (
+                      <LocaleLink className="action-link table-link" href={`/institutions/${publisherId}`}>{venue.publisher.name}</LocaleLink>
+                    ) : (
+                      venue.publisher.name
+                    )}
                     {venue.publisher.country_code ? ` (${venue.publisher.country_code})` : ''}
                   </td>
                 </tr>
@@ -433,10 +471,46 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                   <td className="field-value">{venue.country_code}</td>
                 </tr>
               ) : null}
+              {venue?.language ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.language')}</th>
+                  <td className="field-value">{String(venue.language).toUpperCase()}</td>
+                </tr>
+              ) : null}
+              {accessLabels.length ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.access')}</th>
+                  <td className="field-value">{accessLabels.join(' • ')}</td>
+                </tr>
+              ) : null}
+              {indexingLabels.length ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.indexing')}</th>
+                  <td className="field-value">{indexingLabels.join(' • ')}</td>
+                </tr>
+              ) : null}
+              {Number.isFinite(citedByCount) && citedByCount > 0 ? (
+                <tr>
+                  <th scope="row">{t('common.meta.citedBy')}</th>
+                  <td className="field-value">{formatNumber(citedByCount)}</td>
+                </tr>
+              ) : null}
+              {impactFactor ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.impactFactor')}</th>
+                  <td className="field-value">{String(impactFactor)}</td>
+                </tr>
+              ) : null}
               {sjr ? (
                 <tr>
                   <th scope="row">{t('venues.detail.sjr')}</th>
-                  <td className="field-value">{String(sjr)}</td>
+                  <td className="field-value">{String(sjr)}{sjrQuartile ? ` (${sjrQuartile})` : ''}</td>
+                </tr>
+              ) : null}
+              {!sjr && sjrQuartile ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.sjrQuartile')}</th>
+                  <td className="field-value">{String(sjrQuartile)}</td>
                 </tr>
               ) : null}
               {snip ? (
@@ -449,6 +523,36 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
                 <tr>
                   <th scope="row">{t('venues.detail.citescore')}</th>
                   <td className="field-value">{String(citescore)}</td>
+                </tr>
+              ) : null}
+              {hIndex ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.hIndexLabel')}</th>
+                  <td className="field-value">{formatNumber(Number(hIndex))}</td>
+                </tr>
+              ) : null}
+              {i10Index ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.i10IndexLabel')}</th>
+                  <td className="field-value">{formatNumber(Number(i10Index))}</td>
+                </tr>
+              ) : null}
+              {meanCitedness ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.meanCitedness')}</th>
+                  <td className="field-value">{String(meanCitedness)}</td>
+                </tr>
+              ) : null}
+              {overton ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.overton')}</th>
+                  <td className="field-value">{formatNumber(Number(overton))}</td>
+                </tr>
+              ) : null}
+              {femaleShare ? (
+                <tr>
+                  <th scope="row">{t('venues.detail.femaleShare')}</th>
+                  <td className="field-value">{`${Number(femaleShare).toFixed(1)}%`}</td>
                 </tr>
               ) : null}
             </tbody>

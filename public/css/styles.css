@@ -1245,7 +1245,8 @@ a.action-btn {
 .result-venue,
 .result-country,
 .result-issn,
-.result-eissn {
+.result-eissn,
+.result-isbn {
     font-family: var(--sans);
     font-size: 14px;
     color: var(--data-gray);
@@ -1263,7 +1264,8 @@ a.action-btn {
 .result-cited,
 .result-refs,
 .result-hindex,
-.result-impact {
+.result-impact,
+.result-quartile {
     font-family: var(--sans);
     font-size: 14px;
     color: var(--data-gray);
@@ -2016,6 +2018,12 @@ section:last-of-type {
 .badge.open-acess {
     background: var(--primary-yellow);
     color: var(--bg-light);
+}
+
+.badge.diamond {
+    background: transparent;
+    color: var(--primary-yellow);
+    border: var(--border-thin) solid var(--primary-yellow);
 }
 
 .badge.doaj {

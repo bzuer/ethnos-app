@@ -5,9 +5,7 @@ import {
   getEntityExportWorks,
   getVenuesPage,
   searchWorks,
-  type VenuesListFilters,
-  type VenuesListSort,
-  type VenuesListSortOrder
+  type VenuesListFilters
 } from './endpoints';
 import type { EntityExportWorks, EntityKind } from './entity-export';
 
@@ -162,14 +160,7 @@ export async function actGetEntityExportWorks(kind: EntityKind, id: string | num
   return await getEntityExportWorks(kind, id);
 }
 
-export type VenuesPageActionOptions = {
-  sortBy?: VenuesListSort;
-  sortOrder?: VenuesListSortOrder;
-  type?: string;
-  coverageFrom?: number;
-  coverageTo?: number;
-  activeInYear?: number;
-};
+export type VenuesPageActionOptions = VenuesListFilters;
 
 export async function actGetVenuesPage(page: number, limit: number, opts?: VenuesPageActionOptions) {
   const filters: VenuesListFilters | undefined = opts ? { ...opts } : undefined;
