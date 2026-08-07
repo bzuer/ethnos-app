@@ -165,6 +165,8 @@ export type ContributorRole = typeof CONTRIBUTOR_ROLES[number];
 
 export type ContributorGroup = { role: ContributorRole; contributors: any[] };
 
+export type ContributorRoleSetGroup = { roles: ContributorRole[]; contributors: any[] };
+
 export function formatContributorName(entry: any) {
   if (!entry) return '';
   if (typeof entry === 'string') return normalizeText(entry);
@@ -177,24 +179,51 @@ export function normalizeContributorRole(raw: any): ContributorRole {
   return (CONTRIBUTOR_ROLES as readonly string[]).includes(value) ? (value as ContributorRole) : 'OTHER';
 }
 
+export function normalizeContributorRoles(entry: any): ContributorRole[] {
+  if (!entry || typeof entry !== 'object') return ['AUTHOR'];
+  const list = Array.isArray(entry.roles) ? entry.roles : null;
+  if (list && list.length) {
+    const normalized = list.map(normalizeContributorRole);
+    const ordered = CONTRIBUTOR_ROLES.filter((role) => normalized.includes(role));
+    return ordered.length ? [...ordered] : ['AUTHOR'];
+  }
+  return [normalizeContributorRole(entry.role)];
+}
+
+export function pickContributorEntries(item: any) {
+  if (Array.isArray(item?.contributors) && item.contributors.length) return item.contributors;
+  if (Array.isArray(item?.authors) && item.authors.length) return item.authors;
+  if (Array.isArray(item?.contributors_preview) && item.contributors_preview.length) return item.contributors_preview;
+  return [];
+}
+
+function contributorIdentity(entry: any) {
+  const name = formatContributorName(entry);
+  const personId = entry && typeof entry === 'object' ? (entry.person_id ?? entry.id ?? null) : null;
+  if (!name && (personId === null || personId === undefined)) return null;
+  const position = Number(entry && typeof entry === 'object' ? entry.position : NaN);
+  return {
+    key: personId !== null && personId !== undefined ? `id:${personId}` : `name:${name.toLowerCase()}`,
+    position: Number.isFinite(position) ? position : Number.MAX_SAFE_INTEGER
+  };
+}
+
 export function groupContributorsByRole(raw: any): ContributorGroup[] {
   const list = Array.isArray(raw) ? raw : [];
   const buckets = new Map<ContributorRole, any[]>();
   const seen = new Map<ContributorRole, Set<string>>();
   list.forEach((entry: any, index: number) => {
-    const name = formatContributorName(entry);
-    const personId = entry && typeof entry === 'object' ? (entry.person_id ?? entry.id ?? null) : null;
-    if (!name && personId === null) return;
-    const role = normalizeContributorRole(entry && typeof entry === 'object' ? entry.role : '');
-    const key = personId !== null ? `id:${personId}` : `name:${name.toLowerCase()}`;
-    const roleSeen = seen.get(role) || new Set<string>();
-    if (roleSeen.has(key)) return;
-    roleSeen.add(key);
-    seen.set(role, roleSeen);
-    const bucket = buckets.get(role) || [];
-    const position = Number(entry && typeof entry === 'object' ? entry.position : NaN);
-    bucket.push({ entry, index, position: Number.isFinite(position) ? position : Number.MAX_SAFE_INTEGER });
-    buckets.set(role, bucket);
+    const identity = contributorIdentity(entry);
+    if (!identity) return;
+    normalizeContributorRoles(entry).forEach((role) => {
+      const roleSeen = seen.get(role) || new Set<string>();
+      if (roleSeen.has(identity.key)) return;
+      roleSeen.add(identity.key);
+      seen.set(role, roleSeen);
+      const bucket = buckets.get(role) || [];
+      bucket.push({ entry, index, position: identity.position });
+      buckets.set(role, bucket);
+    });
   });
   return CONTRIBUTOR_ROLES
     .map((role) => ({
@@ -204,6 +233,40 @@ export function groupContributorsByRole(raw: any): ContributorGroup[] {
         .map((item) => item.entry)
     }))
     .filter((group) => group.contributors.length > 0);
+}
+
+export function groupContributorsByRoleSet(raw: any): ContributorRoleSetGroup[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const people = new Map<string, { entry: any; index: number; position: number; roles: Set<ContributorRole> }>();
+  list.forEach((entry: any, index: number) => {
+    const identity = contributorIdentity(entry);
+    if (!identity) return;
+    const roles = normalizeContributorRoles(entry);
+    const existing = people.get(identity.key);
+    if (existing) {
+      roles.forEach((role) => existing.roles.add(role));
+      if (identity.position < existing.position) existing.position = identity.position;
+      return;
+    }
+    people.set(identity.key, { entry, index, position: identity.position, roles: new Set(roles) });
+  });
+  const groups = new Map<string, { roles: ContributorRole[]; rank: number; order: number; items: any[] }>();
+  people.forEach((person) => {
+    const roles = CONTRIBUTOR_ROLES.filter((role) => person.roles.has(role));
+    const key = roles.join('+');
+    const group = groups.get(key)
+      || { roles: [...roles], rank: CONTRIBUTOR_ROLES.indexOf(roles[0]), order: person.index, items: [] };
+    group.items.push(person);
+    groups.set(key, group);
+  });
+  return [...groups.values()]
+    .sort((a, b) => (a.rank - b.rank) || (a.roles.length - b.roles.length) || (a.order - b.order))
+    .map((group) => ({
+      roles: group.roles,
+      contributors: group.items
+        .sort((a, b) => (a.position - b.position) || (a.index - b.index))
+        .map((item) => item.entry)
+    }));
 }
 
 export function pickContributorsByRole(raw: any, role: ContributorRole) {
@@ -224,9 +287,22 @@ function pickAuthorName(entry: any) {
 }
 
 function pickAuthorList(item: any) {
-  if (Array.isArray(item?.authors) && item.authors.length) return pickPrimaryContributors(item.authors);
+  const entries = pickContributorEntries(item);
+  if (entries.length) return pickPrimaryContributors(entries);
   if (Array.isArray(item?.authors_preview) && item.authors_preview.length) return item.authors_preview;
   return [];
+}
+
+function pickContributorTotal(item: any) {
+  const roles = item?.contributor_roles;
+  if (roles && typeof roles === 'object' && !Array.isArray(roles)) {
+    const authorCount = Number(roles.AUTHOR);
+    if (Number.isFinite(authorCount) && authorCount > 0) return { total: authorCount, exact: true };
+  }
+  const raw = Number(item?.authors_count ?? item?.author_count);
+  if (!Number.isFinite(raw) || raw <= 0) return { total: null as number | null, exact: false };
+  const entries = pickContributorEntries(item);
+  return { total: raw, exact: entries.length > 0 && entries.length >= raw };
 }
 
 function pickAuthorString(item: any) {
@@ -256,8 +332,8 @@ export function formatMetadataAuthors(item: any, fallback = '', maxChars: number
     return fb ? truncateMetadataText(fb, maxChars) : '';
   }
   const two = names.slice(0, 2).join(', ');
-  const countRaw = Number(item?.author_count);
-  const hasMore = Number.isFinite(countRaw) && countRaw > 2 ? true : names.length > 2;
+  const { total, exact } = pickContributorTotal(item);
+  const hasMore = !exact && total !== null && total > 2 ? true : names.length > 2;
   const text = hasMore ? `${two} et al.` : two;
   return truncateMetadataText(text, maxChars);
 }

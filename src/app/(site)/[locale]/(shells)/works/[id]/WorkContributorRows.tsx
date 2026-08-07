@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import LocaleLink from '@/components/common/LocaleLink';
-import { formatContributorName, type ContributorGroup } from '@/lib/works';
+import { formatContributorName, type ContributorRoleSetGroup } from '@/lib/works';
 
 export type ContributorLabels = {
   roles: Record<string, string>;
@@ -17,12 +17,15 @@ function pickAffiliation(contributor: any) {
   return { name: raw?.name || '', id: raw?.id ?? null };
 }
 
-export default function WorkContributorRows({ groups, labels }: { groups: ContributorGroup[]; labels: ContributorLabels }): ReactNode {
+export default function WorkContributorRows({ groups, labels }: { groups: ContributorRoleSetGroup[]; labels: ContributorLabels }): ReactNode {
   return (
     <>
-      {groups.map((group) => (
-        <tr key={group.role}>
-          <th scope="row">{labels.roles[group.role] || labels.roles.OTHER}</th>
+      {groups.map((group) => {
+        const groupKey = group.roles.join('+');
+        const heading = group.roles.map((role) => labels.roles[role] || labels.roles.OTHER).join(' / ');
+        return (
+        <tr key={groupKey}>
+          <th scope="row">{heading}</th>
           <td className="field-value">
             {group.contributors.map((contributor: any, idx: number) => {
               const name = formatContributorName(contributor);
@@ -42,7 +45,7 @@ export default function WorkContributorRows({ groups, labels }: { groups: Contri
                 contributor?.is_corresponding ? { key: 'corresponding', node: <span>{labels.corresponding}</span> } : null
               ].filter(Boolean) as Array<{ key: string; node: ReactNode }>;
               return (
-                <span key={`${group.role}-${personId ?? idx}`}>
+                <span key={`${groupKey}-${personId ?? idx}`}>
                   {personId !== null && personId !== undefined ? (
                     <LocaleLink prefetch={false} className="action-link table-link" href={`/persons/${personId}`}>{name || labels.unknownName}</LocaleLink>
                   ) : (
@@ -62,7 +65,8 @@ export default function WorkContributorRows({ groups, labels }: { groups: Contri
             })}
           </td>
         </tr>
-      ))}
+        );
+      })}
     </>
   );
 }

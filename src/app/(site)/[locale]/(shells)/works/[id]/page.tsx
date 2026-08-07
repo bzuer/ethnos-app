@@ -9,7 +9,7 @@ import WorkSectionTabs from './WorkSectionTabs';
 import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
 import { locales, type Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
-import { formatContributorName, getWorkAbstractSnippet, groupContributorsByRole, pickContributorsByRole, sanitizeWorkAbstract } from '@/lib/works';
+import { formatContributorName, getWorkAbstractSnippet, groupContributorsByRole, groupContributorsByRoleSet, pickContributorEntries, pickContributorsByRole, sanitizeWorkAbstract } from '@/lib/works';
 import { buildIdentifierHref, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { notFound } from 'next/navigation';
@@ -58,7 +58,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     return acc;
   };
   const abstractSnippet = cleanedAbstract ? buildDescription(cleanedAbstract) : buildDescription(getWorkAbstractSnippet(work, 220));
-  const authorNames = pickContributorsByRole(work?.authors, 'AUTHOR').map(formatContributorName).filter(Boolean);
+  const authorNames = pickContributorsByRole(pickContributorEntries(work), 'AUTHOR').map(formatContributorName).filter(Boolean);
   const authorSummary = pickReferenceAuthors(work);
   const descriptionRaw = abstractSnippet || [fullTitle || titleBase, authorSummary, year].filter(Boolean).join('. ');
   const description = descriptionRaw && !/[.!?…]$/.test(descriptionRaw) ? `${descriptionRaw}.` : descriptionRaw;
@@ -132,7 +132,9 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const work = await loadWork(id);
   if (!work || !work.id) notFound();
   const t = await getTranslations({ locale });
-  const contributorGroups = groupContributorsByRole(work?.authors);
+  const contributorEntries = pickContributorEntries(work);
+  const contributorGroups = groupContributorsByRole(contributorEntries);
+  const contributorRoleSets = groupContributorsByRoleSet(contributorEntries);
   const contributorLabels = {
     roles: {
       AUTHOR: t('works.detail.labels.authors'),
@@ -396,8 +398,8 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               <th scope="row">{t('works.detail.labels.id')}</th>
               <td className="field-value">{id}</td>
             </tr>
-            {contributorGroups.length > 0 ? (
-              <WorkContributorRows groups={contributorGroups} labels={contributorLabels} />
+            {contributorRoleSets.length > 0 ? (
+              <WorkContributorRows groups={contributorRoleSets} labels={contributorLabels} />
             ) : (
               <tr>
                 <th scope="row">{t('works.detail.labels.authors')}</th>

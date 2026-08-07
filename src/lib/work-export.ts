@@ -1,4 +1,4 @@
-import { groupContributorsByRole, normalizeWorkDetail } from './works';
+import { groupContributorsByRole, normalizeWorkDetail, pickContributorEntries } from './works';
 import { buildIdentifierHref } from './identifiers';
 
 const WORK_TYPE_FORMATS: Record<string, { bibtex: string; ris: string }> = {
@@ -25,16 +25,32 @@ export function workTypeFormats(workType: any) {
   return WORK_TYPE_FORMATS[key] || { bibtex: 'misc', ris: 'GEN' };
 }
 
+function splitPersonName(raw: any) {
+  const text = typeof raw === 'string' ? raw.trim() : '';
+  if (!text) return { family: '', given: '' };
+  const parts = text.split(/\s+/).filter(Boolean);
+  return {
+    family: parts.length ? parts[parts.length - 1] : '',
+    given: parts.length > 1 ? parts.slice(0, -1).join(' ') : ''
+  };
+}
+
 export function normAuthor(a: any) {
   if (!a) return null;
   if (typeof a === 'string') {
-    const parts = a.trim().split(/\s+/);
-    const family = parts.length ? parts[parts.length - 1] : '';
-    const given = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
+    const { family, given } = splitPersonName(a);
     return { family_name: family || null, given_names: given || null, preferred_name: a, identifiers: {}, affiliation: null };
   }
   const aff = a.affiliation && typeof a.affiliation === 'object' ? a.affiliation.name : a.affiliation || null;
-  return { family_name: a.family_name || null, given_names: a.given_names || null, preferred_name: a.preferred_name || a.full_name || a.name || null, identifiers: a.identifiers || (a.orcid ? { orcid: a.orcid } : {}), affiliation: aff || null };
+  const preferred = a.preferred_name || a.full_name || a.name || null;
+  const fallback = a.family_name || a.given_names ? { family: '', given: '' } : splitPersonName(preferred);
+  return {
+    family_name: a.family_name || fallback.family || null,
+    given_names: a.given_names || fallback.given || null,
+    preferred_name: preferred,
+    identifiers: a.identifiers || (a.orcid ? { orcid: a.orcid } : {}),
+    affiliation: aff || null
+  };
 }
 
 export function normalizeValue(value: any) {
@@ -123,7 +139,8 @@ export function normWork(source: any) {
   const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)
     || (source?.primary_publication && typeof source.primary_publication === 'object');
   const raw = needsNormalization ? normalizeWorkDetail(source) : source;
-  const groups = Array.isArray(raw.authors) ? groupContributorsByRole(raw.authors) : [];
+  const contributorEntries = pickContributorEntries(raw);
+  const groups = contributorEntries.length ? groupContributorsByRole(contributorEntries) : [];
   const byRole = (role: string) => (groups.find((group) => group.role === role)?.contributors || []).map(normAuthor).filter(Boolean);
   const editors = byRole('EDITOR');
   const translators = byRole('TRANSLATOR');

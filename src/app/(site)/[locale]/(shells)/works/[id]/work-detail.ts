@@ -8,6 +8,7 @@ import {
   formatMetadataAuthors,
   groupContributorsByRole,
   normalizeWorkDetail,
+  pickContributorEntries,
   pickPrimaryContributors,
   sanitizeWorkAbstract,
   type ContributorRole
@@ -141,10 +142,11 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   const title = work?.title || '';
   const subtitle = work?.subtitle ? String(work.subtitle) : '';
   const fullTitle = subtitle ? `${title}: ${subtitle}` : title;
-  const authors = pickAuthorNames(work?.authors);
-  const editors = pickRoleNames(work?.authors, 'EDITOR');
-  const translators = pickRoleNames(work?.authors, 'TRANSLATOR');
-  const otherContributors = pickRoleNames(work?.authors, 'REVIEWER', 'OTHER');
+  const contributorEntries = pickContributorEntries(work);
+  const authors = pickAuthorNames(contributorEntries);
+  const editors = pickRoleNames(contributorEntries, 'EDITOR');
+  const translators = pickRoleNames(contributorEntries, 'TRANSLATOR');
+  const otherContributors = pickRoleNames(contributorEntries, 'REVIEWER', 'OTHER');
   const year = publication?.year || work?.publication_year || work?.year;
   const publicationDate = publication?.publication_date || work?.publication_date;
   const volume = publication?.volume || work?.volume;
@@ -217,7 +219,7 @@ export function buildCoins(work: any, locale: string, id: string) {
   const title = work?.title || '';
   const subtitle = work?.subtitle ? String(work.subtitle) : '';
   const fullTitle = subtitle ? `${title}: ${subtitle}` : title;
-  const authors = pickAuthorNames(work?.authors);
+  const authors = pickAuthorNames(pickContributorEntries(work));
   const year = publication?.year || work?.publication_year || work?.year;
   const publicationDate = publication?.publication_date || work?.publication_date;
   const volume = publication?.volume || work?.volume;
