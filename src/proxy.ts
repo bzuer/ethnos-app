@@ -100,10 +100,11 @@ function setLocaleHeaders(response: NextResponse, locale: Locale) {
 function shouldBypassIntl(pathname: string) {
   const normalized = pathname.toLowerCase();
   if (normalized === '/robots.txt' || normalized === '/sitemap.xml' || normalized === '/site.webmanifest') return true;
+  if (normalized.startsWith('/sitemaps/')) return true;
   if (normalized.startsWith('/icons/') || normalized.startsWith('/screenshots/')) return true;
   if (normalized.startsWith('/css/')) return true;
   if (normalized.startsWith('/android-chrome-') || normalized.startsWith('/apple-touch-icon') || normalized.startsWith('/favicon')) return true;
-  if (/\.(png|jpg|jpeg|svg|ico|json|webmanifest|txt|css)$/i.test(normalized)) return true;
+  if (/\.(png|jpg|jpeg|svg|ico|json|webmanifest|xml|txt|css)$/i.test(normalized)) return true;
   return false;
 }
 

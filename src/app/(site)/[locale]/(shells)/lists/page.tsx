@@ -1,8 +1,8 @@
 import ListPageClient from './ListPageClient';
-import { buildPageMetadata } from '@/i18n/metadata';
+import { NON_INDEXABLE_ROBOTS, buildPageMetadata } from '@/i18n/metadata';
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.lists', '/lists');
+  return buildPageMetadata(props.params, 'metadata.lists', '/lists', { robots: NON_INDEXABLE_ROBOTS });
 }
 
 export default function ListsPage() {

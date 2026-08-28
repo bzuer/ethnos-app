@@ -11,7 +11,7 @@ export const dynamic = 'force-static';
 export const revalidate = false;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.home', '/');
+  return buildPageMetadata(props.params, 'metadata.home', '/', { absoluteTitle: true });
 }
 
 export default async function HomePage(props: { params: Promise<{ locale: string }> }) {

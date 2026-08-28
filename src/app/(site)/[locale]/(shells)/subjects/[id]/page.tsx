@@ -7,16 +7,24 @@ import { WorkResultList, type WorkResultLabels } from '@/components/common/WorkR
 import { getSubject, getSubjectWorksByTerm, getSubjectWorksPage } from '@/lib/endpoints';
 import { subjectTerm } from '@/lib/subjects';
 import { formatNumber } from '@/lib/format';
-import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
-import { localizedPath } from '@/i18n/paths';
+import JsonLd from '@/components/common/JsonLd';
+import { buildPageMetadata } from '@/i18n/metadata';
+import { localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
+import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string; id: string }>;
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const { id, locale } = await props.params;
-  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.subjectsDetail', `/subjects/${id}`);
+  const page = resolvePageParam((await props.searchParams)?.page);
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.subjectsDetail', `/subjects/${id}`, {
+    query: page > 1 ? { page } : undefined
+  });
   let subject: any = null;
   try {
     subject = await getSubject(id);
@@ -25,11 +33,18 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   }
   if (!subject) return base;
   const term = subjectTerm(subject, locale);
-  const canonicalUrl = new URL(localizedPath(locale as Locale, `/subjects/${id}`), metadataBase).toString();
+  if (!term) return base;
+  const t = await getTranslations({ locale, namespace: 'metadata.descriptors' });
+  const description = [t('subjectDetail', { term }), page > 1 ? t('pageSuffix', { page }) : '']
+    .filter(Boolean)
+    .join(' ');
+  const canonicalUrl = localeUrl(locale as Locale, paginatedPath(`/subjects/${id}`, page));
   return {
     ...base,
-    title: term || base.title,
-    alternates: { canonical: canonicalUrl, languages: base.alternates?.languages }
+    title: term,
+    description,
+    openGraph: base.openGraph ? { ...base.openGraph, title: term, description, url: canonicalUrl } : undefined,
+    twitter: { ...(base.twitter || {}), title: term, description }
   };
 }
 
@@ -74,14 +89,15 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
     emptyState: ''
   };
 
-  const canonical = new URL(localizedPath(locale as Locale, `/subjects/${id}`), metadataBase).toString();
-  const jsonLd: Record<string, any> = {
+  const canonical = localeUrl(locale as Locale, `/subjects/${id}`);
+  const jsonLd: Record<string, any> = withSitePublisher({
     '@context': 'https://schema.org',
     '@type': 'DefinedTerm',
+    '@id': `${canonical}#term`,
     name: term,
     url: canonical,
     mainEntityOfPage: canonical
-  };
+  });
   if (vocabulary) jsonLd.inDefinedTermSet = vocabulary;
 
   const toYear = (value: any): number => {
@@ -136,7 +152,11 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
 
   return (
     <div className="page-header" aria-labelledby="page-title">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={buildBreadcrumbList(locale as Locale, [
+        { name: t('metadata.breadcrumbs.home'), path: '/' },
+        { name: term, path: `/subjects/${id}` }
+      ])} />
       <h1 className="page-title" id="page-title">{term}</h1>
 
       <section aria-labelledby="subject-info">

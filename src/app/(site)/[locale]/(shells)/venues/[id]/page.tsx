@@ -10,8 +10,10 @@ import type { Venue } from '@/lib/api';
 import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
 import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
-import { buildPageMetadata, metadataBase, openGraphLocales } from '@/i18n/metadata';
-import { localizedPath } from '@/i18n/paths';
+import JsonLd from '@/components/common/JsonLd';
+import { alternateOpenGraphLocales, buildPageMetadata, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
+import { SITE_NAME, localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
+import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
 export const dynamic = 'force-dynamic';
@@ -105,7 +107,7 @@ const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTit
     ...toStringList((venue as any)?.isbn13),
     ...toStringList((venue as any)?.identifiers?.isbn13)
   ]);
-  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/venues/${id}`)}`;
+  const publicUrl = localeUrl(locale as Locale, `/venues/${id}`);
   const subjectsText = getVenueSubjectsText(venue);
   const titles = uniqueList(workTitles);
   const identifiers = uniqueList([
@@ -114,19 +116,9 @@ const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTit
     ...isbnValues
   ]);
   const other: Record<string, string | string[]> = {};
-  if (titles.length === 1) other.citation_title = titles[0];
-  if (titles.length > 1) other.citation_title = titles;
   if (titles.length === 1) other['dc.relation'] = titles[0];
   if (titles.length > 1) other['dc.relation'] = titles;
-  if (name) {
-    other.citation_journal_title = name;
-    other.citation_title = name;
-  }
-  if (publisherName) other.citation_publisher = publisherName;
-  if (issnValues.length) other.citation_issn = issnValues;
-  if (isbnValues.length) other.citation_isbn = isbnValues;
   if (venue?.language) other['dc.language'] = String(venue.language);
-  if (publicUrl) other.citation_public_url = publicUrl;
   if (name) other['dc.title'] = name;
   if (publisherName) other['dc.publisher'] = publisherName;
   if (subjectsText) other['dc.subject'] = subjectsText;
@@ -170,9 +162,15 @@ const addIdentifierValues = (
 };
 
 
-export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string; id: string }>;
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const { id, locale } = await props.params;
-  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`);
+  const page = resolvePageParam((await props.searchParams)?.page);
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`, {
+    query: page > 1 ? { page } : undefined
+  });
   let venue: Venue | null = null;
   try { venue = await getVenue(id); } catch {}
   if (!venue) return base;
@@ -200,16 +198,10 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     return acc;
   };
   const description = descriptionSource ? buildDescription(descriptionSource) : undefined;
-  const canonicalPath = localizedPath(locale as Locale, `/venues/${id}`);
-  const canonicalUrl = new URL(canonicalPath, metadataBase).toString();
+  const canonicalUrl = localeUrl(locale as Locale, paginatedPath(`/venues/${id}`, page));
   const ogLocale = openGraphLocales[locale as Locale] || openGraphLocales.en;
-  const alternateLocale = ['en', 'pt', 'es'].filter((code) => code !== locale).map((code) => openGraphLocales[code as Locale]);
-  const ogImage = {
-    url: new URL('/og-default.png', metadataBase).toString(),
-    width: 1200,
-    height: 630,
-    alt: 'Ethnos Bibliography catalog interface'
-  };
+  const alternateLocale = alternateOpenGraphLocales(locale as Locale);
+  const ogImage = siteOpenGraphImage();
   const keywords = Array.from(new Set([
     name || '',
     venue?.publisher?.name || '',
@@ -222,16 +214,13 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     title: name || base.title,
     description: description || base.description,
     keywords: keywords.length ? keywords : base.keywords,
-    alternates: {
-      canonical: canonicalUrl,
-      languages: base.alternates?.languages
-    },
+    alternates: base.alternates,
     openGraph: {
       type: 'website',
       locale: ogLocale,
       alternateLocale,
       url: canonicalUrl,
-      siteName: 'Ethnos Bibliography',
+      siteName: SITE_NAME,
       title: name || base.title || '',
       description: description || base.description || '',
       images: [ogImage]
@@ -301,11 +290,12 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     ...toStringList(venue?.eissn),
     ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
   ]);
-  const canonical = new URL(localizedPath(locale as Locale, `/venues/${id}`), metadataBase).toString();
+  const canonical = localeUrl(locale as Locale, `/venues/${id}`);
   const venueIsbn13 = pickText([(venue as any)?.isbn13, (venue as any)?.identifiers?.isbn13]);
-  const jsonLd = {
+  const jsonLd = withSitePublisher({
     '@context': 'https://schema.org',
     '@type': 'Periodical',
+    '@id': `${canonical}#periodical`,
     name,
     alternateName: venue?.abbreviated_name && venue.abbreviated_name !== name ? venue.abbreviated_name : undefined,
     issn: issnValues.length ? issnValues : undefined,
@@ -315,7 +305,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     mainEntityOfPage: canonical,
     inLanguage: venue?.language || locale,
     description: descriptionText || undefined
-  };
+  });
 
   const metrics = venue?.metrics || venue?.legacy_metrics || null;
   const metricValue = (key: string) => {
@@ -389,7 +379,12 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
 
   return (
     <div className="page-header" aria-labelledby="page-title">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={buildBreadcrumbList(locale as Locale, [
+        { name: t('metadata.breadcrumbs.home'), path: '/' },
+        { name: t('metadata.breadcrumbs.venues'), path: '/venues' },
+        { name, path: `/venues/${id}` }
+      ])} />
       <h1 className="page-title" id="page-title">{name}</h1>
 
       {hasVenue && (

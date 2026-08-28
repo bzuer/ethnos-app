@@ -483,84 +483,113 @@
   },
   "metadata": {
     "subjectsDetail": {
-      "title": "Materia — Ethnos_APP",
+      "title": "Materia",
       "description": "Detalle de la materia con sus obras clasificadas en el catálogo de antropología y sociología.",
       "keywords": "materia, palabra clave, obras, clasificación, antropología, sociología, Ethnos"
     },
     "institutionsDetail": {
-      "title": "Detalles de la Institución — Ethnos_APP",
+      "title": "Detalles de la Institución",
       "description": "Perfil de la institución con trabajos, autores principales, tendencia de producción, rol de financiamiento y organizaciones relacionadas.",
       "keywords": "perfil de institución, ROR, OpenAlex, producción de investigación, antropología, sociología"
     },
     "home": {
-      "title": "Inicio — Ethnos_APP",
+      "title": "Ethnos Bibliography — Investigación en Antropología y Sociología",
       "description": "Página principal de Ethnos Bibliography con actualizaciones, revistas destacadas y acceso rápido a datos de antropología y sociología.",
       "keywords": "bibliografía, antropología, sociología, revistas académicas, catálogo abierto, Ethnos"
     },
     "search": {
-      "title": "Búsqueda — Ethnos_APP",
+      "title": "Búsqueda",
       "description": "Formulario de búsqueda avanzada para filtrar obras por título, autor, revista, tema, año, tipo e idioma.",
       "keywords": "búsqueda avanzada, antropología, sociología, consulta académica, Ethnos"
     },
     "results": {
-      "title": "Resultados — Ethnos_APP",
+      "title": "Resultados",
       "description": "Redirección heredada para mantener el acceso a enlaces de resultados anteriores en Ethnos.",
       "keywords": "resultados heredados, redirección, búsqueda bibliográfica, Ethnos"
     },
     "venues": {
-      "title": "Revistas — Ethnos_APP",
+      "title": "Revistas",
       "description": "Directorio de revistas académicas con datos de cobertura, indicadores y contexto editorial para antropología y sociología.",
       "keywords": "revistas, antropología, sociología, métricas Scopus, Open Access, Ethnos"
     },
     "venuesDetail": {
-      "title": "Detalles de la Revista — Ethnos_APP",
+      "title": "Detalles de la Revista",
       "description": "Perfil detallado de revista con métricas (SJR, SNIP, CiteScore), identificadores y descripción editorial.",
       "keywords": "métricas de revistas, SJR, SNIP, CiteScore, antropología, sociología"
     },
     "works": {
-      "title": "Obras — Ethnos_APP",
+      "title": "Obras",
       "description": "Catálogo de obras indexadas y programas de curaduría en Ethnos Bibliography.",
       "keywords": "obras, antropología, sociología, catálogo bibliográfico, Ethnos"
     },
     "workDetail": {
-      "title": "Detalles de la Obra — Ethnos_APP",
+      "title": "Detalles de la Obra",
       "description": "Registro bibliográfico completo con DOI, autores, referencias, citas y herramientas de exportación.",
       "keywords": "metadados, DOI, antropología, sociología, citas, Open Access"
     },
     "searchResults": {
-      "title": "Resultados de la Búsqueda — Ethnos_APP",
+      "title": "Resultados de la Búsqueda",
       "description": "Lista de resultados de búsqueda con metadados, filtros aplicados y paginación.",
       "keywords": "resultados de búsqueda, antropología, sociología, investigación bibliográfica"
     },
     "searchGlobal": {
-      "title": "Búsqueda Global — Ethnos_APP",
+      "title": "Búsqueda Global",
       "description": "Búsqueda unificada que devuelve obras, con autores e instituciones relacionados como refinamientos.",
       "keywords": "búsqueda global, obras, autores, instituciones, investigación bibliográfica"
     },
     "lists": {
-      "title": "Mi Lista — Ethnos_APP",
+      "title": "Mi Lista",
       "description": "Interfaz de lista personal para guardar obras y exportar referencias en formatos BibTeX y RIS.",
       "keywords": "lista de lectura, exportación bibliográfica, BibTeX, RIS, referencias"
     },
     "persons": {
-      "title": "Detalles de la Persona — Ethnos_APP",
+      "title": "Detalles de la Persona",
       "description": "Registro de autoridad de investigador con identificadores ORCID, Lattes, afiliaciones y producción académica.",
       "keywords": "perfil académico, autor, antropología, sociología, ORCID, Lattes"
     },
     "license": {
-      "title": "Licencia MIT — Ethnos_APP",
+      "title": "Licencia MIT",
       "description": "Términos de licencia que regulan la distribución y reutilización del frontend de Ethnos Bibliography bajo licencia MIT.",
       "keywords": "licencia MIT, licencia open source, Ethnos Bibliography, licenciamiento del frontend"
     },
     "privacy": {
-      "title": "Privacidad y Cookies — Ethnos_APP",
+      "title": "Privacidad y Cookies",
       "description": "Política de privacidad y cookies sobre el tratamiento de localidad, almacenamiento local y obtención de datos en el servidor.",
       "keywords": "privacidad, cookies, local storage, manejo de datos, Ethnos Bibliography"
     },
     "maintenance": {
-      "title": "Mantenimiento — Ethnos_APP",
+      "title": "Mantenimiento",
       "description": "Ethnos Bibliography está temporalmente fuera de servicio por mantenimiento programado.",
       "keywords": "mantenimiento, interrupción programada, Ethnos Bibliography"
+    },
+    "breadcrumbs": {
+      "home": "Inicio",
+      "search": "Búsqueda",
+      "venues": "Revistas",
+      "works": "Obras",
+      "persons": "Investigadores",
+      "institutions": "Instituciones",
+      "subjects": "Materias"
+    },
+    "descriptors": {
+      "personProfile": "Perfil de investigador de {name} en la bibliografía de antropología y sociología de Ethnos.",
+      "personAffiliations": "Afiliaciones: {value}.",
+      "personOrcid": "ORCID: {value}.",
+      "subjectDetail": "Obras indexadas bajo la materia {term} en la bibliografía de antropología y sociología de Ethnos.",
+      "institutionDetail": "Obras, autores y producción de investigación de {name} indexados en la bibliografía de antropología y sociología de Ethnos.",
+      "pageSuffix": "Página {page}."
+    },
+    "notFound": {
+      "title": "Página No Encontrada",
+      "description": "La dirección solicitada no corresponde a ningún registro del catálogo Ethnos Bibliography.",
+      "keywords": "no encontrada, página inexistente, Ethnos Bibliography"
+    },
+    "site": {
+      "title": "Ethnos Bibliography — Investigación en Antropología y Sociología",
+      "titleTemplate": "%s | Ethnos Bibliography",
+      "description": "Ethnos ofrece una bibliografía abierta de antropología y sociología, que reúne obras, revistas, métricas y herramientas de investigación en un único catálogo.",
+      "abstract": "Ethnos Bibliography es un entorno de descubrimiento de referencias dedicado a la antropología, la sociología y los estudios etnográficos.",
+      "keywords": "herramienta de bibliografía de antropología, índice de investigación en sociología, plataforma de referencias de etnografía, base bibliográfica abierta, catálogo de ciencias sociales latinoamericanas, directorio de revistas de antropología, exportación de métricas de investigación"
     }
   },
   "searchGlobal": {
@@ -598,6 +627,32 @@
     },
     "tools": {
       "exportSubject": "Exportar datos de la materia (JSON)"
+    }
+  },
+  "manifest": {
+    "name": "Ethnos Bibliography — Investigación en Antropología y Sociología",
+    "shortName": "Ethnos",
+    "description": "Bibliografía abierta de antropología y sociología con interfaces en inglés, portugués y español, además de obras indexadas, revistas, métricas y herramientas de exportación.",
+    "screenshots": {
+      "desktop": "Búsqueda en el catálogo indexado de obras y revistas",
+      "mobile": "Búsqueda bibliográfica en el móvil"
+    },
+    "shortcuts": {
+      "search": {
+        "name": "Búsqueda avanzada",
+        "shortName": "Búsqueda",
+        "description": "Abrir el formulario de búsqueda avanzada de Ethnos."
+      },
+      "venues": {
+        "name": "Directorio de revistas",
+        "shortName": "Revistas",
+        "description": "Explorar revistas y colecciones de libros indexadas."
+      },
+      "lists": {
+        "name": "Mi lista",
+        "shortName": "Lista",
+        "description": "Abrir la lista personal de lectura y exportar referencias."
+      }
     }
   }
 }

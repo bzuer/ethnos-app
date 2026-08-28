@@ -1,4 +1,4 @@
-import { redirect } from '@/i18n/routing';
+import { permanentRedirect } from '@/i18n/routing';
 import { buildPageMetadata } from '@/i18n/metadata';
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
@@ -9,5 +9,5 @@ export default async function JournalsRedirect(props: { params: Promise<{ locale
   const { locale } = await props.params;
   const sp = (await props.searchParams) || {};
   const qs = new URLSearchParams(sp).toString();
-  redirect({ href: qs ? `/venues?${qs}` : '/venues', locale });
+  permanentRedirect({ href: qs ? `/venues?${qs}` : '/venues', locale });
 }

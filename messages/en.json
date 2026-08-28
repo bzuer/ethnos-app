@@ -483,84 +483,113 @@
   },
   "metadata": {
     "subjectsDetail": {
-      "title": "Subject — Ethnos_APP",
+      "title": "Subject",
       "description": "Subject detail with its classified works in the anthropology and sociology catalog.",
       "keywords": "subject, keyword, works, classification, anthropology, sociology, Ethnos"
     },
     "institutionsDetail": {
-      "title": "Institution Details — Ethnos_APP",
+      "title": "Institution Details",
       "description": "Institution profile with works, top authors, production trend, funding role, and related organizations.",
       "keywords": "institution profile, ROR, OpenAlex, research output, anthropology, sociology"
     },
     "home": {
-      "title": "Home — Ethnos_APP",
+      "title": "Ethnos Bibliography — Anthropology & Sociology Research",
       "description": "Ethnos Bibliography homepage featuring updates, featured journals, and quick access to anthropology and sociology data.",
       "keywords": "bibliography, anthropology, sociology, academic journals, open catalog, Ethnos"
     },
     "search": {
-      "title": "Search — Ethnos_APP",
+      "title": "Search",
       "description": "Advanced search form to filter works by title, author, journal, subject, year, type, and language.",
       "keywords": "advanced search, anthropology, sociology, scholarly query, Ethnos"
     },
     "results": {
-      "title": "Results — Ethnos_APP",
+      "title": "Results",
       "description": "Legacy search redirect to maintain access to previous result links within Ethnos.",
       "keywords": "legacy results, search redirect, bibliography routing, Ethnos"
     },
     "venues": {
-      "title": "Journals — Ethnos_APP",
+      "title": "Journals",
       "description": "Directory of academic journals with coverage data, metrics, and publisher context for anthropology and sociology.",
       "keywords": "journals, anthropology, sociology, Scopus metrics, Open Access, Ethnos"
     },
     "venuesDetail": {
-      "title": "Journal Details — Ethnos_APP",
+      "title": "Journal Details",
       "description": "Detailed journal profile featuring SJR, SNIP, and CiteScore metrics, identifiers, and editorial description.",
       "keywords": "journal metrics, SJR, SNIP, CiteScore, anthropology, sociology"
     },
     "works": {
-      "title": "Works — Ethnos_APP",
+      "title": "Works",
       "description": "Catalog of indexed works and bibliographic curation within Ethnos Bibliography.",
       "keywords": "works, anthropology, sociology, bibliographic catalog, Ethnos"
     },
     "workDetail": {
-      "title": "Work Details — Ethnos_APP",
+      "title": "Work Details",
       "description": "Full bibliographic record featuring DOI, authors, references, citations, and export tools.",
       "keywords": "metadata, DOI, anthropology, sociology, citations, Open Access"
     },
     "searchResults": {
-      "title": "Search Results — Ethnos_APP",
+      "title": "Search Results",
       "description": "Search result list displaying metadata, applied filters, and pagination.",
       "keywords": "search results, anthropology, sociology, bibliographic research"
     },
     "searchGlobal": {
-      "title": "Global Search — Ethnos_APP",
+      "title": "Global Search",
       "description": "Unified search returning works, with related authors and institutions as refinements.",
       "keywords": "global search, works, authors, institutions, bibliographic research"
     },
     "lists": {
-      "title": "My List — Ethnos_APP",
+      "title": "My List",
       "description": "Personal list interface to save works and export references in BibTeX and RIS formats.",
       "keywords": "reading list, bibliography export, BibTeX, RIS, references"
     },
     "persons": {
-      "title": "Person Details — Ethnos_APP",
+      "title": "Person Details",
       "description": "Researcher authority record including ORCID, Lattes identifiers, affiliations, and academic production.",
       "keywords": "academic profile, author, anthropology, sociology, ORCID, Lattes"
     },
     "license": {
-      "title": "MIT License — Ethnos_APP",
+      "title": "MIT License",
       "description": "License terms governing the Ethnos Bibliography frontend distribution and reuse under the MIT license.",
       "keywords": "MIT license, open source license, Ethnos Bibliography, frontend licensing"
     },
     "privacy": {
-      "title": "Privacy and Cookies — Ethnos_APP",
+      "title": "Privacy and Cookies",
       "description": "Privacy and cookies policy covering locale handling, local storage, and server-side data fetching for Ethnos Bibliography.",
       "keywords": "privacy, cookies, local storage, data handling, Ethnos Bibliography"
     },
     "maintenance": {
-      "title": "Maintenance — Ethnos_APP",
+      "title": "Maintenance",
       "description": "Ethnos Bibliography is temporarily offline for scheduled maintenance.",
       "keywords": "maintenance, scheduled downtime, Ethnos Bibliography"
+    },
+    "breadcrumbs": {
+      "home": "Home",
+      "search": "Search",
+      "venues": "Journals",
+      "works": "Works",
+      "persons": "Researchers",
+      "institutions": "Institutions",
+      "subjects": "Subjects"
+    },
+    "descriptors": {
+      "personProfile": "Researcher profile for {name} in the Ethnos anthropology and sociology bibliography.",
+      "personAffiliations": "Affiliations: {value}.",
+      "personOrcid": "ORCID: {value}.",
+      "subjectDetail": "Works indexed under the subject {term} in the Ethnos anthropology and sociology bibliography.",
+      "institutionDetail": "Works, authors, and research output of {name} indexed in the Ethnos anthropology and sociology bibliography.",
+      "pageSuffix": "Page {page}."
+    },
+    "notFound": {
+      "title": "Page Not Found",
+      "description": "The requested address does not match any record in the Ethnos Bibliography catalog.",
+      "keywords": "not found, missing page, Ethnos Bibliography"
+    },
+    "site": {
+      "title": "Ethnos Bibliography — Anthropology & Sociology Research",
+      "titleTemplate": "%s | Ethnos Bibliography",
+      "description": "Ethnos delivers an open bibliography for anthropology and sociology, joining works, journals, metrics, and research tools in a single catalog.",
+      "abstract": "Ethnos Bibliography is a reference discovery environment dedicated to anthropology, sociology, and ethnographic studies.",
+      "keywords": "anthropology bibliography tool, sociology research index, ethnography reference platform, open bibliographic database, latin american social sciences catalog, journals directory anthropology, research metrics export"
     }
   },
   "searchGlobal": {
@@ -598,6 +627,32 @@
     },
     "tools": {
       "exportSubject": "Export subject data (JSON)"
+    }
+  },
+  "manifest": {
+    "name": "Ethnos Bibliography — Anthropology & Sociology Research",
+    "shortName": "Ethnos",
+    "description": "Open bibliography for anthropology and sociology with English, Portuguese, and Spanish interfaces plus indexed works, journals, metrics, and export tools.",
+    "screenshots": {
+      "desktop": "Search the indexed catalog of works and journals",
+      "mobile": "Bibliographic search on mobile"
+    },
+    "shortcuts": {
+      "search": {
+        "name": "Advanced search",
+        "shortName": "Search",
+        "description": "Open the Ethnos advanced search form."
+      },
+      "venues": {
+        "name": "Journals directory",
+        "shortName": "Journals",
+        "description": "Browse indexed journals and book series."
+      },
+      "lists": {
+        "name": "My list",
+        "shortName": "List",
+        "description": "Open the personal reading list and export references."
+      }
     }
   }
 }

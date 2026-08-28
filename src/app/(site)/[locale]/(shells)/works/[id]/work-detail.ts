@@ -1,8 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import type { Locale } from '@/i18n/config';
-import { localizedPath } from '@/i18n/paths';
-import { fetchJson, isNotFoundError } from '@/lib/api';
+import { localeUrl } from '@/lib/site';
+import { fetchJson, isMissingEntityError } from '@/lib/api';
 import {
   formatContributorName,
   formatMetadataAuthors,
@@ -168,7 +168,7 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
     ...toStringList(identifierIsbn)
   ]);
   const publicationDateFormatted = formatPublicationDate(publicationDate, year);
-  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
+  const publicUrl = localeUrl(locale as Locale, `/works/${id}`);
   const { pdf, fulltext } = pickFulltextUrls(work);
   const bestOaUrl = pickBestOaUrl(work);
   const other: Record<string, string | string[]> = {};
@@ -240,7 +240,7 @@ export function buildCoins(work: any, locale: string, id: string) {
     ...toStringList(venue?.eissn || work?.venue_eissn)
   ]);
   const publicationDateFormatted = formatPublicationDate(publicationDate, year);
-  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
+  const publicUrl = localeUrl(locale as Locale, `/works/${id}`);
   const typeRaw = String(work?.work_type || work?.type || '').toLowerCase();
   const isBook = typeRaw.includes('book');
   const isChapter = typeRaw.includes('chapter');
@@ -282,7 +282,7 @@ export const loadWork = cache(async (id: string) => {
     fetchJson<any>(`/works/${safeId}/metrics`)
   ]);
   if (workResult.status === 'rejected') {
-    if (isNotFoundError(workResult.reason)) return null;
+    if (isMissingEntityError(workResult.reason)) return null;
     throw workResult.reason;
   }
   const envelope: any = workResult.value;

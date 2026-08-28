@@ -369,8 +369,33 @@ maintenance() {
   esac
 }
 
+seo_audit() {
+  ensure_node
+  local TARGET="${SEO_BASE:-http://127.0.0.1:$PROD_PORT}"
+  node "$ROOT_DIR/scripts/seo/audit.mjs" --base "$TARGET" "$@"
+}
+
+indexnow() {
+  ensure_node
+  load_env
+  node "$ROOT_DIR/scripts/seo/indexnow.mjs" "$@"
+}
+
+seo() {
+  local SUB="${1:-audit}"
+  shift || true
+  case "$SUB" in
+    audit) seo_audit "$@" ;;
+    indexnow|ping) indexnow "$@" ;;
+    *)
+      echo "Usage: $0 seo {audit|indexnow} [options]" >&2
+      exit 1
+      ;;
+  esac
+}
+
 usage() {
-  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall|maintenance [on|off|status]}"
+  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall|maintenance [on|off|status]|seo [audit|indexnow]}"
 }
 
 case "$CMD" in
@@ -379,6 +404,10 @@ case "$CMD" in
     ;;
   maintenance)
     maintenance "$@"
+    ;;
+  seo)
+    shift
+    seo "$@"
     ;;
   *)
     usage

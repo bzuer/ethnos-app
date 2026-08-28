@@ -6,9 +6,11 @@ import ClientActions from './work-actions';
 import WorkCitationList from './WorkCitationList';
 import WorkContributorRows from './WorkContributorRows';
 import WorkSectionTabs from './WorkSectionTabs';
-import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
+import JsonLd from '@/components/common/JsonLd';
+import { buildPageMetadata, siteOpenGraphImage } from '@/i18n/metadata';
+import { localeUrl } from '@/lib/site';
+import { buildBreadcrumbList, buildDoiIdentifier, withSitePublisher } from '@/lib/structured-data';
 import { locales, type Locale } from '@/i18n/config';
-import { localizedPath } from '@/i18n/paths';
 import { formatContributorName, getWorkAbstractSnippet, groupContributorsByRole, groupContributorsByRoleSet, pickContributorEntries, pickContributorsByRole, sanitizeWorkAbstract } from '@/lib/works';
 import { buildIdentifierHref, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
@@ -62,17 +64,11 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const authorSummary = pickReferenceAuthors(work);
   const descriptionRaw = abstractSnippet || [fullTitle || titleBase, authorSummary, year].filter(Boolean).join('. ');
   const description = descriptionRaw && !/[.!?…]$/.test(descriptionRaw) ? `${descriptionRaw}.` : descriptionRaw;
-  const canonicalPath = localizedPath(locale as Locale, `/works/${id}`);
-  const canonicalUrl = `https://ethnos.app${canonicalPath}`;
+  const canonicalUrl = localeUrl(locale as Locale, `/works/${id}`);
   const ogLocale = openGraphLocaleMap[locale] || 'en_US';
   const alternateLocale = locales.filter((code) => code !== locale).map((code) => openGraphLocaleMap[code] || 'en_US');
   const ogTitle = titleWithYear ? `${titleWithYear} - Ethnos Bibliography` : 'Ethnos Bibliography';
-  const ogImage = {
-    url: new URL('/og-default.png', metadataBase).toString(),
-    width: 1200,
-    height: 630,
-    alt: 'Ethnos Bibliography catalog interface'
-  };
+  const ogImage = siteOpenGraphImage();
   const articleAuthors = Array.from(new Set((authorNames.length ? authorNames : (authorSummary ? [authorSummary] : [])).map((a: any) => String(a))));
   const keywords = [
     fullTitle || '',
@@ -351,15 +347,16 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
     );
   })();
 
-  const publicUrl = `https://ethnos.app${localizedPath(locale as Locale, `/works/${id}`)}`;
-  const jsonLd: Record<string, any> = {
+  const publicUrl = localeUrl(locale as Locale, `/works/${id}`);
+  const jsonLd: Record<string, any> = withSitePublisher({
     '@context': 'https://schema.org',
     '@type': isBookType ? 'Book' : 'ScholarlyArticle',
+    '@id': `${publicUrl}#record`,
     headline: fullTitle,
     name: fullTitle,
     url: publicUrl,
     mainEntityOfPage: publicUrl
-  };
+  });
   if (publicationDateFormatted) jsonLd.datePublished = publicationDateFormatted;
   if (language) jsonLd.inLanguage = String(language);
   const toPersonNodes = (names: string[]) => names.map((name: string) => ({ '@type': 'Person', name }));
@@ -368,7 +365,13 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   if (translatorNames.length) jsonLd.translator = toPersonNodes(translatorNames);
   if (otherContributorNames.length) jsonLd.contributor = toPersonNodes(otherContributorNames);
   if (publisherName) jsonLd.publisher = { '@type': 'Organization', name: publisherName };
-  if (doi) jsonLd.identifier = { '@type': 'PropertyValue', propertyID: 'DOI', value: String(doi) };
+  if (doi) {
+    jsonLd.identifier = buildDoiIdentifier(String(doi));
+    jsonLd.sameAs = `https://doi.org/${String(doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')}`;
+  }
+  if (workSubjects.length) jsonLd.keywords = workSubjects.map((subject) => subject.term);
+  if (typeof openAccess === 'boolean') jsonLd.isAccessibleForFree = openAccess;
+  if (publication?.license_url) jsonLd.license = String(publication.license_url);
   if (venueName && !isBookType) {
     const issn = [venueIssn, venueEissn].flatMap((v) => (Array.isArray(v) ? v : v ? [v] : [])).filter(Boolean);
     jsonLd.isPartOf = {
@@ -383,9 +386,15 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   if (pageParts.first) jsonLd.pageStart = pageParts.first;
   if (pageParts.last) jsonLd.pageEnd = pageParts.last;
   if (cleanedAbstract) jsonLd.description = getWorkAbstractSnippet(work, 700);
+  const breadcrumb = buildBreadcrumbList(locale as Locale, [
+    { name: t('metadata.breadcrumbs.home'), path: '/' },
+    { name: fullTitle, path: `/works/${id}` }
+  ]);
+
   return (
     <div className="page-header" aria-labelledby="page-title">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={breadcrumb} />
       {coins ? <span className="Z3988 visually-hidden" title={coins} /> : null}
       <h1 className="page-title" id="page-title">{workTitle}</h1>
       {work?.subtitle ? (<p className="item-subtitle">{work.subtitle}</p>) : null}

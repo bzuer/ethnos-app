@@ -1,5 +1,6 @@
 import { groupContributorsByRole, normalizeWorkDetail, pickContributorEntries } from './works';
 import { buildIdentifierHref } from './identifiers';
+import { SITE_ORIGIN } from './site';
 
 const WORK_TYPE_FORMATS: Record<string, { bibtex: string; ris: string }> = {
   ARTICLE: { bibtex: 'article', ris: 'JOUR' },
@@ -63,7 +64,7 @@ export function normalizeDoi(value: any) {
   return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
 }
 
-export const SITE_ORIGIN = 'https://ethnos.app';
+export { SITE_ORIGIN } from './site';
 
 export function buildAccessUrl(id: string | number | null | undefined) {
   if (id === null || id === undefined) return '';

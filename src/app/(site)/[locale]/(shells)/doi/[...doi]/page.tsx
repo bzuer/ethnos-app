@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/routing';
+import { NON_INDEXABLE_ROBOTS } from '@/i18n/metadata';
 import { resolveDoi } from '@/lib/endpoints';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export function generateMetadata() {
+  return { robots: NON_INDEXABLE_ROBOTS };
+}
 
 export default async function DoiResolverPage(props: { params: Promise<{ locale: string; doi: string[] }> }) {
   const { locale, doi } = await props.params;

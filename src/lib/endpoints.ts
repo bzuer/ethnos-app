@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { fetchJson, isNotFoundError, unwrapData } from './api';
+import { fetchJson, isMissingEntityError, unwrapData } from './api';
 import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
@@ -213,7 +213,7 @@ export const getPersonsWorks = cache(async (personId: string | number, page = 1,
     fetchJson<any>(`/persons/${id}`),
     fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`)
   ]);
-  if (personResult.status === 'rejected' && !isNotFoundError(personResult.reason)) throw personResult.reason;
+  if (personResult.status === 'rejected' && !isMissingEntityError(personResult.reason)) throw personResult.reason;
   const p: any = personResult.status === 'fulfilled' ? personResult.value : null;
   const personRaw = p?.data || p?.person || p || null;
   const person = personRaw ? normalizePersonDetail(personRaw) : null;
@@ -277,7 +277,7 @@ export const getInstitution = cache(async (id: string | number) => {
   try {
     envelope = await fetchJson<any>(`/institutions/${encodeURIComponent(String(id))}`);
   } catch (error) {
-    if (isNotFoundError(error)) return null;
+    if (isMissingEntityError(error)) return null;
     throw error;
   }
   const raw = unwrapData(envelope);
@@ -302,7 +302,7 @@ export const getSubject = cache(async (id: string | number) => {
   try {
     envelope = await fetchJson<any>(`/subjects/${encodeURIComponent(String(id))}`);
   } catch (error) {
-    if (isNotFoundError(error)) return null;
+    if (isMissingEntityError(error)) return null;
     throw error;
   }
   const raw = unwrapData(envelope);
@@ -347,7 +347,7 @@ export async function resolveDoi(doi: string) {
   try {
     envelope = await fetchJson<any>(`/${encoded}`);
   } catch (error) {
-    if (isNotFoundError(error)) return null;
+    if (isMissingEntityError(error)) return null;
     throw error;
   }
   return unwrapData(envelope) || null;

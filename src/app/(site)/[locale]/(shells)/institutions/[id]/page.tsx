@@ -8,16 +8,24 @@ import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import { formatMetadataAuthors } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
-import { buildPageMetadata, metadataBase } from '@/i18n/metadata';
-import { localizedPath } from '@/i18n/paths';
+import JsonLd from '@/components/common/JsonLd';
+import { buildPageMetadata } from '@/i18n/metadata';
+import { localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
+import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string; id: string }>;
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const { id, locale } = await props.params;
-  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.institutionsDetail', `/institutions/${id}`);
+  const page = resolvePageParam((await props.searchParams)?.page);
+  const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.institutionsDetail', `/institutions/${id}`, {
+    query: page > 1 ? { page } : undefined
+  });
   let institution: any = null;
   try {
     institution = await getInstitution(id);
@@ -25,12 +33,19 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     return base;
   }
   if (!institution) return base;
-  const name = institution.name || base.title;
-  const canonicalUrl = new URL(localizedPath(locale as Locale, `/institutions/${id}`), metadataBase).toString();
+  const name = institution.name ? String(institution.name) : '';
+  if (!name) return base;
+  const t = await getTranslations({ locale, namespace: 'metadata.descriptors' });
+  const description = [t('institutionDetail', { name }), page > 1 ? t('pageSuffix', { page }) : '']
+    .filter(Boolean)
+    .join(' ');
+  const canonicalUrl = localeUrl(locale as Locale, paginatedPath(`/institutions/${id}`, page));
   return {
     ...base,
-    title: name || base.title,
-    alternates: { canonical: canonicalUrl, languages: base.alternates?.languages }
+    title: name,
+    description,
+    openGraph: base.openGraph ? { ...base.openGraph, title: name, description, url: canonicalUrl } : undefined,
+    twitter: { ...(base.twitter || {}), title: name, description }
   };
 }
 
@@ -92,14 +107,15 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
   };
   const pickAuthors = (item: any) => formatMetadataAuthors(item);
 
-  const canonical = new URL(localizedPath(locale as Locale, `/institutions/${id}`), metadataBase).toString();
-  const jsonLd: Record<string, any> = {
+  const canonical = localeUrl(locale as Locale, `/institutions/${id}`);
+  const jsonLd: Record<string, any> = withSitePublisher({
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${canonical}#organization`,
     name,
     url: canonical,
     mainEntityOfPage: canonical
-  };
+  });
   if (website) jsonLd.sameAs = [website, wikidataId ? `https://www.wikidata.org/wiki/${wikidataId}` : '', openalexId ? `https://openalex.org/${openalexId}` : ''].filter(Boolean);
   if (city || country) jsonLd.location = { '@type': 'Place', address: [city, country].filter(Boolean).join(', ') };
 
@@ -186,7 +202,11 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
 
   return (
     <div className="page-header" aria-labelledby="page-title">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
+      <JsonLd data={buildBreadcrumbList(locale as Locale, [
+        { name: t('metadata.breadcrumbs.home'), path: '/' },
+        { name, path: `/institutions/${id}` }
+      ])} />
       <h1 className="page-title" id="page-title">{name}</h1>
 
       <section aria-labelledby="institution-info">

@@ -2,6 +2,24 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { defaultLocale, locales, type Locale } from './config';
 import { localizedPath } from './paths';
+import {
+  SITE_NAME,
+  SITE_OG_IMAGE_HEIGHT,
+  SITE_OG_IMAGE_PATH,
+  SITE_OG_IMAGE_WIDTH,
+  SITE_ORIGIN,
+  absoluteUrl,
+  alternateUrls,
+  localeUrl,
+  withQuery
+} from '@/lib/site';
+
+export type PageMetadataOptions = {
+  robots?: Metadata['robots'];
+  query?: Record<string, string | number | undefined | null>;
+  ogType?: 'website' | 'article' | 'profile' | 'book';
+  absoluteTitle?: boolean;
+};
 
 const safeTranslate = (translate: (path: string) => string, path: string) => {
   try {
@@ -11,7 +29,7 @@ const safeTranslate = (translate: (path: string) => string, path: string) => {
   }
 };
 
-export const metadataBase = new URL('https://ethnos.app');
+export const metadataBase = new URL(SITE_ORIGIN);
 
 export const openGraphLocales: Record<Locale, string> = {
   en: 'en_US',
@@ -19,36 +37,98 @@ export const openGraphLocales: Record<Locale, string> = {
   es: 'es_ES'
 };
 
-const toKeywords = (value?: string) => (value ? value.split(',').map((kw) => kw.trim()).filter(Boolean) : undefined);
-
-export const buildLanguageAlternates = (path: string) => {
-  const languages: Record<string, string> = {
-    'x-default': new URL(localizedPath(defaultLocale, path), metadataBase).toString()
-  };
-  locales.forEach((code) => {
-    languages[code] = new URL(localizedPath(code, path), metadataBase).toString();
-  });
-  return languages;
+export const INDEXABLE_ROBOTS: Metadata['robots'] = {
+  index: true,
+  follow: true,
+  googleBot: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+    'max-video-preview': -1
+  }
 };
 
-export async function buildPageMetadata(params: Promise<{ locale: string }>, key: string, path?: string): Promise<Metadata> {
+export const NON_INDEXABLE_ROBOTS: Metadata['robots'] = {
+  index: false,
+  follow: true,
+  googleBot: {
+    index: false,
+    follow: true
+  }
+};
+
+export const siteIcons: Metadata['icons'] = {
+  icon: [
+    { url: '/favicon.ico', sizes: 'any' },
+    { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+    { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' }
+  ],
+  shortcut: ['/favicon.ico'],
+  apple: [{ url: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }]
+};
+
+export function siteOpenGraphImage(alt = 'Ethnos Bibliography catalog interface') {
+  return {
+    url: absoluteUrl(SITE_OG_IMAGE_PATH),
+    width: SITE_OG_IMAGE_WIDTH,
+    height: SITE_OG_IMAGE_HEIGHT,
+    type: 'image/png',
+    alt
+  };
+}
+
+export function manifestPath(locale: Locale) {
+  return localizedPath(locale, '/site.webmanifest');
+}
+
+export function siteVerification(): Metadata['verification'] | undefined {
+  const google = process.env.SEO_GOOGLE_SITE_VERIFICATION?.trim();
+  const yandex = process.env.SEO_YANDEX_SITE_VERIFICATION?.trim();
+  const bing = process.env.SEO_BING_SITE_VERIFICATION?.trim();
+  const verification: Metadata['verification'] = {};
+  if (google) verification.google = google;
+  if (yandex) verification.yandex = yandex;
+  if (bing) verification.other = { 'msvalidate.01': bing };
+  return Object.keys(verification).length ? verification : undefined;
+}
+
+export function alternateOpenGraphLocales(locale: Locale) {
+  return locales.filter((code) => code !== locale).map((code) => openGraphLocales[code]);
+}
+
+export function resolveLocale(locale: string): Locale {
+  return locales.includes(locale as Locale) ? (locale as Locale) : defaultLocale;
+}
+
+const toKeywords = (value?: string) => (value ? value.split(',').map((kw) => kw.trim()).filter(Boolean) : undefined);
+
+export const buildLanguageAlternates = (path: string) => alternateUrls(path);
+
+export async function buildPageMetadata(
+  params: Promise<{ locale: string }>,
+  key: string,
+  path?: string,
+  options?: PageMetadataOptions
+): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'metadata' });
+  const safeLocale = resolveLocale(locale);
+  const t = await getTranslations({ locale: safeLocale, namespace: 'metadata' });
   const normalizedKey = key.startsWith('metadata.') ? key.slice('metadata.'.length) : key;
-  const title = safeTranslate(t, `${normalizedKey}.title`) || safeTranslate(t, normalizedKey);
+  const rawTitle = safeTranslate(t, `${normalizedKey}.title`) || safeTranslate(t, normalizedKey);
   const description = safeTranslate(t, `${normalizedKey}.description`);
   const keywords = toKeywords(safeTranslate(t, `${normalizedKey}.keywords`));
-  const safeLocale = locale as Locale;
-  const canonical = path ? new URL(localizedPath(safeLocale, path), metadataBase).toString() : undefined;
-  const alternates = path
+  const canonicalPath = path ? withQuery(path, options?.query) : undefined;
+  const canonical = canonicalPath ? localeUrl(safeLocale, canonicalPath) : undefined;
+  const alternates = canonicalPath
     ? {
         canonical,
-        languages: buildLanguageAlternates(path)
+        languages: buildLanguageAlternates(canonicalPath)
       }
     : undefined;
-  const imageUrl = new URL('/og-default.png', metadataBase).toString();
-  const ogLocale = openGraphLocales[safeLocale] || openGraphLocales[defaultLocale];
-  const alternateLocale = locales.filter((code) => code !== safeLocale).map((code) => openGraphLocales[code]);
+  const ogLocale = openGraphLocales[safeLocale];
+  const image = siteOpenGraphImage();
+  const title = rawTitle && options?.absoluteTitle ? { absolute: rawTitle } : rawTitle;
 
   return {
     metadataBase,
@@ -56,30 +136,27 @@ export async function buildPageMetadata(params: Promise<{ locale: string }>, key
     description,
     keywords: keywords && keywords.length > 0 ? keywords : undefined,
     alternates,
+    icons: siteIcons,
+    manifest: manifestPath(safeLocale),
+    robots: options?.robots ?? INDEXABLE_ROBOTS,
+    verification: siteVerification(),
     openGraph: canonical
       ? {
-          type: 'website',
+          type: options?.ogType ?? 'website',
           locale: ogLocale,
-          alternateLocale,
+          alternateLocale: alternateOpenGraphLocales(safeLocale),
           url: canonical,
-          title: title || undefined,
+          title: rawTitle || undefined,
           description,
-          siteName: 'Ethnos Bibliography',
-          images: [
-            {
-              url: imageUrl,
-              width: 1200,
-              height: 630,
-              alt: 'Ethnos Bibliography catalog interface'
-            }
-          ]
+          siteName: SITE_NAME,
+          images: [image]
         }
       : undefined,
     twitter: {
       card: 'summary_large_image',
-      title: title || undefined,
+      title: rawTitle || undefined,
       description,
-      images: [imageUrl]
+      images: [image.url]
     }
   };
 }

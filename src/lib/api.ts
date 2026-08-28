@@ -22,6 +22,21 @@ export function isNotFoundError(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 404 || error.code === 'NOT_FOUND');
 }
 
+export function isInvalidEntityIdError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  if (error.status !== 400 && error.code !== 'VALIDATION_ERROR') return false;
+  const details = Array.isArray(error.errors) ? error.errors : [];
+  if (details.length === 0) return true;
+  return details.some((entry) => {
+    const location = (entry as { location?: unknown })?.location;
+    return location === 'params' || location === 'param' || location === 'path';
+  });
+}
+
+export function isMissingEntityError(error: unknown): boolean {
+  return isNotFoundError(error) || isInvalidEntityIdError(error);
+}
+
 async function buildApiError(res: Response) {
   let code: string | undefined;
   let message = `HTTP ${res.status}`;
@@ -235,7 +250,7 @@ export async function getVenue(id: string | number): Promise<Venue | null> {
   try {
     res = await fetchJson<ApiEnvelope<Venue>>(`/venues/${id}`);
   } catch (error) {
-    if (isNotFoundError(error)) return null;
+    if (isMissingEntityError(error)) return null;
     throw error;
   }
   const v: any = unwrapData(res);

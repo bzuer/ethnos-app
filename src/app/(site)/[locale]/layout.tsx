@@ -3,12 +3,33 @@ import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
+import JsonLd from '@/components/common/JsonLd';
 import LocaleLink from '@/components/common/LocaleLink';
 import LocaleSwitcher from '@/components/common/LocaleSwitcher';
 import ScrollTools from '@/components/common/ScrollTools';
 import { locales, type Locale } from '@/i18n/config';
-import { buildLanguageAlternates, metadataBase, openGraphLocales } from '@/i18n/metadata';
+import {
+  INDEXABLE_ROBOTS,
+  alternateOpenGraphLocales,
+  buildLanguageAlternates,
+  manifestPath,
+  metadataBase,
+  openGraphLocales,
+  resolveLocale,
+  siteIcons,
+  siteOpenGraphImage,
+  siteVerification
+} from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
+import {
+  SITE_NAME,
+  SITE_ORIGIN,
+  SITE_PUBLISHER,
+  SITE_THEME_COLOR,
+  SITE_THEME_COLOR_DARK,
+  localeUrl
+} from '@/lib/site';
+import { buildSiteGraph } from '@/lib/structured-data';
 
 type NavLinks = {
   home: string;
@@ -30,76 +51,64 @@ type FooterStrings = {
   tagline: string;
 };
 
-const siteDescription = 'Ethnos delivers an open bibliography for anthropology and sociology, joining works, journals, metrics, and research tools in a single catalog.';
-const siteAbstract = 'Ethnos Bibliography is a reference discovery environment dedicated to anthropology, sociology, and ethnographic studies.';
-const siteKeywords = [
-  'anthropology bibliography tool',
-  'sociology research index',
-  'ethnography reference platform',
-  'open bibliographic database',
-  'latin american social sciences catalog',
-  'journals directory anthropology',
-  'research metrics export'
-];
-const socialImage = new URL('/og-default.png', metadataBase).toString();
+const toKeywordList = (value: string) => value.split(',').map((entry) => entry.trim()).filter(Boolean);
 
 export const viewport: Viewport = {
   width: 'device-width',
-  initialScale: 1
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: SITE_THEME_COLOR },
+    { media: '(prefers-color-scheme: dark)', color: SITE_THEME_COLOR_DARK }
+  ]
 };
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await props.params;
-  const safeLocale = locale as Locale;
-  const ogLocale = openGraphLocales[safeLocale] || openGraphLocales.en;
-  const alternateLocale = locales.filter((code) => code !== safeLocale).map((code) => openGraphLocales[code as Locale]);
-  const canonicalPath = localizedPath(safeLocale, '/');
-  const canonical = new URL(canonicalPath, metadataBase).toString();
+  const safeLocale = resolveLocale(locale);
+  const t = await getTranslations({ locale: safeLocale, namespace: 'metadata.site' });
+  const canonical = localeUrl(safeLocale, '/');
+  const title = t('title');
+  const description = t('description');
+  const image = siteOpenGraphImage();
 
   return {
     metadataBase,
     title: {
-      template: '%s | Ethnos Bibliography',
-      default: 'Ethnos Bibliography | Anthropology & Sociology Research Tool'
+      template: t('titleTemplate'),
+      default: title
     },
-    description: siteDescription,
-    abstract: siteAbstract,
-    keywords: siteKeywords,
-    applicationName: 'Ethnos Bibliography',
+    description,
+    abstract: t('abstract'),
+    keywords: toKeywordList(t('keywords')),
+    applicationName: SITE_NAME,
     category: 'reference',
-    creator: 'Ethnos Research Lab',
-    publisher: 'Ethnos Research Lab',
-    authors: [{ name: 'Ethnos Research Lab' }],
-    robots: {
-      index: true,
-      follow: true
-    },
+    creator: SITE_PUBLISHER,
+    publisher: SITE_PUBLISHER,
+    authors: [{ name: SITE_PUBLISHER, url: SITE_ORIGIN }],
+    referrer: 'strict-origin-when-cross-origin',
+    robots: INDEXABLE_ROBOTS,
+    icons: siteIcons,
+    manifest: manifestPath(safeLocale),
+    verification: siteVerification(),
     alternates: {
       canonical,
       languages: buildLanguageAlternates('/')
     },
     openGraph: {
       type: 'website',
-      locale: ogLocale,
-      alternateLocale,
+      locale: openGraphLocales[safeLocale],
+      alternateLocale: alternateOpenGraphLocales(safeLocale),
       url: canonical,
-      title: 'Ethnos Bibliography | Anthropology & Sociology Research Tool',
-      description: siteDescription,
-      siteName: 'Ethnos Bibliography',
-      images: [
-        {
-          url: socialImage,
-          width: 1200,
-          height: 630,
-          alt: 'Ethnos Bibliography catalog interface'
-        }
-      ]
+      title,
+      description,
+      siteName: SITE_NAME,
+      images: [image]
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Ethnos Bibliography | Anthropology & Sociology Research Tool',
-      description: siteDescription,
-      images: [socialImage]
+      title,
+      description,
+      images: [image.url]
     }
   };
 }
@@ -135,33 +144,15 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   };
   const searchPath = localizedPath(locale as Locale, '/search/results');
   const searchTarget = `${metadataBase.origin}${searchPath}?q={search_term_string}`;
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'Ethnos Bibliography',
-    url: new URL(localizedPath(locale as Locale, '/'), metadataBase).toString(),
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: searchTarget,
-      'query-input': 'required name=search_term_string'
-    },
-    inLanguage: locale
-  };
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} dir="ltr" suppressHydrationWarning>
       <head>
         <link rel="stylesheet" href={cssPath} />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#F5F5F4" />
       </head>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+          <JsonLd data={buildSiteGraph(locale as Locale, searchTarget)} />
           <a href="#main-content" className="skip-link">{t('skipLink')}</a>
           <div className="container">
             <Header
@@ -207,7 +198,7 @@ function Footer({ label, strings }: { label: string; strings: FooterStrings }) {
   return (
     <footer className="footer" aria-label={label}>
       <div className="footer-sources">
-        <a href="https://ethnos.app" target="_blank" rel="noopener noreferrer">{strings.project}</a> • {strings.openSource} • <LocaleLink href="/license">{strings.license}</LocaleLink> • {strings.frontendVersion} • <LocaleLink href="/privacy">{strings.privacy}</LocaleLink> • {strings.apiDocs}: <a href="https://api.ethnos.app/docs" target="_blank" rel="noopener noreferrer">api.ethnos.app/docs</a> • {strings.apiSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17049435 • {strings.frontendSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17050053 • <a href="https://cruz.rio.br" target="_blank" rel="noopener noreferrer">cruz.rio.br</a> • {strings.tagline}
+        <a href={SITE_ORIGIN} target="_blank" rel="noopener noreferrer">{strings.project}</a> • {strings.openSource} • <LocaleLink href="/license">{strings.license}</LocaleLink> • {strings.frontendVersion} • <LocaleLink href="/privacy">{strings.privacy}</LocaleLink> • {strings.apiDocs}: <a href="https://api.ethnos.app/docs" target="_blank" rel="noopener noreferrer">api.ethnos.app/docs</a> • {strings.apiSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17049435 • {strings.frontendSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17050053 • <a href="https://cruz.rio.br" target="_blank" rel="noopener noreferrer">cruz.rio.br</a> • {strings.tagline}
       </div>
     </footer>
   );

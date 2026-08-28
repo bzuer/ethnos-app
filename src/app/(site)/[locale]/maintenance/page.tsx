@@ -1,11 +1,11 @@
 import { getTranslations } from 'next-intl/server';
-import { buildPageMetadata } from '@/i18n/metadata';
+import { NON_INDEXABLE_ROBOTS, buildPageMetadata } from '@/i18n/metadata';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
-  return buildPageMetadata(props.params, 'metadata.maintenance', '/maintenance');
+  return buildPageMetadata(props.params, 'metadata.maintenance', '/maintenance', { robots: NON_INDEXABLE_ROBOTS });
 }
 
 export default async function MaintenancePage(props: { params: Promise<{ locale: string }> }) {
