@@ -321,6 +321,9 @@ deps() {
 # keeps the proxy and the service reading one source of truth.
 sudo_wrap() {
   local ENVS=("APP_PORT=$APP_PORT" "APP_UPSTREAM_HOST=$APP_UPSTREAM_HOST" "NGINX_PUBLIC_PORT=$PUBLIC_PORT" "NGINX_APP_CONF=$NGINX_APP_CONF")
+  # Forwarded only when it is actually set: an empty NGINX_LISTEN_ADDRESS means
+  # "every interface", so inventing one here would publish the port.
+  [ -n "${NGINX_LISTEN_ADDRESS+x}" ] && ENVS+=("NGINX_LISTEN_ADDRESS=$NGINX_LISTEN_ADDRESS")
   [ -n "$ENV_FILE" ] && ENVS+=("ENV_FILE=$ENV_FILE")
   if [ "$(id -u)" -eq 0 ]; then
     env "${ENVS[@]}" "$@"
