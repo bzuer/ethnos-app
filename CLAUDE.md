@@ -2,16 +2,18 @@
 
 ## Project
 
-**Ethnos** — Next.js 16 bibliographic discovery app for anthropology/sociology research. Multilingual (en, pt, es), static-first. All data is fetched server-side directly from the backend at `127.0.0.1:1211` — there is no in-app HTTP proxy; client components reach the backend through server actions in `src/lib/actions.ts`.
+**Ethnos** — Next.js 16 bibliographic discovery app for anthropology/sociology research. Multilingual (en, pt, es), static-first. All data is fetched server-side directly from the backend at `127.0.0.1:1211` — there is no in-app HTTP proxy; client components reach the backend through server actions in `src/lib/actions.ts`. `1211` is the API's **nginx** front door (it proxies to the API process on `127.0.0.1:1201`), so the address is unchanged for this app while the API itself is no longer a public listener; the frontend answers the same way, on **nginx `:1212` → Next on `localhost:1202`** (loopback).
 
 ## Commands
 
 | Task | Command | Port |
 |------|---------|------|
-| Dev | `./bin/dev` or `npm run dev` | 1210 |
+| Dev | `./bin/dev` or `npm run dev` | localhost:1210 |
 | Build | `npm run build` | — |
-| Prod (systemd) | `systemctl --user start ethnos-app` | 1212 |
-| Deploy | `scripts/manage.sh deploy` | 1212 |
+| Prod (systemd) | `systemctl --user start ethnos-app` | localhost:1202 (app) |
+| Deploy | `scripts/manage.sh deploy` | 1212 (nginx) → 1202 |
+| Nginx front door | `scripts/manage.sh nginx` (`--print` to render only) | 1212 |
+| Topology check | `scripts/manage.sh verify` / `status` | — |
 | Lint | `npm run lint` | — |
 | CSS minify | `scripts/manage.sh css` | — |
 | Setup service | `scripts/manage.sh setup_service` | — |
@@ -46,7 +48,9 @@ public/robots.txt                Static robots.txt (content signals + AI-crawler
 public/xml-list/                 Curated top works/venues/persons id lists feeding the sitemaps
 docs/SEO.md                      SEO/indexability contract — read before touching metadata or sitemaps
 docs/html-css/                   Legacy HTML/CSS reference (visual parity target)
-scripts/manage.sh                Build, deploy, daemon management
+config/nginx.conf                Nginx vhost template (placeholders) for the app's front door
+scripts/nginx/render-config.sh   Renders/installs that vhost to /etc/nginx/conf.d/ethnos-app.conf
+scripts/manage.sh                Build, deploy, nginx, daemon management
 scripts/seo/audit.mjs            SEO conformance audit (acceptance test for docs/SEO.md)
 scripts/seo/indexnow.mjs         IndexNow submitter
 scripts/systemd/                 systemd user service unit
@@ -83,7 +87,9 @@ config/env/                      Env file templates
 ## Architecture Rules
 
 - **Home, Search, Venues are fully static** (`dynamic = 'force-static'`, no `revalidate`). No `headers()`, `cookies()`, or request-bound APIs in these routes.
+- **Nginx owns every port a client reaches.** The Next server binds **`localhost:1202`** (`APP_BIND_HOST`/`APP_PORT`, loopback only) and is never a public listener; nginx listens on **`1212`** (`NGINX_PUBLIC_PORT`) and dials **`127.0.0.1:1202`** (`APP_UPSTREAM_HOST`), so the port the edge and `SEO_BASE` talk to is unchanged while the application moved behind the proxy. `next dev` binds `localhost:1210` for the same reason. The vhost is generated from `config/nginx.conf` by `scripts/nginx/render-config.sh` — which refuses a non-loopback `APP_UPSTREAM_HOST`, refuses an `APP_PORT` equal to the public port, refuses a public port another vhost already claims, runs `nginx -t` and restores the previous config if nginx rejects the new one. `scripts/manage.sh deploy` installs it on every deploy and ends in `verify` (app loopback-only, vhost present, public port listening, HTTP through the proxy); `NO_NGINX=1` skips only the install step. Never publish an application port directly, and never point the edge at `1202`. The API follows the same contract on its side (nginx `1211` → API process `127.0.0.1:1201`, `/etc/nginx/conf.d/ethnos-api.conf`).
 - **One HTTP path to the API.** Every request to `127.0.0.1:1211` is made by `fetchJson()` in `src/lib/api.ts` — server components, `generateMetadata`, and server actions all share it. There is no `src/app/api/**` route and there must not be one; introducing an HTTP proxy duplicates URL/parameter logic and is the source of the dysfunctions that motivated removing it.
+- **The backend is reached through its own nginx.** `127.0.0.1:1211` is the API's proxy, not the API process (`127.0.0.1:1201`), which changes two things for this app. **(a)** A stopped or restarting API answers **HTML `502`**, not a refused connection — `fetchJson` still retries (`res.status >= 500`, 2 attempts) and `buildApiError` degrades to `HTTP 502` when the body is not JSON, so nothing needs to parse it; it is never a `NOT_FOUND` and must never be folded into `isMissingEntityError`. **(b)** The loopback rate-limit exemption is gone: traffic through the proxy carries `X-Forwarded-For`, so the API rate-limits `localhost` like any other origin and the frontend depends on `ETHNOS_API_KEY` being valid to stay exempt — an unset or wrong key turns a build's static generation into a wall of `429`s rather than a quiet degradation. Details in [`docs/api_doc/00-conventions.md`](docs/api_doc/00-conventions.md) § Ports and [`docs/api_doc/domains/system.md`](docs/api_doc/domains/system.md) § Serving topology.
 - **Client → backend = server actions.** Pagination, filters, autocomplete, and any other browser-triggered data fetch go through a `'use server'` function in `src/lib/actions.ts` (which internally calls `fetchJson` or a wrapper in `endpoints.ts`). Never call the backend via `fetch('/api/...')` from a client component, and never hard-code the backend URL on the client.
 - **Next.js 16 params are Promises** — always `await props.params` before accessing fields.
 - **The API key never leaves the server.** `fetchJson()` injects `x-access-key` from `ETHNOS_API_KEY`; because every backend call funnels through it, no client component (including server-action bodies sent over the wire) ever touches the secret.
@@ -169,14 +175,27 @@ config/env/                      Env file templates
 
 ## Production Service
 
-The app runs as a **systemd user service** (`ethnos-app.service`). Linger is enabled so it survives logout.
+The app runs as a **systemd user service** (`ethnos-app.service`) behind nginx. Linger is enabled so it survives logout.
+
+```
+edge (Cloudflare) → nginx :1212 → next start -H localhost -p 1202   (binds 127.0.0.1)
+                    nginx :1211 → node 127.0.0.1:1201              (the API, same contract)
+```
 
 - **Source unit:** `scripts/systemd/ethnos-app.service`
 - **Installed to:** `~/.config/systemd/user/ethnos-app.service`
 - **Manage:** `systemctl --user {start|stop|restart|status} ethnos-app`
-- **Logs:** `journalctl --user -u ethnos-app -f`
+- **Logs:** `journalctl --user -u ethnos-app -f`; nginx logs are `/var/log/nginx/ethnos-app.{access,error}.log`.
 - `scripts/manage.sh restart` and `deploy` use `systemctl --user restart` automatically.
 - **First-time setup:** `scripts/manage.sh setup_service` installs the unit, enables it, and configures linger.
+- The unit carries **no port**: `start_foreground` derives the bind address from `APP_PORT`/`APP_BIND_HOST`, which default to `localhost:1202` and can be overridden in `/etc/next-frontend.env` — the same file `scripts/nginx/render-config.sh` reads, so the proxy and the process can never disagree about the port.
+
+### Nginx front door
+
+- **Template:** `config/nginx.conf` (placeholders, committed) → **installed:** `/etc/nginx/conf.d/ethnos-app.conf` (rendered, root-owned).
+- **Install/reload:** `scripts/manage.sh nginx` (wraps `sudo scripts/nginx/render-config.sh`); `scripts/manage.sh nginx --print` renders to stdout and needs no root. `deploy` runs it after the build, after a `sudo -v` so the password prompt does not land at the end of a long build.
+- **Tunables**, all read from `/etc/next-frontend.env` with these defaults: `NGINX_PUBLIC_PORT=1212`, `APP_PORT=1202`, `APP_BIND_HOST=localhost` (the app's `-H`), `APP_UPSTREAM_HOST=127.0.0.1` (what nginx dials), `NGINX_SERVER_NAME=_` (the `_` catch-all is what makes the block `default_server`), `NGINX_LISTEN_ADDRESS=` (all interfaces), `NGINX_IPV6=true`, `NGINX_CLIENT_MAX_BODY_SIZE=10m`, `NGINX_PROXY_TIMEOUT=60s`, `NGINX_APP_CONF`, plus the optional `NGINX_SSL_CERT`/`NGINX_SSL_KEY`/`NGINX_TLS_PORT` trio that adds a TLS listener to the same server block.
+- **What the vhost deliberately does not do:** no `add_header` (nosniff, Referrer-Policy, X-DNS-Prefetch-Control and the per-route Cache-Control come from `next.config.mjs#headers()`, and one here would duplicate each); no `proxy_intercept_errors` (the app owns its 404 and its maintenance 503); `proxy_buffering off` so streamed HTML/RSC reaches the browser as produced; `Host $host` preserved, because a Server Action POST is rejected when the browser's `Origin` does not match the forwarded host; and `X-Forwarded-Proto` passed through when the edge already set it (`$scheme` only as fallback), so TLS terminated at Cloudflare is not reported as `http`.
 
 ## Maintenance Mode
 
@@ -214,6 +233,9 @@ The shared helper `buildFileOpenAccessUrl(file)` in `src/lib/work-export.ts` enc
 ## Gotchas
 
 - If `Cannot find module './948.js'` on `next start`: ensure Node < 25, run `scripts/manage.sh deploy`.
+- **Node is resolved by path, not by `nvm use`.** `ensure_node` in `scripts/manage.sh` requires major `[NODE_MIN_MAJOR..NODE_MAX_MAJOR]` = **20–24** (`package.json#engines: >=18.18 <25`) and picks the highest nvm-installed version in range, preferring `.nvmrc`'s major, then **prepends that `bin/` to `PATH`**. `nvm use` alone is not enough on this host: nvm only rewrites the nvm entry already in `PATH`, and Homebrew's `/home/linuxbrew/.linuxbrew/bin/node` (v26) sits ahead of it, so the switch silently did nothing and every command died with `Node >=20 <25 is required`. Override with `NODE_BIN=/path/to/node` (binary or its directory) when the right version lives outside nvm.
+- The app port must never appear in `ss -lntH` on anything but `127.0.0.1` — `scripts/manage.sh verify` asserts exactly that, and `start` warns when the nginx vhost is missing.
+- **Bind the app with `-H localhost`, never `-H 127.0.0.1`.** Both listen on loopback only, but Next builds the origin it compares middleware rewrites against from that string (`resolve-routes.js` → `initURL = ${protocol}://${hostname||'localhost'}:${port}`). With an IP literal the rewrite `/` → `/en` no longer matches that origin, so Next treats it as an *external* target: the home page (and every default-locale, i.e. English, URL) answers **307 to itself**, and when the edge also sends `X-Forwarded-Proto: https` it answers **500** with `Failed to proxy https://localhost:1202/en … EPROTO … wrong version number` — a TLS handshake against its own plaintext port. `HOSTNAME=127.0.0.1` is not a substitute either: `next start` ignores it for binding and listens on `*`. `scripts/manage.sh verify` probes `/` with edge-style headers and fails on a self-redirect precisely to catch a regression here.
 - CSS changes: edit `public/css/styles.css`, then run `scripts/manage.sh css` to regenerate minified version.
 - Three message files must stay structurally identical — adding a key in one requires adding it in all three.
 - Export/citation functions (`normWork`, `toBibTeX`, `toRIS`, `toApaParagraph`) live in `src/lib/work-export.ts`; export envelopes/records live in `src/lib/entity-export.ts` and the download plumbing in `src/lib/download.ts` — do not duplicate any of them in page components.

@@ -96,7 +96,7 @@ These are **not release blockers** but worth filing:
 
 ## Operations
 
-- **Prod service:** `ethnos-app.service` (systemd user unit, linger enabled), port **1212**.
+- **Prod service:** `ethnos-app.service` (systemd user unit, linger enabled) on **localhost:1202** (loopback), published by nginx on **1212** (`/etc/nginx/conf.d/ethnos-app.conf`, rendered by `scripts/nginx/render-config.sh`).
 - **Dev:** `./bin/dev` or `npm run dev`, port **1210**.
 - **Deploy:** `scripts/manage.sh deploy` (rebuilds, restarts via `systemctl --user restart ethnos-app`).
 - **Logs:** `journalctl --user -u ethnos-app -f`.

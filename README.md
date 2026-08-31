@@ -50,9 +50,9 @@ Next.js (App Router) frontend for Ethnos App. This project ports Flask/Jinja scr
 
 ## Commands
 - Install: `npm install`
-- Dev (1210): `./bin/dev` or `npm run dev`, then open `http://localhost:1210`
+- Dev (localhost:1210): `./bin/dev` or `npm run dev`, then open `http://localhost:1210`
 - Build: `npm run build`
-- Prod (1212): `./bin/start` or `scripts/manage.sh start`
+- Prod: `scripts/manage.sh deploy` — nginx serves `:1212` and proxies to the app on loopback `1202`. `./bin/start` or `scripts/manage.sh start` runs the same loopback daemon without touching nginx; `scripts/manage.sh nginx` installs the front door and `scripts/manage.sh verify` checks the whole path.
 - Foreground prod: `scripts/manage.sh start_foreground`
 - Daemon control: `scripts/manage.sh start|stop|restart`
 - Deploy: `scripts/manage.sh deploy`

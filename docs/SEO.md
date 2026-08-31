@@ -198,7 +198,7 @@ through `robots.txt` and Search Console.
 ## Auditing
 
 ```bash
-scripts/manage.sh seo audit                     # against the production port (1212)
+scripts/manage.sh seo audit                     # against the public nginx port (1212)
 scripts/manage.sh seo audit --sample 5          # more entity samples per type
 SEO_BASE=http://127.0.0.1:1210 scripts/manage.sh seo audit
 node scripts/seo/audit.mjs --base <url> --skip-entities

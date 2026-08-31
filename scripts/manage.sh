@@ -3,8 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CMD="${1:-}"
-DEV_PORT="${DEV_PORT:-1210}"
-PROD_PORT="${PROD_PORT:-1212}"
 NEXT_BIN="$ROOT_DIR/node_modules/.bin/next"
 ENV_FILE="${ENV_FILE:-}"
 PID_FILE="${PID_FILE:-/tmp/ethnos-next.pid}"
@@ -14,6 +12,36 @@ SYSTEMD_ARGS="${SYSTEMD_ARGS:---user}"
 SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-ethnos-app.service}"
 MAINTENANCE_DROPIN_DIR="${MAINTENANCE_DROPIN_DIR:-$HOME/.config/systemd/user/ethnos-app.service.d}"
 MAINTENANCE_DROPIN_FILE="${MAINTENANCE_DROPIN_FILE:-$MAINTENANCE_DROPIN_DIR/maintenance.conf}"
+NGINX_RENDER="$ROOT_DIR/scripts/nginx/render-config.sh"
+NODE_MIN_MAJOR="${NODE_MIN_MAJOR:-20}"
+NODE_MAX_MAJOR="${NODE_MAX_MAJOR:-24}"
+
+# nginx owns every port a client reaches; the Next server only ever binds
+# loopback. Values set on the command line win over the ones in the env file,
+# which load_env would otherwise overwrite, so they are captured before it runs.
+APP_PORT_OVERRIDE="${APP_PORT:-${PROD_PORT:-}}"
+APP_BIND_HOST_OVERRIDE="${APP_BIND_HOST:-}"
+PUBLIC_PORT_OVERRIDE="${PUBLIC_PORT:-}"
+DEV_PORT_OVERRIDE="${DEV_PORT:-}"
+DEV_HOST_OVERRIDE="${DEV_HOST:-}"
+NGINX_APP_CONF_OVERRIDE="${NGINX_APP_CONF:-}"
+
+# APP_BIND_HOST is what Next binds; it must stay `localhost`. Next builds the
+# origin it compares middleware rewrites against from this value, so `-H
+# 127.0.0.1` makes every rewrite (i.e. every default-locale URL) look external:
+# `/` answers 307 to itself, and with X-Forwarded-Proto: https it 500s trying to
+# speak TLS to its own plaintext port. `localhost` resolves to loopback all the
+# same, which `verify` asserts. APP_UPSTREAM_HOST is the address nginx dials.
+resolve_ports() {
+  APP_PORT="${APP_PORT_OVERRIDE:-${APP_PORT:-1202}}"
+  APP_BIND_HOST="${APP_BIND_HOST_OVERRIDE:-${APP_BIND_HOST:-localhost}}"
+  APP_UPSTREAM_HOST="${APP_UPSTREAM_HOST:-127.0.0.1}"
+  PUBLIC_PORT="${PUBLIC_PORT_OVERRIDE:-${NGINX_PUBLIC_PORT:-1212}}"
+  DEV_PORT="${DEV_PORT_OVERRIDE:-${DEV_PORT:-1210}}"
+  DEV_HOST="${DEV_HOST_OVERRIDE:-${DEV_HOST:-localhost}}"
+  NGINX_APP_CONF="${NGINX_APP_CONF_OVERRIDE:-${NGINX_APP_CONF:-/etc/nginx/conf.d/ethnos-app.conf}}"
+}
+resolve_ports
 
 port_listening() {
   local TARGET="$1"
@@ -24,6 +52,15 @@ port_listening() {
     return 0
   fi
   return 1
+}
+
+# A listener on anything but 127.0.0.0/8 or [::1] is reachable from the network,
+# which is exactly what nginx is here to prevent.
+port_loopback_only() {
+  local TARGET="$1" ADDRESSES
+  ADDRESSES="$(ss -lntH "sport = :$TARGET" 2>/dev/null | awk '{print $4}')"
+  [ -n "$ADDRESSES" ] || return 1
+  ! printf '%s\n' "$ADDRESSES" | grep -qvE '^(127\.[0-9.]+|\[::1\])'
 }
 
 load_env_file() {
@@ -63,25 +100,77 @@ systemd_restart() {
   systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE"
 }
 
+node_major() {
+  local VERSION
+  VERSION="$(node -v 2>/dev/null || true)"
+  VERSION="${VERSION#v}"
+  printf '%s' "${VERSION%%.*}"
+}
+
+node_supported() {
+  local MAJOR="${1:-}"
+  case "$MAJOR" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$MAJOR" -ge "$NODE_MIN_MAJOR" ] && [ "$MAJOR" -le "$NODE_MAX_MAJOR" ]
+}
+
+# The highest nvm-installed version inside the supported range, preferring the
+# major in .nvmrc. Returns the bin directory, which the caller PREPENDS to PATH:
+# `nvm use` only rewrites the nvm entry already in PATH, so with a Homebrew node
+# ahead of it (as on this host) the switch silently has no effect.
+nvm_node_bin() {
+  local ROOT="${NVM_DIR:-$HOME/.nvm}/versions/node"
+  [ -d "$ROOT" ] || return 1
+  local WANTED="" DIR MAJOR BEST="" BEST_WANTED=""
+  if [ -f "$ROOT_DIR/.nvmrc" ]; then
+    WANTED="$(tr -d ' \t\r\nv' < "$ROOT_DIR/.nvmrc")"
+    WANTED="${WANTED%%.*}"
+  fi
+  for DIR in $(ls -1 "$ROOT" 2>/dev/null | sort -V); do
+    [ -x "$ROOT/$DIR/bin/node" ] || continue
+    MAJOR="${DIR#v}"
+    MAJOR="${MAJOR%%.*}"
+    node_supported "$MAJOR" || continue
+    BEST="$ROOT/$DIR/bin"
+    [ -n "$WANTED" ] && [ "$MAJOR" = "$WANTED" ] && BEST_WANTED="$ROOT/$DIR/bin"
+  done
+  BEST="${BEST_WANTED:-$BEST}"
+  [ -n "$BEST" ] || return 1
+  printf '%s' "$BEST"
+}
+
 ensure_node() {
-  if command -v node >/dev/null 2>&1 && node -v | grep -qE '^v(20|21|22|23|24)\.'; then
-    return 0
+  local BIN_DIR
+  if [ -n "${NODE_BIN:-}" ]; then
+    BIN_DIR="$NODE_BIN"
+    [ -d "$BIN_DIR" ] || BIN_DIR="$(dirname "$BIN_DIR")"
+    PATH="$BIN_DIR:$PATH"
+    export PATH
   fi
-  if [ -n "${NVM_DIR:-}" ] && [ -s "$NVM_DIR/nvm.sh" ]; then
-    . "$NVM_DIR/nvm.sh" >/dev/null 2>&1 || true
-  elif [ -s "$HOME/.nvm/nvm.sh" ]; then
-    . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1 || true
+  node_supported "$(node_major)" && return 0
+
+  if BIN_DIR="$(nvm_node_bin)"; then
+    PATH="$BIN_DIR:$PATH"
+    export PATH
+    node_supported "$(node_major)" && return 0
   fi
-  if command -v nvm >/dev/null 2>&1; then
-    nvm use --silent 24 >/dev/null 2>&1 || nvm install 24 >/dev/null 2>&1 || true
-    if ! command -v node >/dev/null 2>&1 || ! node -v | grep -qE '^v(20|21|22|23|24)\.'; then
-      nvm use --silent 20 >/dev/null 2>&1 || nvm install 20 >/dev/null 2>&1 || true
+
+  if [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
+    . "${NVM_DIR:-$HOME/.nvm}/nvm.sh" >/dev/null 2>&1 || true
+    if command -v nvm >/dev/null 2>&1; then
+      nvm install "$NODE_MAX_MAJOR" >/dev/null 2>&1 || true
+      if BIN_DIR="$(nvm_node_bin)"; then
+        PATH="$BIN_DIR:$PATH"
+        export PATH
+        node_supported "$(node_major)" && return 0
+      fi
     fi
   fi
-  if ! command -v node >/dev/null 2>&1 || ! node -v | grep -qE '^v(20|21|22|23|24)\.'; then
-    echo "Node >=20 <25 is required. Install Node 24 LTS if possible." >&2
-    exit 1
-  fi
+
+  local FOUND
+  FOUND="$(node -v 2>/dev/null || echo 'none')"
+  echo "Node >=$NODE_MIN_MAJOR <$((NODE_MAX_MAJOR + 1)) is required (package.json#engines); found $FOUND." >&2
+  echo "Install it with 'nvm install $NODE_MAX_MAJOR', or point NODE_BIN at a supported node binary." >&2
+  exit 1
 }
 
 css() {
@@ -91,14 +180,16 @@ css() {
 dev() {
   ensure_node
   load_env
+  resolve_ports
   export PORT="${PORT:-$DEV_PORT}"
   css
-  exec npx next dev -p "$PORT"
+  exec npx next dev -H "$DEV_HOST" -p "$PORT"
 }
 
 build() {
   ensure_node
   load_env
+  resolve_ports
   export NODE_ENV=production
   css
   npx next build
@@ -107,8 +198,9 @@ build() {
 start() {
   ensure_node
   load_env
+  resolve_ports
   export NODE_ENV=production
-  export PORT="$PROD_PORT"
+  export PORT="$APP_PORT"
   if [ -f "$PID_FILE" ]; then
     local PID
     PID="$(cat "$PID_FILE" 2>/dev/null || true)"
@@ -126,8 +218,8 @@ start() {
     echo "Missing Next binary at $NEXT_BIN. Run npm install." >&2
     exit 1
   fi
-  echo "Starting daemon on port $PORT (log: $LOG_FILE)"
-  nohup "$NEXT_BIN" start -p "$PORT" >>"$LOG_FILE" 2>&1 &
+  echo "Starting daemon on $APP_BIND_HOST:$PORT (log: $LOG_FILE)"
+  nohup "$NEXT_BIN" start -H "$APP_BIND_HOST" -p "$PORT" >>"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
   local waited=0
   while [ "$waited" -lt "$DAEMON_READY_TIMEOUT" ]; do
@@ -147,18 +239,20 @@ start() {
   if ! port_listening "$PORT"; then
     echo "Daemon running on PID $NEW_PID but port $PORT is still warming up."
   fi
+  nginx_warn_if_absent
 }
 
 start_foreground() {
   ensure_node
   load_env
+  resolve_ports
   export NODE_ENV=production
-  export PORT="$PROD_PORT"
+  export PORT="$APP_PORT"
   if [ ! -x "$NEXT_BIN" ]; then
     echo "Missing Next binary at $NEXT_BIN. Run npm install." >&2
     exit 1
   fi
-  exec "$NEXT_BIN" start -p "$PORT"
+  exec "$NEXT_BIN" start -H "$APP_BIND_HOST" -p "$PORT"
 }
 
 stop() {
@@ -172,7 +266,8 @@ stop() {
     fi
     rm -f "$PID_FILE"
   fi
-  local P="$PROD_PORT"
+  resolve_ports
+  local P="$APP_PORT"
   local PIDS
   PIDS="$(lsof -t -i TCP:$P -s TCP:LISTEN 2>/dev/null || true)"
   if [ -z "${PIDS:-}" ]; then
@@ -220,9 +315,126 @@ deps() {
   fi
 }
 
+# sudo drops the environment, so the resolved topology is handed over
+# explicitly. The renderer still lets /etc/next-frontend.env win, which is what
+# keeps the proxy and the service reading one source of truth.
+sudo_wrap() {
+  local ENVS=("APP_PORT=$APP_PORT" "APP_UPSTREAM_HOST=$APP_UPSTREAM_HOST" "NGINX_PUBLIC_PORT=$PUBLIC_PORT" "NGINX_APP_CONF=$NGINX_APP_CONF")
+  [ -n "$ENV_FILE" ] && ENVS+=("ENV_FILE=$ENV_FILE")
+  if [ "$(id -u)" -eq 0 ]; then
+    env "${ENVS[@]}" "$@"
+    return
+  fi
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "This step needs root and sudo is not available: run it as root." >&2
+    return 1
+  fi
+  sudo env "${ENVS[@]}" "$@"
+}
+
+nginx_installed() {
+  [ -f "$NGINX_APP_CONF" ]
+}
+
+# The public port is nginx's to own. Starting the app without the vhost leaves
+# the site unreachable from the edge, which is worth saying out loud rather than
+# discovering through a 502 at the tunnel.
+nginx_warn_if_absent() {
+  if ! nginx_installed; then
+    echo "Warning: $NGINX_APP_CONF is missing — nothing is serving :$PUBLIC_PORT." >&2
+    echo "Run 'scripts/manage.sh nginx' to install the front door." >&2
+  fi
+}
+
+nginx_config() {
+  resolve_ports
+  if [ "${1:-}" = "--print" ]; then
+    exec "$NGINX_RENDER" --print
+  fi
+  sudo_wrap "$NGINX_RENDER"
+}
+
+# Every check the topology depends on, in the order a request travels: the app
+# on loopback, nginx on the public port, and a real response through the proxy.
+verify_stack() {
+  resolve_ports
+  local FAILED=0 CODE
+
+  if port_listening "$APP_PORT"; then
+    if port_loopback_only "$APP_PORT"; then
+      echo "  [OK] app upstream (port $APP_PORT) bound to loopback only"
+    else
+      echo "  [FAIL] app upstream (port $APP_PORT) is bound beyond loopback" >&2
+      FAILED=1
+    fi
+  else
+    echo "  [FAIL] nothing is listening on the app upstream port $APP_PORT" >&2
+    FAILED=1
+  fi
+
+  if nginx_installed; then
+    echo "  [OK] nginx vhost ($NGINX_APP_CONF)"
+  else
+    echo "  [FAIL] missing nginx vhost ($NGINX_APP_CONF)" >&2
+    FAILED=1
+  fi
+
+  if port_listening "$PUBLIC_PORT"; then
+    echo "  [OK] nginx public (port $PUBLIC_PORT)"
+  else
+    echo "  [FAIL] nothing is listening on the public port $PUBLIC_PORT" >&2
+    FAILED=1
+  fi
+
+  # Sent the way the edge sends it: Host is the public name and TLS terminated
+  # upstream. A 307 back to "/" here is the APP_BIND_HOST trap, not a redirect.
+  local PROBE REDIRECT
+  PROBE="$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 20 \
+    -H "Host: ${VERIFY_HOST:-ethnos.app}" -H 'X-Forwarded-Proto: https' \
+    "http://127.0.0.1:$PUBLIC_PORT/" 2>/dev/null || true)"
+  CODE="${PROBE%% *}"
+  CODE="${CODE:-000}"
+  REDIRECT="${PROBE#* }"
+  case "$CODE" in
+    200) echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP 200)" ;;
+    503) echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP 503, maintenance mode)" ;;
+    3??)
+      local RPATH="${REDIRECT#*://}"
+      [ "$RPATH" = "$REDIRECT" ] || RPATH="/${RPATH#*/}"
+      if [ "$RPATH" = "/" ]; then
+        echo "  [FAIL] the home page redirects to itself ($CODE -> ${REDIRECT:-/})." >&2
+        echo "         APP_BIND_HOST must be 'localhost': an IP literal makes Next treat every" >&2
+        echo "         middleware rewrite as external, so every default-locale URL loops." >&2
+        FAILED=1
+      else
+        echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP $CODE -> $REDIRECT)"
+      fi
+      ;;
+    2??) echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP $CODE)" ;;
+    *) echo "  [FAIL] app not reachable through nginx (:$PUBLIC_PORT/ -> HTTP $CODE)" >&2; FAILED=1 ;;
+  esac
+
+  if [ "$FAILED" -ne 0 ]; then
+    return 1
+  fi
+  echo "All checks passed"
+}
+
+status() {
+  resolve_ports
+  maintenance_status
+  verify_stack
+}
+
 deploy() {
   ensure_node
   load_env
+  resolve_ports
+  # The build takes minutes and the nginx step needs root: asking for the
+  # password up front keeps the deploy from stalling on a prompt at the end.
+  if [ "${NO_NGINX:-0}" != "1" ] && [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+    sudo -v
+  fi
   clean
   deps
   export NODE_ENV=production
@@ -233,8 +445,25 @@ deploy() {
   if [ ! -f "$DEST" ]; then
     setup_service
   fi
+
+  if [ "${NO_NGINX:-0}" = "1" ]; then
+    echo "Skipping the nginx front door (NO_NGINX=1)."
+  else
+    nginx_config
+  fi
+
   systemctl --user restart "$SYSTEMD_SERVICE"
   systemctl --user is-active --quiet "$SYSTEMD_SERVICE"
+
+  local waited=0
+  while [ "$waited" -lt "$DAEMON_READY_TIMEOUT" ] && ! port_listening "$APP_PORT"; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  echo
+  echo "-- Final validation --"
+  verify_stack
 }
 
 setup_service() {
@@ -262,7 +491,7 @@ setup_service() {
     fi
   fi
 
-  echo "Setup complete. Use 'scripts/manage.sh deploy' to build and start, or 'systemctl --user start ethnos-next' to start directly."
+  echo "Setup complete. Use 'scripts/manage.sh deploy' to build, install the nginx front door and start."
 }
 
 uninstall() {
@@ -371,7 +600,8 @@ maintenance() {
 
 seo_audit() {
   ensure_node
-  local TARGET="${SEO_BASE:-http://127.0.0.1:$PROD_PORT}"
+  resolve_ports
+  local TARGET="${SEO_BASE:-http://127.0.0.1:$PUBLIC_PORT}"
   node "$ROOT_DIR/scripts/seo/audit.mjs" --base "$TARGET" "$@"
 }
 
@@ -395,12 +625,21 @@ seo() {
 }
 
 usage() {
-  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall|maintenance [on|off|status]|seo [audit|indexnow]}"
+  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|nginx [--print]|status|verify|setup_service|uninstall|maintenance [on|off|status]|seo [audit|indexnow]}"
+  echo
+  echo "Ports: nginx serves :$PUBLIC_PORT and proxies to the app on $APP_BIND_HOST:$APP_PORT (dev: $DEV_HOST:$DEV_PORT)."
 }
 
 case "$CMD" in
-  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall)
+  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall|status)
     "$CMD"
+    ;;
+  nginx)
+    shift
+    nginx_config "$@"
+    ;;
+  verify)
+    verify_stack
     ;;
   maintenance)
     maintenance "$@"

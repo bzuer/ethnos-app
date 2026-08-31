@@ -39,9 +39,9 @@ Operational directive: at the end of each session or significant change, create 
  - Search results uses vitrine when `q=*` or when search is empty.
 
 ## Commands and Ports
-- Dev (1210): `./bin/dev` or `npm run dev` serves `http://localhost:1210`.
+- Dev (localhost:1210): `./bin/dev` or `npm run dev` serves `http://localhost:1210`.
 - Build: `npm run build`.
-- Prod (1212): `./bin/start` or `scripts/manage.sh start` runs the daemon on `:1212`.
+- Prod: nginx owns `:1212` and proxies to the app on loopback `1202` (`next start -H localhost`). `./bin/start` or `scripts/manage.sh start` runs that loopback daemon; `scripts/manage.sh nginx` installs the front door, `scripts/manage.sh verify` checks it.
 - Foreground prod: `scripts/manage.sh start_foreground` (for service managers).
 - Daemon control: `scripts/manage.sh start|stop|restart` with logs at `/tmp/ethnos-next.log`.
 - Static preview: `python3 -m http.server -d docs/html-css 8080` then open `templates/pages/home.html`.
@@ -114,7 +114,7 @@ Operational directive: at the end of each session or significant change, create 
   `export default async function Page(props: { params: Promise<{ id: string }>, searchParams?: Promise<Record<string, string>> }) { const { id } = await props.params; const sp = (await props.searchParams) || {}; }`
 
 ## Production Daemon
-- `scripts/manage.sh start|stop|restart` runs a background daemon on port 1212 using `/tmp/ethnos-next.pid`.
+- `scripts/manage.sh start|stop|restart` runs a background daemon on `localhost:1202` using `/tmp/ethnos-next.pid`; the public port `1212` belongs to nginx.
 - Linux `systemd` template: `scripts/systemd/ethnos-next.service` using `scripts/manage.sh start_foreground`.
 - macOS `launchd` template: `scripts/launchd/ethnos-next.plist` using `scripts/manage.sh start_foreground`.
 - Service templates assume checkout path `~/app`; adjust paths when repository location differs.
