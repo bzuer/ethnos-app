@@ -155,10 +155,54 @@ fi
 
 [ -n "$backup" ] && rm -f "$backup"
 
-if command -v systemctl >/dev/null 2>&1; then
-  systemctl reload nginx || systemctl restart nginx
-else
-  nginx -s reload
+# Whether the sockets nginx actually holds match the config just installed. A
+# reload cannot narrow (or widen) a listen address: nginx binds the new listener
+# while the previous socket is still open, bind() fails with EADDRINUSE, the new
+# config is rejected at runtime and the old listeners stay — silently, because
+# the reload itself still returns 0.
+listeners_match_intent() {
+  local port="$1" want="$2" addrs
+  addrs="$(ss -lntH "sport = :$port" 2>/dev/null | awk '{print $4}')"
+  [ -n "$addrs" ] || return 1
+  [ -n "$want" ] || return 0
+  printf '%s\n' "$addrs" | grep -qE "^(0\.0\.0\.0|\[::\]):${port}\$" && return 1
+  printf '%s\n' "$addrs" | grep -qE "^(${want//./\\.}|\[::1\]):${port}\$"
+}
+
+reload_nginx() {
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl reload nginx || systemctl restart nginx
+  else
+    nginx -s reload
+  fi
+}
+
+restart_nginx() {
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl restart nginx
+  else
+    nginx -s stop || true
+    sleep 1
+    nginx
+  fi
+}
+
+reload_nginx
+
+if ! listeners_match_intent "$PUBLIC_PORT" "$LISTEN_ADDRESS"; then
+  echo "reload kept the previous listeners on ${PUBLIC_PORT}; restarting nginx to rebind them"
+  restart_nginx
+  waited=0
+  while [ "$waited" -lt 5 ] && ! listeners_match_intent "$PUBLIC_PORT" "$LISTEN_ADDRESS"; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+fi
+
+if ! listeners_match_intent "$PUBLIC_PORT" "$LISTEN_ADDRESS"; then
+  echo "port ${PUBLIC_PORT} is bound to $(ss -lntH "sport = :$PUBLIC_PORT" 2>/dev/null | awk '{print $4}' | tr '\n' ' ')" \
+       "instead of ${LISTEN_ADDRESS:-every interface}. Another process may hold the port." >&2
+  exit 1
 fi
 
 listen_label="${LISTEN_ADDRESS:-0.0.0.0}:${PUBLIC_PORT}"

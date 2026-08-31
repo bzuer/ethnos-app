@@ -40,6 +40,7 @@ resolve_ports() {
   DEV_PORT="${DEV_PORT_OVERRIDE:-${DEV_PORT:-1210}}"
   DEV_HOST="${DEV_HOST_OVERRIDE:-${DEV_HOST:-localhost}}"
   NGINX_APP_CONF="${NGINX_APP_CONF_OVERRIDE:-${NGINX_APP_CONF:-/etc/nginx/conf.d/ethnos-app.conf}}"
+  NGINX_LISTEN="${NGINX_LISTEN_ADDRESS-127.0.0.1}"
 }
 resolve_ports
 
@@ -379,11 +380,19 @@ verify_stack() {
     FAILED=1
   fi
 
-  if port_listening "$PUBLIC_PORT"; then
-    echo "  [OK] nginx public (port $PUBLIC_PORT)"
-  else
+  local PUBLIC_ADDRESSES
+  PUBLIC_ADDRESSES="$(ss -lntH "sport = :$PUBLIC_PORT" 2>/dev/null | awk '{print $4}' | tr '\n' ' ')"
+  if [ -z "$PUBLIC_ADDRESSES" ]; then
     echo "  [FAIL] nothing is listening on the public port $PUBLIC_PORT" >&2
     FAILED=1
+  elif [ -n "$NGINX_LISTEN" ] && printf '%s' "$PUBLIC_ADDRESSES" | grep -qE "(^| )(0\.0\.0\.0|\[::\]):$PUBLIC_PORT( |$)"; then
+    # nginx cannot narrow a listen address on reload: it keeps the previous
+    # wildcard socket and the config on disk no longer describes what is bound.
+    echo "  [FAIL] port $PUBLIC_PORT is bound to ${PUBLIC_ADDRESSES% } but the vhost asks for $NGINX_LISTEN" >&2
+    echo "         nginx keeps the old socket across a reload — 'sudo systemctl restart nginx' rebinds it." >&2
+    FAILED=1
+  else
+    echo "  [OK] nginx public (port $PUBLIC_PORT on ${PUBLIC_ADDRESSES% })"
   fi
 
   # Sent the way the edge sends it: Host is the public name and TLS terminated
@@ -421,6 +430,7 @@ verify_stack() {
 }
 
 status() {
+  load_env
   resolve_ports
   maintenance_status
   verify_stack
@@ -639,6 +649,7 @@ case "$CMD" in
     nginx_config "$@"
     ;;
   verify)
+    load_env
     verify_stack
     ;;
   maintenance)
