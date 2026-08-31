@@ -32,6 +32,21 @@ A **work** is a *multi-manifestation* record: its type lives per-publication on 
 
 All examples in this guide use relative paths; prefix them with a base URL. OpenAPI `info.version` is `2.0.0`.
 
+**Ports**
+
+Both base URLs are served by **nginx**, which reverse-proxies to the application on loopback. The API is not reachable except through that proxy, so `1211` is the only port a client ever calls.
+
+| Port | Owner | Reachable from a client |
+|---|---|---|
+| `1211` | nginx — the public API | **Yes.** This is the base URL above. |
+| `1201` | the API process (`127.0.0.1` only) | No. Loopback-bound; not routable even on the LAN. |
+| `1210` | temporary instance for integration tests | No. Only exists while a test run is up. |
+| `1212` | **the frontend** | Reserved for the frontend app; never an API port. |
+
+Nothing about the API surface changes because of the proxy — the path, the envelope, the headers and the status codes are the same — with one exception, described under [Gateway errors](#gateway-errors) below. The rate limiter counts the **real client IP**, which nginx forwards as `X-Forwarded-For`; requests are not exempted just because the proxy itself is on loopback.
+
+Do not hardcode `1201` to "skip the proxy". It is not exposed, and bypassing nginx would also bypass the client-IP forwarding the rate limiter depends on.
+
 ---
 
 ## 2. Response envelope
@@ -61,6 +76,29 @@ Every response is a JSON object with a `status` discriminator.
 ```
 
 Always branch on `status` first. On success, read `data`; on error, read `code` (stable) and `message` (human).
+
+<a id="gateway-errors"></a>
+**Gateway errors are not in this envelope**
+
+The envelope is produced by the application. When the application is down, restarting, or unreachable, the request never gets that far and **nginx answers instead, in HTML**:
+
+```
+HTTP/1.1 502 Bad Gateway
+Server: nginx
+Content-Type: text/html
+
+<html>
+<head><title>502 Bad Gateway</title></head>
+...
+```
+
+So a client must not assume a response body is JSON just because it came from the API host. Parse defensively:
+
+- **`502`** — the API is not answering (deploy, restart, crash). Retry; the envelope returns with the service.
+- **`504`** — the API accepted the request but did not answer within the proxy's 30 s ceiling. Rare: the application's own 5 s request budget normally answers first, in JSON, with a proper error `code`.
+- Any status with `Content-Type: text/html` is the proxy talking, not the API. Treat it as infrastructure-level and fall back to a generic message rather than reading `message` / `code`.
+
+Every other error — validation, not-found, rate limit, internal — comes from the application and does use the envelope above.
 
 ---
 
@@ -120,7 +158,18 @@ So: booleans are booleans, dates are ISO strings, and absent values are `null` (
 
 `/health/liveness`, `/docs`, and the OpenAPI documents are public.
 
-**Rate limiting** is on by default: unauthenticated requests are capped at **120 requests/minute per IP** (window 60 s). Over the cap → **429**. Localhost is exempt. A valid key **removes** the cap on the open endpoints (it is an optional rate-limit bypass there).
+**Rate limiting** is on by default, per IP, in a 60 s window. Over the cap → **429**. The cap is **not one number**: endpoints are grouped into limiter classes, and the applicable one is reported per response.
+
+| Class | Cap / min | Applies to (measured) |
+|---|---|---|
+| general | 120 | the default for anything not in a class below |
+| relational | 240 | listing/detail endpoints such as `/works`, `/venues` |
+| search | 1200 | `/search/*` |
+| metrics | 3000 | `/metrics/*` |
+
+Read `RateLimit-Limit` from the response rather than assuming a value — the caps are configuration, not contract. A valid key **removes** the cap on the open endpoints (it is an optional rate-limit bypass there).
+
+The counted IP is the **real client address**, taken from the `X-Forwarded-For` that nginx sets — not the proxy's own loopback address, and not a value a client can forge by sending its own `X-Forwarded-For`. The exemption for loopback traffic applies only to a process calling the API directly on the host, which is never how a browser or a deployed frontend reaches it: **assume you are rate-limited, including in local development against `localhost:1211`**. Responses carry `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset`, so a client can pace itself instead of discovering the cap at 429.
 
 Header aliases (case-insensitive): `x-access-key`, `x-internal-key`, `x-api-key`. Query-string aliases: `access_key`, `accessKey`, `api_key`.
 
@@ -197,8 +246,10 @@ Every primary resource nests its external identifiers under an `identifiers{}` o
 | 429 | rate limit exceeded | `RATE_LIMITED` |
 | 500 | unexpected server error | `INTERNAL_ERROR` (+ domain `*_FAILED` codes) |
 | 503 | timeout / dependency unavailable | `TIMEOUT` |
+| 502 | **from nginx, not the API** — the application is down or restarting | none; body is HTML |
+| 504 | **from nginx, not the API** — no answer within the proxy's 30 s ceiling | none; body is HTML |
 
-`code` values are stable — branch UI logic on `code`, show `message` to users. Nested listings **404** when the parent id does not exist (e.g. `/venues/{id}/works`, `/works/{id}/citations`, `/persons/{id}/collaborators`, `/courses/{id}/instructors`).
+`code` values are stable — branch UI logic on `code`, show `message` to users. The last two rows are the exception: they are produced by the reverse proxy before the request reaches the application, so they carry no envelope and no `code` — see [Gateway errors](#gateway-errors). Nested listings **404** when the parent id does not exist (e.g. `/venues/{id}/works`, `/works/{id}/citations`, `/persons/{id}/collaborators`, `/courses/{id}/instructors`).
 
 ---
 

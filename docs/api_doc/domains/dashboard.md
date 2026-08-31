@@ -16,7 +16,7 @@ One-shot operational snapshot combining search performance, status distribution,
 
 ```
 GET /dashboard/overview                       # requires header X-Access-Key: $KEY
-# curl -s -H "X-Access-Key: $KEY" http://localhost:1210/dashboard/overview
+# curl -s -H "X-Access-Key: $KEY" http://localhost:1211/dashboard/overview
 # no key -> 401 UNAUTHORIZED
 ```
 

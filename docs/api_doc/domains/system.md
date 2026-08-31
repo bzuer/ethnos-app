@@ -10,16 +10,37 @@ Route files: `src/app.js` (root `/`, catch-all 404), `src/routes/health.js` (the
 
 ---
 
+## Serving topology and ports
+
+The API is never its own public listener. **nginx** owns the public port and reverse-proxies to the application, which is bound to loopback and is not routable — not from the internet, and not from the LAN.
+
+| Port | Owner | Role |
+|---|---|---|
+| `1211` | nginx | The public API. The only port a client calls. |
+| `1201` | the API process | Application listener, `127.0.0.1` only. Not exposed. |
+| `1210` | temporary test instance | Integration-test runs (`INTEGRATION_BASE_URL`). Ephemeral. |
+| `1212` | the frontend | Reserved for the frontend app; never an API port. |
+| `1213` | another site's vhost | Unrelated to the API. |
+
+Consequences a frontend or a status dashboard must handle:
+
+- **A health probe measures the application, not the path to it.** `/health/liveness` returning 200 proves the app answered; it says nothing about nginx, because the answer already came through nginx. If the proxy is down the request does not return 200 — it does not return at all (connection refused).
+- **`502` means the app is down while nginx is up.** It is HTML, not the JSON envelope — see [Gateway errors](../00-conventions.md#gateway-errors). A status page should render it as "API unavailable", never parse it for `message`.
+- **A restart is visible as a 502 window, not as an error envelope.** nginx keeps the public port bound while the application is stopped, so clients get 502 rather than a refused connection for the duration.
+- **Rate limits apply to localhost too.** Traffic through the proxy carries `X-Forwarded-For`, which disables the loopback exemption; `http://localhost:1211` is rate-limited exactly like any other origin.
+
+---
+
 ## `GET /`
 
-API root and service-discovery document. **Public** — no key, and localhost is rate-limit exempt. No DB query at request time; corpus totals come from a snapshot captured at boot / periodic refresh (`data.data_statistics.collected_at` is the snapshot time, not `now()`).
+API root and service-discovery document. **Public** — no key required. It is rate-limited like every other open endpoint, localhost included, because requests reach the app through the proxy (see [Serving topology and ports](#serving-topology-and-ports)). No DB query at request time; corpus totals come from a snapshot captured at boot / periodic refresh (`data.data_statistics.collected_at` is the snapshot time, not `now()`).
 
 **Query parameters**: none.
 
 **Example requests**
 
 ```
-GET http://localhost:1210/
+GET http://localhost:1211/
 ```
 
 **Example response** (HTTP 200, trimmed; long category lists kept in full because they are the discovery map):
@@ -169,7 +190,7 @@ Liveness probe — is the process up and responsive. **Public** (`security: []`)
 **Example requests**
 
 ```
-GET http://localhost:1210/health/liveness
+GET http://localhost:1211/health/liveness
 ```
 
 **Example response** (HTTP 200)
@@ -206,9 +227,9 @@ Readiness probe — is the service ready to serve, i.e. the **database is reacha
 **Example requests**
 
 ```
-GET http://localhost:1210/health/readiness                         # 401 (no key)
-GET http://localhost:1210/health/readiness   -H "X-Access-Key: $KEY"   # 200 (DB up)
-GET http://localhost:1210/health/readiness   -H "X-Access-Key: wrong"  # 401 (invalid key)
+GET http://localhost:1211/health/readiness                         # 401 (no key)
+GET http://localhost:1211/health/readiness   -H "X-Access-Key: $KEY"   # 200 (DB up)
+GET http://localhost:1211/health/readiness   -H "X-Access-Key: wrong"  # 401 (invalid key)
 ```
 
 **Example response** (HTTP 200)
@@ -255,8 +276,8 @@ In-process monitoring metrics from `monitoring.getMetrics()` — the same teleme
 **Example requests**
 
 ```
-GET http://localhost:1210/health/metrics                       # 401 (no key)
-GET http://localhost:1210/health/metrics -H "X-Access-Key: $KEY"   # 200
+GET http://localhost:1211/health/metrics                       # 401 (no key)
+GET http://localhost:1211/health/metrics -H "X-Access-Key: $KEY"   # 200
 ```
 
 **Example response** (HTTP 200, structurally complete; `top_endpoints` trimmed to 3 of 10)
@@ -331,7 +352,7 @@ GET http://localhost:1210/health/metrics -H "X-Access-Key: $KEY"   # 200
 **404 (unmatched path).** Any path that does not match a route and is not DOI-shaped falls to the path-less `notFoundHandler`:
 
 ```
-GET http://localhost:1210/nonexistent-path-xyz   → HTTP 404
+GET http://localhost:1211/nonexistent-path-xyz   → HTTP 404
 ```
 ```json
 { "status": "error", "message": "Can't find /nonexistent-path-xyz on this server!", "timestamp": "2026-07-23T18:57:16.008Z", "code": "NOT_FOUND" }

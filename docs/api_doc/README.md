@@ -34,3 +34,7 @@ Two forms of documentation live here, plus the machine-readable OpenAPI spec:
 | [system](./domains/system.md) | `GET /`, `/health/liveness`, `/health/readiness`, `/health/metrics` |
 
 **78 operations** across 78 paths. All examples were captured against the live API and validated field-for-field against the OpenAPI spec.
+
+## Where the API listens
+
+Call **`http://localhost:1211`** (or the production base URL). That port is served by nginx, which reverse-proxies to the application on `127.0.0.1:1201`; the application port is loopback-bound and not reachable. Port `1212` belongs to the frontend and is never an API port. The full table, and what a `502` from the proxy means for a client, are in [`00-conventions.md` § Ports](./00-conventions.md#ports) and [`domains/system.md` § Serving topology](./domains/system.md#serving-topology-and-ports).
