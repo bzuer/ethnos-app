@@ -35,7 +35,10 @@ fi
 
 DEST="${NGINX_APP_CONF:-/etc/nginx/conf.d/ethnos-app.conf}"
 PUBLIC_PORT="${NGINX_PUBLIC_PORT:-1212}"
-LISTEN_ADDRESS="${NGINX_LISTEN_ADDRESS:-}"
+# Loopback by default: the only client of this port is the tunnel connector that
+# runs on this host. Set NGINX_LISTEN_ADDRESS= (empty) to listen on every
+# interface, which is required when the connector lives on another machine.
+LISTEN_ADDRESS="${NGINX_LISTEN_ADDRESS-127.0.0.1}"
 SERVER_NAME="${NGINX_SERVER_NAME:-_}"
 # The address nginx dials, which is not necessarily the string the app binds:
 # APP_BIND_HOST must be `localhost` (see scripts/manage.sh#resolve_ports), and
@@ -71,6 +74,13 @@ build_listen() {
   local port="$1" extra="$2" lines=""
   if [ -n "$LISTEN_ADDRESS" ]; then
     lines="    listen ${LISTEN_ADDRESS}:${port}${default_flag}${extra};"
+    # A connector pointed at "localhost" may resolve it to ::1, which an
+    # IPv4-only listener refuses with no useful error on either side.
+    if [ "$IPV6" = "true" ]; then
+      case "$LISTEN_ADDRESS" in
+        127.*) lines="${lines}"$'\n'"    listen [::1]:${port}${default_flag}${extra};" ;;
+      esac
+    fi
   else
     lines="    listen ${port}${default_flag}${extra};"
     if [ "$IPV6" = "true" ]; then
