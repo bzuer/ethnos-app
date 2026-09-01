@@ -358,7 +358,10 @@ async function main() {
     await auditPage(options.base, localizedPath(locale, '/'), { locale, jsonLdTypes: ['WebSite', 'Organization'] });
     await auditPage(options.base, localizedPath(locale, '/search'), { locale });
     await auditPage(options.base, localizedPath(locale, '/venues'), { locale });
+    await auditPage(options.base, localizedPath(locale, '/docs'), { locale, jsonLdTypes: ['BreadcrumbList'] });
   }
+  await auditPage(options.base, '/docs/corpus', { locale: 'en', jsonLdTypes: ['BreadcrumbList', 'CollectionPage'] });
+  await auditPage(options.base, '/docs/corpus/the-problem', { locale: 'en', jsonLdTypes: ['BreadcrumbList', 'TechArticle'] });
   await auditPage(options.base, '/privacy', { locale: 'en' });
   await auditPage(options.base, '/license', { locale: 'en' });
   await auditPage(options.base, '/search/results', { locale: 'en', noindex: true });

@@ -65,7 +65,7 @@ title template, description, abstract and keyword set.
 
 | Page | Robots |
 |------|--------|
-| `/`, `/search`, `/venues`, `/privacy`, `/license`, and every entity detail page | index, follow |
+| `/`, `/search`, `/venues`, `/docs`, `/docs/*`, `/privacy`, `/license`, and every entity detail page | index, follow |
 | `/search/results`, `/search/global` | noindex, follow — internal search results |
 | `/lists` | noindex, follow — client-only personal reading list |
 | `/maintenance` | noindex, follow — also served with HTTP 503 while maintenance is on |
@@ -97,6 +97,9 @@ page — never hand-roll `dangerouslySetInnerHTML={{ __html: JSON.stringify(...)
   `isAccessibleForFree` from open access, and `license` when the publication carries one.
 - `/venues/{id}`: `Periodical`. `/persons/{id}`: `Person`. `/institutions/{id}`: `Organization`.
   `/subjects/{id}`: `DefinedTerm`.
+- `/docs/{collection}`: `CollectionPage` wrapping an `ItemList` of its chapters.
+  `/docs/{collection}/{slug}`: `TechArticle` carrying `inLanguage: en` — the document body is the
+  English source and only the page chrome is localized, so the node must not claim the page locale.
 - Every detail page also emits a `BreadcrumbList`. A breadcrumb level is only added when a real
   listing page exists — venues get `Home › Journals › name`, everything else gets `Home › name`,
   because works, persons, institutions and subjects have no catalog route.
@@ -109,13 +112,17 @@ per resource, and every entry carries the full `xhtml:link` alternate set includ
 
 | Section | Contents | Source | changefreq / priority |
 |---------|----------|--------|-----------------------|
-| `pages` | `/`, `/search`, `/venues`, `/privacy`, `/license` | `STATIC_PAGES` in `src/lib/sitemap.ts` | daily–yearly / 1.0–0.2 |
+| `pages` | `/`, `/search`, `/venues`, the documentation tree, `/privacy`, `/license` | `STATIC_PAGES` in `src/lib/sitemap.ts` | daily–yearly / 1.0–0.2 |
 | `works` | curated work ids | `public/xml-list/top_works.xml` | monthly / 0.6 |
 | `venues` | curated venue ids | `public/xml-list/top_venues.xml` | weekly / 0.7 |
 | `persons` | curated person ids | `public/xml-list/top_persons.xml` | monthly / 0.5 |
 
-- `lastmod` is honest: the mtime of `package.json` for static pages, the mtime of the curated XML
-  list for entities. It is never "now".
+- The documentation paths are not hardcoded: `STATIC_PAGES` splices in `listDocPaths()` from
+  `src/lib/docs.ts`, so a new chapter reaches the sitemap by editing the collection manifest and
+  nothing else.
+- `lastmod` is honest: the mtime of `package.json` for static pages, the mtime of the newest file in
+  `docs/data_doc/` for the documentation pages, the mtime of the curated XML list for entities. It is
+  never "now".
 - Sections are `force-static`, generated at build time from files in the repository, and served
   with `Cache-Control: public, max-age=3600, s-maxage=86400`.
 - The curated lists use a bespoke `<item>works/123</item>` format. `normalizeTopItem` tolerates a
@@ -215,3 +222,7 @@ self-referential canonical, the full hreflang set, `<html lang>`, the robots dir
 page's expected indexability, the Open Graph and Twitter set with a reachable image, the locale
 manifest link, parseable JSON-LD of the expected types, 404s for unknown entities, and 308s for
 legacy routes.
+
+The documentation tree is audited as `/docs` in all three locales plus one collection index
+(`CollectionPage`) and one chapter (`TechArticle`); add a new collection to that list when one goes
+live.

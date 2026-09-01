@@ -6,6 +6,7 @@
       "home": "Início",
       "search": "Busca",
       "journals": "Periódicos",
+      "docs": "Docs",
       "lists": "Lista",
       "listCounterLabel": "Itens na lista pessoal",
       "ariaLabel": "Navegação principal"
@@ -569,7 +570,9 @@
       "works": "Obras",
       "persons": "Pesquisadores",
       "institutions": "Instituições",
-      "subjects": "Assuntos"
+      "subjects": "Assuntos",
+      "docs": "Documentação",
+      "docsCorpus": "O Corpus Ethnos"
     },
     "descriptors": {
       "personProfile": "Perfil de pesquisador de {name} na bibliografia de antropologia e sociologia do Ethnos.",
@@ -590,6 +593,21 @@
       "description": "O Ethnos oferece uma bibliografia aberta de antropologia e sociologia, reunindo obras, periódicos, métricas e ferramentas de pesquisa em um único catálogo.",
       "abstract": "O Ethnos Bibliography é um ambiente de descoberta de referências dedicado a antropologia, sociologia e estudos etnográficos.",
       "keywords": "ferramenta de bibliografia de antropologia, índice de pesquisa em sociologia, plataforma de referências de etnografia, base bibliográfica aberta, catálogo de ciências sociais latino-americanas, diretório de periódicos de antropologia, exportação de métricas de pesquisa"
+    },
+    "docs": {
+      "title": "Documentação",
+      "description": "Documentação do corpus bibliográfico Ethnos: como os dados são montados, reparados, pontuados e publicados.",
+      "keywords": "documentação, corpus bibliográfico, pipeline de dados, antropologia, Ethnos Bibliography"
+    },
+    "docsCorpus": {
+      "title": "O Corpus Ethnos",
+      "description": "Como o corpus Ethnos é construído: fontes, coleta, limpeza e reparo, pontuação de relevância, lacunas medidas e operações diárias.",
+      "keywords": "documentação do corpus, dados bibliográficos, fontes, limpeza de dados, pontuação de relevância, antropologia"
+    },
+    "docsChapter": {
+      "title": "Documentação",
+      "description": "Um capítulo da documentação do corpus Ethnos.",
+      "keywords": "documentação, corpus bibliográfico, Ethnos Bibliography"
     }
   },
   "searchGlobal": {
@@ -627,6 +645,70 @@
     },
     "tools": {
       "exportSubject": "Exportar dados do assunto (JSON)"
+    }
+  },
+  "docs": {
+    "title": "Documentação",
+    "lead": "Como o corpus Ethnos é montado, reparado, pontuado e publicado — escrito ao mesmo tempo para quem conhece a maquinaria e para quem conhece a literatura.",
+    "collectionsLabel": "Coleções",
+    "contentsLabel": "Sumário",
+    "chapterNavLabel": "Navegação entre capítulos",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "indexLink": "Sumário",
+    "chapterLabel": "Capítulo",
+    "sourceLanguage": "Este documento é publicado em inglês. A interface ao redor segue o idioma que você selecionou.",
+    "table": {
+      "number": "Nº",
+      "title": "Capítulo",
+      "summary": "O que cobre"
+    },
+    "collections": {
+      "corpus": {
+        "title": "O Corpus Ethnos",
+        "summary": "O banco de dados e o pipeline que o alimenta: o que são os dados, de onde vêm, como são coletados, como são reparados, como são pontuados e o que não contêm.",
+        "cta": "Abrir a documentação do corpus"
+      }
+    },
+    "chapters": {
+      "corpus": {
+        "the-problem": {
+          "title": "O problema: não existe uma fonte",
+          "summary": "Por que não existe fonte que cubra o campo inteiro, o que cada fonte disponível pode e não pode afirmar, e a regra de confiança que disso decorre."
+        },
+        "data-model": {
+          "title": "A forma dos dados",
+          "summary": "Obras diante de publicações, o modelo de entidades e o que de fato está guardado nas tabelas."
+        },
+        "sources": {
+          "title": "Fontes",
+          "summary": "Cada fonte em uso, sobre o que é autoritativa, o que erra, e uma que foi avaliada e recusada."
+        },
+        "collection": {
+          "title": "Coleta",
+          "summary": "Listas de trabalho, o custo de API como restrição de projeto, cache e o arquivo das fontes."
+        },
+        "cleaning": {
+          "title": "Limpeza e reparo",
+          "summary": "As quatro corrupções recorrentes e a regra adotada contra cada uma."
+        },
+        "relevance": {
+          "title": "Relevância: pontuação e filtragem",
+          "summary": "Faixas, o escore, as quatro restrições, as classes — e por que nada é apagado."
+        },
+        "incompleteness": {
+          "title": "O que falta",
+          "summary": "As lacunas medidas e o limite que cada uma demarca."
+        },
+        "files-and-availability": {
+          "title": "Arquivos e disponibilidade",
+          "summary": "O que é um registro de disponibilidade, o que não é armazenado e o que não é verificado."
+        },
+        "operations": {
+          "title": "Operações",
+          "summary": "A execução diária, suas restrições de ordem, a reversibilidade e a escala."
+        }
+      }
     }
   },
   "manifest": {

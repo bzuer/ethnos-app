@@ -123,6 +123,52 @@ export function buildItemList(locale: Locale, entries: Array<{ name: string; pat
 }
 
 
+export function buildCollectionPageNode(input: {
+  locale: Locale;
+  path: string;
+  name: string;
+  description?: string;
+  inLanguage?: string;
+  entries: Array<{ name: string; path: string }>;
+}): JsonLdNode {
+  return withSitePublisher({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${localeUrl(input.locale, input.path)}#collection`,
+    url: localeUrl(input.locale, input.path),
+    name: input.name,
+    description: input.description,
+    inLanguage: input.inLanguage ?? input.locale,
+    publisher: { '@id': ORGANIZATION_ID },
+    mainEntity: buildItemList(input.locale, input.entries) ?? undefined
+  });
+}
+
+export function buildTechArticleNode(input: {
+  locale: Locale;
+  path: string;
+  name: string;
+  description?: string;
+  section?: string;
+  position?: number;
+  inLanguage?: string;
+}): JsonLdNode {
+  return withSitePublisher({
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    '@id': `${localeUrl(input.locale, input.path)}#article`,
+    url: localeUrl(input.locale, input.path),
+    name: input.name,
+    headline: input.name,
+    description: input.description,
+    articleSection: input.section,
+    position: input.position,
+    inLanguage: input.inLanguage ?? input.locale,
+    publisher: { '@id': ORGANIZATION_ID },
+    author: { '@id': ORGANIZATION_ID }
+  });
+}
+
 export function normalizeDoi(value: string) {
   return value.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:/i, '');
 }

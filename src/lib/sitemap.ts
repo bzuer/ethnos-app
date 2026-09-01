@@ -2,6 +2,7 @@ import 'server-only';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { locales, type Locale } from '@/i18n/config';
+import { listDocPaths } from './docs';
 import { alternateUrls, localeUrl } from './site';
 
 export type SitemapSection = 'pages' | 'works' | 'venues' | 'persons';
@@ -42,6 +43,7 @@ const STATIC_PAGES: Array<{ path: string; changeFrequency: ChangeFrequency; prio
   { path: '/', changeFrequency: 'daily', priority: 1 },
   { path: '/search', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/venues', changeFrequency: 'weekly', priority: 0.8 },
+  ...listDocPaths().map((docPath) => ({ path: docPath, changeFrequency: 'monthly' as ChangeFrequency, priority: 0.6 })),
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.2 },
   { path: '/license', changeFrequency: 'yearly', priority: 0.2 }
 ];
@@ -126,8 +128,27 @@ function renderUrl(locale: Locale, entry: SitemapEntry, languages: Record<string
 }
 
 async function buildStaticEntries(): Promise<SitemapEntry[]> {
-  const lastModified = await resolveBuildDate();
-  return STATIC_PAGES.map((page) => ({ ...page, lastModified }));
+  const [lastModified, docsModified] = await Promise.all([resolveBuildDate(), resolveDocsDate()]);
+  const docPaths = new Set(listDocPaths());
+  return STATIC_PAGES.map((page) => ({
+    ...page,
+    lastModified: docPaths.has(page.path) ? docsModified : lastModified
+  }));
+}
+
+async function resolveDocsDate() {
+  try {
+    const entries = await fs.readdir(path.join(process.cwd(), 'docs', 'data_doc'));
+    const stats = await Promise.all(
+      entries
+        .filter((entry) => entry.endsWith('.md'))
+        .map((entry) => fs.stat(path.join(process.cwd(), 'docs', 'data_doc', entry)))
+    );
+    const newest = stats.reduce<Date | null>((acc, stat) => (!acc || stat.mtime > acc ? stat.mtime : acc), null);
+    return newest ?? (await resolveBuildDate());
+  } catch {
+    return resolveBuildDate();
+  }
 }
 
 async function buildEntityEntries(section: TopEntity): Promise<SitemapEntry[]> {

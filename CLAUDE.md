@@ -25,6 +25,7 @@
 
 ```
 src/app/(site)/[locale]/         App Router pages (locale-prefixed)
+src/app/(site)/[locale]/(shells)/docs/  Documentation hub, collection index, chapter pages
 src/components/common/           Shared React components
 src/lib/                         Server utilities, API client, formatters
 src/lib/api.ts                   fetchJson() — the single HTTP client to 127.0.0.1:1211
@@ -37,6 +38,8 @@ src/lib/site.ts                  Origin/name/image/theme constants + URL builder
 src/lib/structured-data.ts       JSON-LD node builders + safe serializer
 src/lib/sitemap.ts               Sitemap index/section builders (server-only)
 src/lib/manifest.ts              Per-locale web manifest builder
+src/lib/markdown.ts              Dependency-free Markdown → typed AST (no innerHTML)
+src/lib/docs.ts                  Documentation collection manifest, loader, link/anchor resolution
 src/app/sitemap.xml/             Sitemap index route
 src/app/sitemaps/[section]/      Sitemap section routes (pages/works/venues/persons)
 src/app/site.webmanifest/        Default-locale web manifest route
@@ -47,6 +50,8 @@ public/css/styles.css            SSOT stylesheet
 public/robots.txt                Static robots.txt (content signals + AI-crawler policy)
 public/xml-list/                 Curated top works/venues/persons id lists feeding the sitemaps
 docs/SEO.md                      SEO/indexability contract — read before touching metadata or sitemaps
+docs/data_doc/                   Corpus documentation source — rendered at /docs/corpus
+docs/api_doc/                    API reference source (not yet published; awaiting correction)
 docs/html-css/                   Legacy HTML/CSS reference (visual parity target)
 config/nginx.conf                Nginx vhost template (placeholders) for the app's front door
 scripts/nginx/render-config.sh   Renders/installs that vhost to /etc/nginx/conf.d/ethnos-app.conf
@@ -104,9 +109,35 @@ config/env/                      Env file templates
   - **Indexability is explicit.** `INDEXABLE_ROBOTS` (default) vs `NON_INDEXABLE_ROBOTS`. Noindex: `/search/results`, `/search/global` (internal search results), `/lists` (client-only personal list), `/maintenance`, `/doi/*`. They stay crawlable — never `Disallow` a page you want to carry a `noindex`. A noindex page must not appear in the sitemap.
   - **Highwire `citation_*` tags are works-only.** They describe a document; `/works/{id}` (`buildCitationMeta`) is the only page allowed to emit them, plus the COinS `Z3988` span. Person/venue/institution/subject pages describe entities and carry Dublin Core (`dc.*`) only — emitting `citation_title` there tells Google Scholar the page is an article.
   - **JSON-LD only through `src/components/common/JsonLd.tsx`.** It prunes empty values and escapes `<`, `>`, `&`, U+2028/U+2029, so an entity title containing `</script>` cannot break the page. Nodes come from `src/lib/structured-data.ts`. Every page carries the `Organization` + `WebSite` `@graph`; every detail page adds its entity node plus a `BreadcrumbList` — and a breadcrumb level is only added when a real listing page exists (venues get `Home › Journals › name`, everything else `Home › name`, because works/persons/institutions/subjects have no catalog route).
+  - **The documentation tree is indexable and sitemapped.** `STATIC_PAGES` splices in
+    `listDocPaths()`, so chapters never drift out of the sitemap; `lastmod` is the newest mtime under
+    `docs/data_doc/`. Chapters emit a four-level `BreadcrumbList` (Home › Documentation › collection ›
+    chapter) plus a `TechArticle` with `inLanguage: en`; a collection index emits a `CollectionPage`
+    wrapping an `ItemList`.
   - **`/sitemap.xml` is a sitemap index** over `/sitemaps/{pages,works,venues,persons}.xml`. Each section emits one `<url>` per locale per resource, each carrying the complete `xhtml:link` alternate set **including itself and `x-default`** (the bidirectional form Google requires). `lastmod` is the mtime of the underlying source, never `new Date()`. Sections are `force-static`, built from `public/xml-list/*.xml`, capped at `50000 / locales.length` entries. There are **no per-locale sitemap routes** — the alternates in the index cover every language.
   - **The web manifest is per locale.** `/site.webmanifest` (default) and `/{locale}/site.webmanifest` render `buildWebManifest(locale)` from `messages/*.json#manifest`, sharing one `id` so browsers treat them as one app. Screenshot `sizes` must match the real pixel dimensions of the files in `public/screenshots/`.
   - **New crawler-facing paths must be added to `shouldBypassIntl`** in `src/proxy.ts`, or the locale middleware rewrites them into a 404.
+- **The documentation pages render repository Markdown; they never duplicate it.** `/docs` is a hub,
+  `/docs/{collection}` a collection index, `/docs/{collection}/{slug}` a chapter — all `force-static`,
+  all built from files under `docs/` at build time. The single source of structure is
+  `DOC_COLLECTIONS` in `src/lib/docs.ts`: adding a chapter (or the whole `api_doc` set, once it is
+  corrected) is a manifest entry plus its `docs.chapters.*` message keys, and the routes,
+  `generateStaticParams`, prev/next navigation, sitemap entries and cross-document links all follow.
+  Three rules bind anything touching this path. **(a) No HTML is ever injected.**
+  `src/lib/markdown.ts` parses to a typed AST and `DocArticle` renders React elements, so there is no
+  `dangerouslySetInnerHTML` and no sanitizer to get wrong; the one raw construct the sources use,
+  `<a id="…"></a>`, is parsed into an `anchor` node. Do not add a Markdown dependency — the parser
+  covers the subset the sources actually use and emits SSOT classes directly. **(b) Cross-document
+  links are rewritten, never left dangling.** `resolveDocHref` maps a source path such as
+  `03-sources.md` to `/docs/corpus/sources` (anchors preserved); a link that resolves to nothing
+  degrades to emphasis rather than a dead `<a>`. Heading ids are GitHub-compatible slugs with `-N`
+  de-duplication, so an anchor written in the Markdown keeps working. **(c) The body is the English
+  source; only the chrome is localized.** Chapter titles, summaries, contents label and navigation
+  come from `docs.*` in `messages/*.json`; the rendered body is wrapped in `lang="en"` and non-English
+  locales get a one-line `docs.sourceLanguage` note. Do not machine-translate the sources into the
+  page. The section is reachable from the header nav (`Home • Search • Journals • Docs • List`,
+  `layout.nav.docs`); the footer's `api.ethnos.app/docs` link is the upstream Swagger UI and is a
+  different thing.
 - **Contributor roles are never dropped and never conflated.** Anything reading a work's contributors must first pick the entry list with `pickContributorEntries(work)` (prefers `contributors[]`, falls back to `authors[]`, then `contributors_preview[]`) and then go through the role helpers in `src/lib/works.ts` (`groupContributorsByRole`, `groupContributorsByRoleSet`, `pickContributorsByRole`, `pickPrimaryContributors`, `formatContributorName`, `normalizeContributorRole`, `normalizeContributorRoles`) — never an inline `filter(a => a.role === 'AUTHOR')`, which is exactly the bug that hid every translator from the work detail page. `groupContributorsByRole` returns groups in the fixed order **AUTHOR → EDITOR → TRANSLATOR → REVIEWER → OTHER**, drops empty ones, dedupes by `person_id` (falling back to lowercased name) **within each role**, and sorts by `position` with the original array index as tiebreak; an entry carrying `roles[]` is expanded into every one of its roles, so it behaves identically whether fed `authors[]` or `contributors[]`. `groupContributorsByRoleSet` is the **display** counterpart: it merges each person across roles and groups by the exact role set, so the AUTHOR+EDITOR team of an edited volume becomes one group instead of two — groups are ordered by their highest-priority role, then by role-set size, then by first appearance. `pickPrimaryContributors` is the "who gets credited as the author" answer used by metadata/citations: the AUTHOR group, else the EDITOR group, else the first non-empty group. Downstream contract: the detail table renders **one row per role set** via `WorkContributorRows` (heading = the role labels joined with ` / `), `<meta>`/JSON-LD split into `citation_author`/`dc.creator` vs `citation_editor`/`dc.contributor` and `author`/`editor`/`translator`/`contributor`, and `normWork` exposes `authors` / `editors` / `translators` / `reviewers` as separate arrays so BibTeX emits `author`+`editor`+`translator` and RIS emits `AU`/`A2`/`A4`/`A3` instead of flattening a translator into the author list. `normWork` applies the split whenever `pickContributorEntries` yields entries — including the role-bearing `contributors_preview[]` of list payloads — and only falls back to `authors_preview`/`author_string`/`first_author` when there are none.
 - **The Tools tab is always `EntityTools`.** `src/components/common/EntityTools.tsx` is the single client component behind the Tools panel of persons/venues/institutions/subjects (works detail keeps its richer `work-actions.tsx`). Do not fork per-entity export components again — pass `kind`, `entity`, `works` and the entity-specific button label instead.
 - **Exports are entity-scoped and lossless.** Every Tools panel exports *its own entity*: the entity's own JSON is the complete upstream record, and the works exports cover a **corpus fetched on demand, not the works the page happens to render**. The scope is per entity kind and is fixed in `getEntityExportWorks` (`endpoints.ts`): **person → every work** (paginate `/persons/{id}/works` at 100/page until exhausted), **venue → the current calendar year** (`/venues/{id}/works?year=<new Date().getFullYear()>`, all pages), **institution and subject → the first 100**. A hard stop of 50 pages (5 000 works) guards the unbounded kinds; when it trips, or when a capped kind has more works than it returned, the result carries `scope.truncated: true`, the JSON envelope records `scope`, and the UI raises a "capped at N works" notice — caps are never silent. All JSON exports go through the builders in `src/lib/entity-export.ts` (`buildWorkExport`, `buildEntityExport`, `buildWorksExport`) — never hand-roll an envelope in a component, and never ship a lossy projection (`normWork`) as the JSON payload: `normWork` is the *citation* shape, consumed only by BibTeX/RIS/APA. A JSON export must always be **equal to or richer than** the API response for that entity; the builders guarantee this by spreading the upstream record whole and only adding resolvable URLs under `_links` (`html`, `doi`, `open_access`), which extends the `_links.self` the API already emits.
@@ -120,6 +151,13 @@ config/env/                      Env file templates
 - Navigation helpers from `@/i18n/routing`. Locale-aware links via `LocaleLink` component.
 - Every localized page calls `buildPageMetadata` with matching message key.
 - **Nothing user-facing is hardcoded in `layout.tsx`.** The root title template, default title, description, abstract and keywords come from `metadata.site.{title,titleTemplate,description,abstract,keywords}`, so `/pt` and `/es` no longer inherit English metadata. The web manifest strings live under `manifest.*` (name, shortName, description, screenshot labels, three shortcut entries), and the detail-page description templates under `metadata.descriptors.*` (`personProfile`, `personAffiliations`, `personOrcid`, `subjectDetail`, `institutionDetail`, `pageSuffix`) plus `metadata.breadcrumbs.*`. Adding a locale means translating all of them.
+- **The `docs.*` namespace localizes the documentation chrome, not its body.** `docs.title`,
+  `docs.lead`, `docs.contentsLabel`, `docs.previous`/`next`/`indexLink`, `docs.chapterLabel`,
+  `docs.sourceLanguage`, `docs.table.*`, `docs.collections.<id>.{title,summary,cta}` and
+  `docs.chapters.<id>.<slug>.{title,summary}`. The chapter title and summary are the SSOT for both the
+  visible `<h1>` and the page metadata (the chapter page spreads them over `buildPageMetadata`'s base,
+  the same pattern `subjects/[id]` uses), so the two can never drift. Adding a chapter means adding its
+  entry to all three message files.
 - **`metadata.*.title` values carry no `— Ethnos_APP` suffix.** The layout template appends `| Ethnos Bibliography`; a suffix in the message would double the brand in every `<title>`.
 - **Locale resolution is cookie-first, then a fallback default.** `src/proxy.ts#detectPreferredLocale` (only runs for unprefixed paths) reads the `NEXT_LOCALE` cookie first, then the `accept-language` header, then `defaultLocale`. The Accept-Language step is only the **first-visit default** — an explicit user choice must always win. Never reorder so the header outranks the cookie.
 - **User-facing language override:** `src/components/common/LocaleSwitcher.tsx` lets the user pick the language regardless of what Accept-Language auto-selected. It writes a 1-year `NEXT_LOCALE` cookie (so the choice persists and outranks the header on every later request) and then hard-navigates (`window.location.assign`) to `localizedPath(locale, pathname)` — a full reload rather than a soft `router.replace`, because with `localePrefix: 'as-needed'` switching *to* the default locale at the unprefixed root can otherwise no-op and never re-hit the middleware. Uses next-intl `usePathname()` (locale-less) and reads `window.location.search` at click time — deliberately **not** `useSearchParams()`, which would force a Suspense boundary / deopt the `force-static` shells this component renders inside. Strings under `layout.language.*`.
@@ -142,6 +180,24 @@ config/env/                      Env file templates
 - `src/lib/download.ts` — browser-side download helpers used by all three export components: `downloadBlob`, `downloadText`, `downloadJson` (pretty-prints with 2-space indent) and the `EXPORT_MIME` map (`json`, `bibtex`, `ris`, `docx`, `text`). No component may re-implement the anchor/`URL.createObjectURL` dance.
 - `src/lib/site.ts` — the single origin/brand SSOT: `SITE_ORIGIN`, `SITE_NAME`, `SITE_PUBLISHER`, `SITE_REPOSITORY`, `SITE_OG_IMAGE_PATH`/`_WIDTH`/`_HEIGHT`, `SITE_LOGO_PATH`, `SITE_THEME_COLOR`/`_DARK`, plus `absoluteUrl`, `localeUrl`, `alternateUrls`, `withQuery`, `paginatedPath` and `resolvePageParam`. `i18n/metadata.ts#metadataBase` and `work-export.ts#SITE_ORIGIN` both re-export from here; the only remaining literal `https://ethnos.app` in the tree is this file.
 - `src/lib/structured-data.ts` — JSON-LD builders and the safe serializer. `pruneJsonLd` drops empty values recursively, `serializeJsonLd` escapes `<`/`>`/`&`/U+2028/U+2029. Nodes: `buildOrganizationNode`, `buildWebSiteNode`, `buildSiteGraph` (the `@graph` every page carries), `buildBreadcrumbList`, `buildItemList`, `buildDoiIdentifier`/`normalizeDoi`, `withSitePublisher` (attaches `isPartOf: {'@id': WEBSITE_ID}`).
+- `src/lib/markdown.ts` — dependency-free Markdown parser: `parseMarkdown(source)` → `BlockNode[]`
+  (heading, paragraph, list, table, code, quote, rule, anchor) with `InlineNode` children (text, code,
+  strong, emphasis, link), plus `inlineText` and the GitHub-compatible `slugifyHeading`. It is pure and
+  has no fs or React dependency, so it is unit-testable in isolation. Covers exactly what the doc
+  sources use — ATX headings, pipe tables with alignment and `\|` escapes, fenced code, `-`/`1.` lists
+  with nesting, blockquotes, `---` rules, `**`/`*` emphasis, backtick code spans and inline links.
+  `_` is deliberately **not** an emphasis delimiter, because `snake_case` identifiers are everywhere in
+  these documents.
+- `src/lib/docs.ts` — `server-only`. `DOC_COLLECTIONS` is the manifest (id, source directory, index
+  file, `metadataKey`, ordered chapters with `slug`/`file`/`number`); `getDocChapter` and
+  `getDocCollectionIndex` read, parse, decorate and memoize a document; `listDocPaths()` feeds the
+  sitemap. Decoration assigns heading ids and `chapter.section` ordinals (`2.1`, `2.1.1`), collects the
+  outline for `DocContents`, rewrites link hrefs through `resolveDocHref`, and strips the source's own
+  hand-written `←`/`next →` navigation lines from **both ends** of a chapter — `DocChapterNav` replaces
+  them. The `api` collection is intentionally absent until `docs/api_doc/` is corrected.
+- `src/components/common/DocArticle.tsx` / `DocContents.tsx` / `DocChapterNav.tsx` — the renderer, the
+  in-page table of contents (rendered only at 3+ sections) and the previous/index/next footer. All
+  three are server components; only the internal links are `LocaleLink` client boundaries.
 - `src/components/common/JsonLd.tsx` — the only component allowed to render `application/ld+json`. Never write `dangerouslySetInnerHTML={{ __html: JSON.stringify(node) }}` by hand again: a title containing `</script>` breaks the page.
 - `src/lib/sitemap.ts` — `server-only`. `SITEMAP_SECTIONS`, `sitemapSectionPath`, `parseSitemapSection`, `buildSitemapSection` (memoized), `renderSitemapSection` and `renderSitemapIndex`. Static pages are hardcoded in `STATIC_PAGES` (`/`, `/search`, `/venues`, `/privacy`, `/license` — noindex routes are deliberately absent); entity sections parse `public/xml-list/*.xml` through `normalizeTopItem`, which strips an origin and a plural/singular prefix and rejects non-URL-safe ids. `lastmod` is the source file's mtime (`package.json` for static pages), never `new Date()`.
 - `src/lib/manifest.ts` — `buildWebManifest(locale)` (from `messages/*.json#manifest`) and `manifestResponse(manifest)`. Consumed by `src/app/site.webmanifest/route.ts` (default locale) and `src/app/(site)/[locale]/site.webmanifest/route.ts` (all three, both `force-static`).
