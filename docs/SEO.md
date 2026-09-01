@@ -119,7 +119,9 @@ per resource, and every entry carries the full `xhtml:link` alternate set includ
 
 - The documentation paths are not hardcoded: `STATIC_PAGES` splices in `listDocPaths()` from
   `src/lib/docs.ts`, so a new chapter reaches the sitemap by editing the collection manifest and
-  nothing else.
+  nothing else. While the section carries no header link, **the sitemap is its only discovery
+  path** — the chapters cross-link to each other but nothing on the site links in, so removing them
+  from `STATIC_PAGES` would make them uncrawlable rather than merely unpromoted.
 - `lastmod` is honest: the mtime of `package.json` for static pages, the mtime of the newest file in
   `docs/data_doc/` for the documentation pages, the mtime of the curated XML list for entities. It is
   never "now".

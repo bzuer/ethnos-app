@@ -19,7 +19,7 @@ export default async function DocsIndexPage(props: { params: Promise<{ locale: s
   const crumbs = await getTranslations({ locale, namespace: 'metadata.breadcrumbs' });
 
   return (
-    <div className="page-header" aria-labelledby="page-title">
+    <div className="page-header" lang="en" aria-labelledby="page-title">
       <JsonLd
         data={buildBreadcrumbList(locale as Locale, [
           { name: crumbs('home'), path: '/' },

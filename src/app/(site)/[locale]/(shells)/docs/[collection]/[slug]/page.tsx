@@ -59,7 +59,7 @@ export default async function DocChapterPage(props: { params: Promise<{ locale: 
   const path = docChapterPath(manifest.id, chapter.slug);
 
   return (
-    <div className="page-header" aria-labelledby="page-title">
+    <div className="page-header" lang="en" aria-labelledby="page-title">
       <JsonLd
         data={buildBreadcrumbList(locale as Locale, [
           { name: crumbs('home'), path: '/' },
@@ -86,7 +86,7 @@ export default async function DocChapterPage(props: { params: Promise<{ locale: 
       <h1 className="page-title" id="page-title">{chapterTitle}</h1>
       {locale === 'en' ? null : <p className="doc-source-language">{t('sourceLanguage')}</p>}
       <DocContents outline={chapter.outline} label={t('contentsLabel')} />
-      <DocArticle blocks={chapter.blocks} lang="en" />
+      <DocArticle blocks={chapter.blocks} />
       <DocChapterNav
         label={t('chapterNavLabel')}
         previous={

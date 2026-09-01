@@ -6,7 +6,6 @@
       "home": "Home",
       "search": "Search",
       "journals": "Journals",
-      "docs": "Docs",
       "lists": "List",
       "listCounterLabel": "Items in personal list",
       "ariaLabel": "Main navigation"
@@ -657,7 +656,7 @@
     "next": "Next",
     "indexLink": "Contents",
     "chapterLabel": "Chapter",
-    "sourceLanguage": "This document is published in English. The surrounding interface follows the language you selected.",
+    "sourceLanguage": "This documentation is available in English only. A translated edition is not published yet.",
     "table": {
       "number": "No.",
       "title": "Chapter",

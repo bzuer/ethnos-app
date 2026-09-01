@@ -40,7 +40,7 @@ export default async function DocCollectionPage(props: { params: Promise<{ local
   const first = manifest.chapters[0];
 
   return (
-    <div className="page-header" aria-labelledby="page-title">
+    <div className="page-header" lang="en" aria-labelledby="page-title">
       <JsonLd
         data={buildBreadcrumbList(locale as Locale, [
           { name: crumbs('home'), path: '/' },
@@ -63,7 +63,7 @@ export default async function DocCollectionPage(props: { params: Promise<{ local
       />
       <h1 className="page-title" id="page-title">{title}</h1>
       {locale === 'en' ? null : <p className="doc-source-language">{t('sourceLanguage')}</p>}
-      <DocArticle blocks={document.blocks} lang="en" />
+      <DocArticle blocks={document.blocks} />
       {first ? (
         <DocChapterNav
           label={t('chapterNavLabel')}
