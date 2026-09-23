@@ -36,5 +36,10 @@
     "safari >= 15.4",
     "ios_saf >= 15.4",
     "samsung >= 19"
-  ]
+  ],
+  "allowScripts": {
+    "@parcel/watcher@2.5.1": true,
+    "@swc/core@1.16.2": true,
+    "unrs-resolver@1.11.1": true
+  }
 }
