@@ -1,19 +1,26 @@
 [Unit]
 Description=Ethnos App
-After=network.target
+After=network-online.target nginx.service
+Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/app
-EnvironmentFile=-/etc/next-frontend.env
-EnvironmentFile=-%h/app/config/env/next-frontend.env
+User=__RUN_USER__
+Group=__RUN_GROUP__
+WorkingDirectory=__WORKDIR__
+EnvironmentFile=__ENV_FILE__
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/env bash -lc 'cd "%h/app" && exec ./scripts/manage.sh start_foreground'
+Environment=PATH=__NODE_DIR__:/usr/local/bin:/usr/bin:/bin
+ExecStart=__NODE_BIN__ __NEXT_BIN__ start -H __BIND_HOST__ -p __APP_PORT__
 Restart=on-failure
 RestartSec=3
+TimeoutStopSec=20
 KillSignal=SIGTERM
 KillMode=mixed
-TimeoutStopSec=20
+SuccessExitStatus=143
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ethnos-app
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

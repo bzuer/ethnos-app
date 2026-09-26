@@ -1,669 +1,824 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-CMD="${1:-}"
-NEXT_BIN="$ROOT_DIR/node_modules/.bin/next"
-ENV_FILE="${ENV_FILE:-}"
-PID_FILE="${PID_FILE:-/tmp/ethnos-next.pid}"
-LOG_FILE="${LOG_FILE:-/tmp/ethnos-next.log}"
-DAEMON_READY_TIMEOUT="${DAEMON_READY_TIMEOUT:-10}"
-SYSTEMD_ARGS="${SYSTEMD_ARGS:---user}"
-SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-ethnos-app.service}"
-MAINTENANCE_DROPIN_DIR="${MAINTENANCE_DROPIN_DIR:-$HOME/.config/systemd/user/ethnos-app.service.d}"
-MAINTENANCE_DROPIN_FILE="${MAINTENANCE_DROPIN_FILE:-$MAINTENANCE_DROPIN_DIR/maintenance.conf}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+SERVICE_NAME="${SERVICE_NAME:-ethnos-app.service}"
+LEGACY_UNITS="ethnos-next.service"
+SYSTEM_UNIT_DIR=/etc/systemd/system
+SYSTEM_UNIT="$SYSTEM_UNIT_DIR/$SERVICE_NAME"
+UNIT_TEMPLATE="$ROOT_DIR/scripts/systemd/ethnos-app.service"
+RUN_USER="$(stat -c %U "$ROOT_DIR")"
+RUN_GROUP="$(stat -c %G "$ROOT_DIR")"
+RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6 || true)"
+STRAY_USER_UNIT="$RUN_HOME/.config/systemd/user/$SERVICE_NAME"
+MAINTENANCE_DROPIN_DIR="$SYSTEM_UNIT_DIR/$SERVICE_NAME.d"
+MAINTENANCE_DROPIN="$MAINTENANCE_DROPIN_DIR/maintenance.conf"
+ENV_FILE="${ENV_FILE:-/etc/next-frontend.env}"
 NGINX_RENDER="$ROOT_DIR/scripts/nginx/render-config.sh"
-NODE_MIN_MAJOR="${NODE_MIN_MAJOR:-20}"
-NODE_MAX_MAJOR="${NODE_MAX_MAJOR:-24}"
+NEXT_BIN="$ROOT_DIR/node_modules/next/dist/bin/next"
+NODE_MIN_MAJOR=20
+NODE_MAX_MAJOR=24
+READY_TIMEOUT="${READY_TIMEOUT:-60}"
 
-# nginx owns every port a client reaches; the Next server only ever binds
-# loopback. Values set on the command line win over the ones in the env file,
-# which load_env would otherwise overwrite, so they are captured before it runs.
-APP_PORT_OVERRIDE="${APP_PORT:-${PROD_PORT:-}}"
-APP_BIND_HOST_OVERRIDE="${APP_BIND_HOST:-}"
-PUBLIC_PORT_OVERRIDE="${PUBLIC_PORT:-}"
-DEV_PORT_OVERRIDE="${DEV_PORT:-}"
-DEV_HOST_OVERRIDE="${DEV_HOST:-}"
-NGINX_APP_CONF_OVERRIDE="${NGINX_APP_CONF:-}"
+APP_PORT=1202
+APP_BIND_HOST=localhost
+APP_UPSTREAM_HOST=127.0.0.1
+PUBLIC_PORT=1212
+NGINX_LISTEN=127.0.0.1
+NGINX_CONF_TARGET=/etc/nginx/conf.d/ethnos-app.conf
+DEV_PORT=1210
+DEV_HOST=localhost
 
-# APP_BIND_HOST is what Next binds; it must stay `localhost`. Next builds the
-# origin it compares middleware rewrites against from this value, so `-H
-# 127.0.0.1` makes every rewrite (i.e. every default-locale URL) look external:
-# `/` answers 307 to itself, and with X-Forwarded-Proto: https it 500s trying to
-# speak TLS to its own plaintext port. `localhost` resolves to loopback all the
-# same, which `verify` asserts. APP_UPSTREAM_HOST is the address nginx dials.
-resolve_ports() {
-  APP_PORT="${APP_PORT_OVERRIDE:-${APP_PORT:-1202}}"
-  APP_BIND_HOST="${APP_BIND_HOST_OVERRIDE:-${APP_BIND_HOST:-localhost}}"
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+ERRORS=0
+
+log()  { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*" >&2; }
+err()  { echo -e "${RED}[ERROR]${NC} $*" >&2; ERRORS=$((ERRORS + 1)); }
+step() { echo -e "\n${CYAN}${BOLD}── $* ──${NC}"; }
+
+resolve_topology() {
+  APP_PORT="${APP_PORT:-1202}"
+  APP_BIND_HOST="${APP_BIND_HOST:-localhost}"
   APP_UPSTREAM_HOST="${APP_UPSTREAM_HOST:-127.0.0.1}"
-  PUBLIC_PORT="${PUBLIC_PORT_OVERRIDE:-${NGINX_PUBLIC_PORT:-1212}}"
-  DEV_PORT="${DEV_PORT_OVERRIDE:-${DEV_PORT:-1210}}"
-  DEV_HOST="${DEV_HOST_OVERRIDE:-${DEV_HOST:-localhost}}"
-  NGINX_APP_CONF="${NGINX_APP_CONF_OVERRIDE:-${NGINX_APP_CONF:-/etc/nginx/conf.d/ethnos-app.conf}}"
+  PUBLIC_PORT="${NGINX_PUBLIC_PORT:-1212}"
   NGINX_LISTEN="${NGINX_LISTEN_ADDRESS-127.0.0.1}"
-}
-resolve_ports
-
-port_listening() {
-  local TARGET="$1"
-  if ss -lptn "sport = :$TARGET" 2>/dev/null | tail -n +2 | grep -q .; then
-    return 0
-  fi
-  if lsof -i TCP:"$TARGET" -s TCP:LISTEN >/dev/null 2>&1; then
-    return 0
-  fi
-  return 1
+  NGINX_CONF_TARGET="${NGINX_APP_CONF:-/etc/nginx/conf.d/ethnos-app.conf}"
+  DEV_PORT="${DEV_PORT:-1210}"
+  DEV_HOST="${DEV_HOST:-localhost}"
 }
 
-# A listener on anything but 127.0.0.0/8 or [::1] is reachable from the network,
-# which is exactly what nginx is here to prevent.
-port_loopback_only() {
-  local TARGET="$1" ADDRESSES
-  ADDRESSES="$(ss -lntH "sport = :$TARGET" 2>/dev/null | awk '{print $4}')"
-  [ -n "$ADDRESSES" ] || return 1
-  ! printf '%s\n' "$ADDRESSES" | grep -qvE '^(127\.[0-9.]+|\[::1\])'
-}
-
-load_env_file() {
-  local FILE_PATH="$1"
-  if [ ! -f "$FILE_PATH" ]; then
-    return 1
-  fi
+read_env_file() {
   set -a
-  . "$FILE_PATH"
+  source "$ENV_FILE"
   set +a
-  return 0
+  resolve_topology
 }
 
 load_env() {
-  if [ -n "$ENV_FILE" ]; then
-    if ! load_env_file "$ENV_FILE"; then
-      echo "Environment file not found: $ENV_FILE" >&2
-      exit 1
-    fi
-    return
+  if [ ! -r "$ENV_FILE" ]; then
+    err "$ENV_FILE not found or not readable"
+    return 1
   fi
-  load_env_file /etc/next-frontend.env && return
-  load_env_file "$ROOT_DIR/config/env/next-frontend.env" && return
-  load_env_file "$ROOT_DIR/.env.local" && return
-  load_env_file "$ROOT_DIR/.env" && return
-  return 0
+  read_env_file
+
+  if [ "$APP_PORT" = "$PUBLIC_PORT" ]; then
+    err "APP_PORT ($APP_PORT) equals NGINX_PUBLIC_PORT ($PUBLIC_PORT) in $ENV_FILE — nginx must own the public port and proxy to a separate application port"
+    return 1
+  fi
+  if [ "$APP_BIND_HOST" != "localhost" ]; then
+    err "APP_BIND_HOST is '$APP_BIND_HOST' — it must be 'localhost': with an IP literal Next treats every middleware rewrite as external and the default-locale URLs loop (307 to themselves, 500 behind TLS)"
+    return 1
+  fi
 }
 
-systemd_restart() {
-  if [ -z "$SYSTEMD_SERVICE" ]; then
+load_env_optional() {
+  if [ -r "$ENV_FILE" ]; then
+    read_env_file
+  else
+    resolve_topology
+  fi
+}
+
+as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  elif command -v sudo >/dev/null 2>&1 && { sudo -n true 2>/dev/null || [ -t 0 ]; }; then
+    sudo "$@"
+  else
+    err "root required for: $* — rerun with sudo"
     return 1
   fi
-  if ! command -v systemctl >/dev/null 2>&1; then
+}
+
+run_as_owner() {
+  if [ "$(id -un)" = "$RUN_USER" ]; then
+    "$@"
+  elif [ "$(id -u)" -eq 0 ]; then
+    runuser -u "$RUN_USER" -- env XDG_RUNTIME_DIR="/run/user/$(id -u "$RUN_USER")" "$@"
+  else
     return 1
   fi
-  systemctl $SYSTEMD_ARGS restart "$SYSTEMD_SERVICE"
-  systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE"
 }
 
 node_major() {
-  local VERSION
-  VERSION="$(node -v 2>/dev/null || true)"
-  VERSION="${VERSION#v}"
-  printf '%s' "${VERSION%%.*}"
+  local version
+  version="$(node -v 2>/dev/null || true)"
+  version="${version#v}"
+  printf '%s' "${version%%.*}"
 }
 
 node_supported() {
-  local MAJOR="${1:-}"
-  case "$MAJOR" in ''|*[!0-9]*) return 1 ;; esac
-  [ "$MAJOR" -ge "$NODE_MIN_MAJOR" ] && [ "$MAJOR" -le "$NODE_MAX_MAJOR" ]
+  local major="${1:-}"
+  case "$major" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$major" -ge "$NODE_MIN_MAJOR" ] && [ "$major" -le "$NODE_MAX_MAJOR" ]
 }
 
-# The highest nvm-installed version inside the supported range, preferring the
-# major in .nvmrc. Returns the bin directory, which the caller PREPENDS to PATH:
-# `nvm use` only rewrites the nvm entry already in PATH, so with a Homebrew node
-# ahead of it (as on this host) the switch silently has no effect.
 nvm_node_bin() {
-  local ROOT="${NVM_DIR:-$HOME/.nvm}/versions/node"
-  [ -d "$ROOT" ] || return 1
-  local WANTED="" DIR MAJOR BEST="" BEST_WANTED=""
+  local root="${NVM_DIR:-$RUN_HOME/.nvm}/versions/node"
+  [ -d "$root" ] || return 1
+  local wanted="" dir major best="" best_wanted=""
   if [ -f "$ROOT_DIR/.nvmrc" ]; then
-    WANTED="$(tr -d ' \t\r\nv' < "$ROOT_DIR/.nvmrc")"
-    WANTED="${WANTED%%.*}"
+    wanted="$(tr -d ' \t\r\nv' < "$ROOT_DIR/.nvmrc")"
+    wanted="${wanted%%.*}"
   fi
-  for DIR in $(ls -1 "$ROOT" 2>/dev/null | sort -V); do
-    [ -x "$ROOT/$DIR/bin/node" ] || continue
-    MAJOR="${DIR#v}"
-    MAJOR="${MAJOR%%.*}"
-    node_supported "$MAJOR" || continue
-    BEST="$ROOT/$DIR/bin"
-    [ -n "$WANTED" ] && [ "$MAJOR" = "$WANTED" ] && BEST_WANTED="$ROOT/$DIR/bin"
+  for dir in $(ls -1 "$root" 2>/dev/null | sort -V); do
+    [ -x "$root/$dir/bin/node" ] || continue
+    major="${dir#v}"
+    major="${major%%.*}"
+    node_supported "$major" || continue
+    best="$root/$dir/bin"
+    [ -n "$wanted" ] && [ "$major" = "$wanted" ] && best_wanted="$root/$dir/bin"
   done
-  BEST="${BEST_WANTED:-$BEST}"
-  [ -n "$BEST" ] || return 1
-  printf '%s' "$BEST"
+  best="${best_wanted:-$best}"
+  [ -n "$best" ] || return 1
+  printf '%s' "$best"
 }
 
 ensure_node() {
-  local BIN_DIR
+  local bin_dir
   if [ -n "${NODE_BIN:-}" ]; then
-    BIN_DIR="$NODE_BIN"
-    [ -d "$BIN_DIR" ] || BIN_DIR="$(dirname "$BIN_DIR")"
-    PATH="$BIN_DIR:$PATH"
-    export PATH
+    bin_dir="$NODE_BIN"
+    [ -d "$bin_dir" ] || bin_dir="$(dirname "$bin_dir")"
+    export PATH="$bin_dir:$PATH"
   fi
   node_supported "$(node_major)" && return 0
 
-  if BIN_DIR="$(nvm_node_bin)"; then
-    PATH="$BIN_DIR:$PATH"
-    export PATH
+  if bin_dir="$(nvm_node_bin)"; then
+    export PATH="$bin_dir:$PATH"
     node_supported "$(node_major)" && return 0
   fi
 
-  if [ -s "${NVM_DIR:-$HOME/.nvm}/nvm.sh" ]; then
-    . "${NVM_DIR:-$HOME/.nvm}/nvm.sh" >/dev/null 2>&1 || true
-    if command -v nvm >/dev/null 2>&1; then
-      nvm install "$NODE_MAX_MAJOR" >/dev/null 2>&1 || true
-      if BIN_DIR="$(nvm_node_bin)"; then
-        PATH="$BIN_DIR:$PATH"
-        export PATH
-        node_supported "$(node_major)" && return 0
-      fi
-    fi
-  fi
-
-  local FOUND
-  FOUND="$(node -v 2>/dev/null || echo 'none')"
-  echo "Node >=$NODE_MIN_MAJOR <$((NODE_MAX_MAJOR + 1)) is required (package.json#engines); found $FOUND." >&2
-  echo "Install it with 'nvm install $NODE_MAX_MAJOR', or point NODE_BIN at a supported node binary." >&2
+  err "Node >=$NODE_MIN_MAJOR <$((NODE_MAX_MAJOR + 1)) is required (package.json#engines); found $(node -v 2>/dev/null || echo none) — run 'nvm install $NODE_MAX_MAJOR' or set NODE_BIN"
   exit 1
 }
 
-css() {
-  node "$ROOT_DIR/scripts/build-css.mjs"
+port_listening() {
+  [ -n "$(ss -lntH "sport = :$1" 2>/dev/null || true)" ]
 }
 
-dev() {
-  ensure_node
-  load_env
-  resolve_ports
-  export PORT="${PORT:-$DEV_PORT}"
-  css
-  exec npx next dev -H "$DEV_HOST" -p "$PORT"
+port_addresses() {
+  ss -lntH "sport = :$1" 2>/dev/null | awk '{print $4}' | tr '\n' ' ' | sed 's/ $//' || true
 }
 
-build() {
-  ensure_node
-  load_env
-  resolve_ports
-  export NODE_ENV=production
-  css
-  npx next build
+port_exposed() {
+  ss -lntH "sport = :$1" 2>/dev/null | awk '{print $4}' | grep -vE '^(127\.|\[::1\]|\[::ffff:127\.)' || true
 }
 
-start() {
-  ensure_node
-  load_env
-  resolve_ports
-  export NODE_ENV=production
-  export PORT="$APP_PORT"
-  if [ -f "$PID_FILE" ]; then
-    local PID
-    PID="$(cat "$PID_FILE" 2>/dev/null || true)"
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-      echo "Daemon already running on PID $PID" >&2
-      exit 0
+port_pids() {
+  ss -lntpH "sport = :$1" 2>/dev/null | grep -oE 'pid=[0-9]+' | cut -d= -f2 | sort -u | tr '\n' ' ' | sed 's/ $//' || true
+}
+
+service_pid() {
+  systemctl show "$SERVICE_NAME" --property=MainPID --value 2>/dev/null || echo 0
+}
+
+stray_units() {
+  local found="" unit
+  for unit in $LEGACY_UNITS; do
+    [ -n "$(systemctl list-unit-files --no-legend "$unit" 2>/dev/null || true)" ] && found="$found $unit"
+  done
+  if [ -e "$STRAY_USER_UNIT" ]; then
+    found="$found $STRAY_USER_UNIT"
+  fi
+  printf '%s' "${found# }"
+}
+
+remove_stray_user_unit() {
+  [ -e "$STRAY_USER_UNIT" ] || [ -e "$STRAY_USER_UNIT.d" ] || return 0
+  warn "Removing user-scope $SERVICE_NAME (the app runs only as the system unit)"
+  run_as_owner systemctl --user disable --now "$SERVICE_NAME" 2>/dev/null || true
+  if [ -f "$STRAY_USER_UNIT.d/maintenance.conf" ]; then
+    warn "The user unit had maintenance mode on — re-enable it with 'scripts/manage.sh maintenance on' if still wanted"
+  fi
+  rm -rf "$STRAY_USER_UNIT" "$STRAY_USER_UNIT.d" 2>/dev/null || as_root rm -rf "$STRAY_USER_UNIT" "$STRAY_USER_UNIT.d"
+  run_as_owner systemctl --user daemon-reload 2>/dev/null || true
+  run_as_owner systemctl --user reset-failed "$SERVICE_NAME" 2>/dev/null || true
+}
+
+kill_rogue_app_processes() {
+  local pids main pid
+  pids="$(port_pids "$APP_PORT")"
+  [ -n "$pids" ] || return 0
+  main="$(service_pid)"
+  for pid in $pids; do
+    [ "$pid" = "$main" ] && systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null && continue
+    warn "Killing rogue process on port $APP_PORT (PID: $pid)"
+    kill "$pid" 2>/dev/null || as_root kill "$pid" 2>/dev/null || true
+    sleep 1
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -9 "$pid" 2>/dev/null || as_root kill -9 "$pid" 2>/dev/null || true
     fi
-    rm -f "$PID_FILE"
-  fi
-  if port_listening "$PORT"; then
-    echo "Port $PORT already in use. Run scripts/manage.sh stop first." >&2
-    exit 1
-  fi
-  if [ ! -x "$NEXT_BIN" ]; then
-    echo "Missing Next binary at $NEXT_BIN. Run npm install." >&2
-    exit 1
-  fi
-  echo "Starting daemon on $APP_BIND_HOST:$PORT (log: $LOG_FILE)"
-  nohup "$NEXT_BIN" start -H "$APP_BIND_HOST" -p "$PORT" >>"$LOG_FILE" 2>&1 &
-  echo $! >"$PID_FILE"
+  done
+}
+
+render_unit() {
+  ensure_node
+  local node_bin
+  node_bin="$(command -v node)"
+  sed \
+    -e "s|__NODE_BIN__|${node_bin}|g" \
+    -e "s|__NODE_DIR__|$(dirname "$node_bin")|g" \
+    -e "s|__NEXT_BIN__|${NEXT_BIN}|g" \
+    -e "s|__WORKDIR__|${ROOT_DIR}|g" \
+    -e "s|__RUN_USER__|${RUN_USER}|g" \
+    -e "s|__RUN_GROUP__|${RUN_GROUP}|g" \
+    -e "s|__ENV_FILE__|${ENV_FILE}|g" \
+    -e "s|__BIND_HOST__|${APP_BIND_HOST}|g" \
+    -e "s|__APP_PORT__|${APP_PORT}|g" \
+    "$UNIT_TEMPLATE"
+}
+
+unit_is_current() {
+  [ -r "$SYSTEM_UNIT" ] || return 1
+  [ "$(render_unit 2>/dev/null)" = "$(cat "$SYSTEM_UNIT")" ]
+}
+
+wait_for_app() {
   local waited=0
-  while [ "$waited" -lt "$DAEMON_READY_TIMEOUT" ]; do
-    if port_listening "$PORT"; then
-      break
+  while [ "$waited" -lt "$READY_TIMEOUT" ]; do
+    if curl -s -o /dev/null --max-time 5 "http://${APP_UPSTREAM_HOST}:${APP_PORT}/" 2>/dev/null; then
+      log "App answering on ${APP_UPSTREAM_HOST}:${APP_PORT} after ${waited}s"
+      return 0
     fi
     sleep 1
     waited=$((waited + 1))
   done
-  local NEW_PID
-  NEW_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
-  if [ -z "$NEW_PID" ] || ! kill -0 "$NEW_PID" 2>/dev/null; then
-    echo "Daemon failed to start. Check $LOG_FILE" >&2
-    rm -f "$PID_FILE"
-    exit 1
-  fi
-  if ! port_listening "$PORT"; then
-    echo "Daemon running on PID $NEW_PID but port $PORT is still warming up."
-  fi
-  nginx_warn_if_absent
+  warn "App did not answer on ${APP_UPSTREAM_HOST}:${APP_PORT} within ${READY_TIMEOUT}s"
+  return 1
 }
 
-start_foreground() {
-  ensure_node
-  load_env
-  resolve_ports
-  export NODE_ENV=production
-  export PORT="$APP_PORT"
-  if [ ! -x "$NEXT_BIN" ]; then
-    echo "Missing Next binary at $NEXT_BIN. Run npm install." >&2
-    exit 1
+check_app() {
+  step "App service"
+
+  remove_stray_user_unit
+  kill_rogue_app_processes
+
+  if [ ! -f "$SYSTEM_UNIT" ]; then
+    warn "$SERVICE_NAME not installed — running systemd:install"
+    cmd_systemd_install
   fi
-  exec "$NEXT_BIN" start -H "$APP_BIND_HOST" -p "$PORT"
+
+  if [ ! -f "$ROOT_DIR/.next/BUILD_ID" ]; then
+    err "No production build in $ROOT_DIR/.next — run: scripts/manage.sh deploy"
+    return 1
+  fi
+
+  as_root systemctl restart "$SERVICE_NAME"
+
+  if ! systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+    err "$SERVICE_NAME failed to start"
+    journalctl -u "$SERVICE_NAME" --no-pager -n 20 2>/dev/null || true
+    return 1
+  fi
+  log "systemd service $SERVICE_NAME is active (PID $(service_pid))"
+
+  wait_for_app || true
+  assert_upstream_is_private
 }
 
-stop() {
-  local PID
-  if [ -f "$PID_FILE" ]; then
-    PID="$(cat "$PID_FILE" 2>/dev/null || true)"
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-      echo "Stopping daemon on PID $PID"
-      kill "$PID" 2>/dev/null || true
-      sleep 1
-    fi
-    rm -f "$PID_FILE"
-  fi
-  resolve_ports
-  local P="$APP_PORT"
-  local PIDS
-  PIDS="$(lsof -t -i TCP:$P -s TCP:LISTEN 2>/dev/null || true)"
-  if [ -z "${PIDS:-}" ]; then
-    PIDS="$(ss -lptn "sport = :$P" 2>/dev/null | awk -F 'pid=' 'NR>1{split($2,a,","); print a[1]}' | tr -d ' ' || true)"
-  fi
-  if [ -n "${PIDS:-}" ]; then
-    echo "Stopping processes bound to port $P: $PIDS"
-    kill $PIDS 2>/dev/null || true
+assert_upstream_is_private() {
+  local exposed
+  exposed="$(port_exposed "$APP_PORT")"
+  if [ -n "$exposed" ]; then
+    err "App port ${APP_PORT} is bound outside loopback ($(echo $exposed)) — APP_BIND_HOST must be localhost so nginx stays the only public listener"
+    return 1
   fi
 }
 
-restart() {
-  if systemd_restart; then
-    return 0
-  fi
-  stop
-  start
+render_nginx_conf() {
+  ENV_FILE="$ENV_FILE" "$NGINX_RENDER" --print
 }
 
-clean() {
+nginx_conf_is_current() {
+  [ -r "$NGINX_CONF_TARGET" ] || return 1
+  local rendered
+  rendered="$(render_nginx_conf 2>/dev/null)" || return 1
+  [ "$rendered" = "$(cat "$NGINX_CONF_TARGET")" ]
+}
+
+install_nginx_conf() {
+  if [ ! -x "$NGINX_RENDER" ]; then
+    err "Renderer not found or not executable: $NGINX_RENDER"
+    return 1
+  fi
+  as_root env ENV_FILE="$ENV_FILE" "$NGINX_RENDER"
+}
+
+public_bind_matches() {
+  local addrs
+  addrs="$(port_addresses "$PUBLIC_PORT")"
+  [ -n "$addrs" ] || return 1
+  if [ -n "$NGINX_LISTEN" ] && printf '%s\n' $addrs | grep -qE "^(0\.0\.0\.0|\[::\]):${PUBLIC_PORT}\$"; then
+    return 1
+  fi
+  return 0
+}
+
+public_server_header() {
+  curl -sI --max-time 20 -H "Host: ${VERIFY_HOST:-ethnos.app}" "http://127.0.0.1:${PUBLIC_PORT}/" 2>/dev/null \
+    | awk 'tolower($1) == "server:" {print tolower($2)}' | tr -d '\r' || true
+}
+
+check_nginx() {
+  step "Nginx"
+
+  if ! command -v nginx >/dev/null 2>&1; then
+    err "nginx is not installed — the app must not be published without it"
+    return 1
+  fi
+  if ! systemctl is-active --quiet nginx 2>/dev/null; then
+    err "nginx service is not active — run: sudo systemctl start nginx"
+    return 1
+  fi
+  if [ ! -r "$NGINX_CONF_TARGET" ]; then
+    err "$NGINX_CONF_TARGET is missing — run: scripts/manage.sh nginx"
+    return 1
+  fi
+  if nginx_conf_is_current; then
+    log "nginx vhost current ($NGINX_CONF_TARGET)"
+  else
+    err "$NGINX_CONF_TARGET differs from the rendered config — run: scripts/manage.sh nginx"
+  fi
+  if ! port_listening "$PUBLIC_PORT"; then
+    err "Nothing is listening on the public port ${PUBLIC_PORT}"
+    return 1
+  fi
+
+  local server_header
+  server_header="$(public_server_header)"
+  case "$server_header" in
+    nginx*) log "Public port ${PUBLIC_PORT} served by nginx → ${APP_UPSTREAM_HOST}:${APP_PORT}" ;;
+    "")     warn "Public port ${PUBLIC_PORT} did not answer (is the app up?)" ;;
+    *)      err "Public port ${PUBLIC_PORT} is answered by '${server_header}', not nginx" ;;
+  esac
+}
+
+ensure_nginx() {
+  step "Nginx"
+
+  if ! command -v nginx >/dev/null 2>&1; then
+    err "nginx is not installed — the app must not be published without it"
+    return 1
+  fi
+
+  if nginx_conf_is_current && public_bind_matches; then
+    log "nginx vhost already current ($NGINX_CONF_TARGET)"
+  else
+    log "Installing nginx vhost → $NGINX_CONF_TARGET"
+    install_nginx_conf || return 1
+  fi
+
+  if ! systemctl is-active --quiet nginx 2>/dev/null; then
+    warn "nginx is not active — attempting start"
+    as_root systemctl start nginx || true
+  fi
+
+  if systemctl is-active --quiet nginx 2>/dev/null; then
+    log "nginx active on ${PUBLIC_PORT} → ${APP_UPSTREAM_HOST}:${APP_PORT}"
+  else
+    err "nginx failed to start — run: sudo systemctl start nginx"
+    return 1
+  fi
+}
+
+clean_build() {
   rm -rf "$ROOT_DIR/.next" "$ROOT_DIR/.turbo" "$ROOT_DIR/node_modules/.cache" 2>/dev/null || true
 }
 
-cache_clean() {
+clean_cache() {
   rm -rf "$ROOT_DIR/.next/cache" "$ROOT_DIR/.turbo" "$ROOT_DIR/node_modules/.cache" 2>/dev/null || true
 }
 
-check() {
+install_deps() {
+  ensure_node
+  log "Installing dependencies"
+  if [ -f "$ROOT_DIR/package-lock.json" ]; then
+    NODE_ENV=development npm ci --no-fund --audit=false 2>&1 | tail -3
+  else
+    NODE_ENV=development npm install --no-fund --audit=false 2>&1 | tail -3
+  fi
+}
+
+build_css() {
+  ensure_node
+  log "Building CSS"
+  node "$ROOT_DIR/scripts/build-css.mjs"
+}
+
+build_app() {
+  ensure_node
+  build_css
+  log "Building Next.js (production)"
+  NODE_ENV=production "$NEXT_BIN" build
+}
+
+validate_all() {
+  step "Final validation"
+  local ok=0 fail=0
+
+  pass() { echo -e "  [OK] $*"; ok=$((ok + 1)); }
+  flunk() { echo -e "  [FAIL] $*"; fail=$((fail + 1)); }
+
+  local main_pid listeners
+  main_pid="$(service_pid)"
+  listeners="$(port_pids "$APP_PORT")"
+  if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null \
+     && [ "${main_pid:-0}" != "0" ] && [ "$listeners" = "$main_pid" ]; then
+    pass "systemd service ($SERVICE_NAME, PID $main_pid owns port ${APP_PORT})"
+  else
+    flunk "systemd service ($SERVICE_NAME) does not own port ${APP_PORT} (unit PID ${main_pid:-0}, listener PID(s) ${listeners:-none})"
+  fi
+
+  if unit_is_current; then
+    pass "system unit current ($SYSTEM_UNIT)"
+  else
+    flunk "system unit missing or stale ($SYSTEM_UNIT) — run: scripts/manage.sh systemd:install"
+  fi
+
+  local stray
+  stray="$(stray_units)"
+  if [ -z "$stray" ]; then
+    pass "single app unit (system scope only)"
+  else
+    flunk "duplicate unit(s) present: $stray — run: scripts/manage.sh systemd:install (legacy system units must be disabled and deleted)"
+  fi
+
+  local restarts
+  restarts="$(systemctl show "$SERVICE_NAME" --property=NRestarts --value 2>/dev/null || echo 0)"
+  if [ "${restarts:-0}" -gt 0 ] 2>/dev/null; then
+    warn "$SERVICE_NAME has restarted ${restarts} time(s) since it was last started — check: journalctl -u $SERVICE_NAME"
+  fi
+
+  if [ -z "$(port_exposed "$APP_PORT")" ] && port_listening "$APP_PORT"; then
+    pass "app port ${APP_PORT} bound to loopback only"
+  else
+    flunk "app port ${APP_PORT} not listening or reachable outside nginx ($(port_addresses "$APP_PORT"))"
+  fi
+
+  if systemctl is-active --quiet nginx 2>/dev/null; then
+    pass "nginx service"
+  else
+    flunk "nginx service"
+  fi
+
+  if nginx_conf_is_current; then
+    pass "nginx vhost current ($NGINX_CONF_TARGET)"
+  else
+    flunk "nginx vhost missing or stale ($NGINX_CONF_TARGET) — run: scripts/manage.sh nginx"
+  fi
+
+  local addrs
+  addrs="$(port_addresses "$PUBLIC_PORT")"
+  if [ -z "$addrs" ]; then
+    flunk "nothing is listening on the public port ${PUBLIC_PORT}"
+  elif ! public_bind_matches; then
+    flunk "port ${PUBLIC_PORT} is bound to ${addrs} but the vhost asks for ${NGINX_LISTEN} — nginx keeps the old socket across a reload; run: sudo systemctl restart nginx"
+  else
+    pass "nginx public (port ${PUBLIC_PORT} on ${addrs})"
+  fi
+
+  local probe code redirect rpath
+  probe="$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 20 \
+    -H "Host: ${VERIFY_HOST:-ethnos.app}" -H 'X-Forwarded-Proto: https' \
+    "http://127.0.0.1:${PUBLIC_PORT}/" 2>/dev/null || true)"
+  code="${probe%% *}"
+  code="${code:-000}"
+  redirect="${probe#* }"
+  case "$code" in
+    200) pass "home page through nginx (:${PUBLIC_PORT}/ → HTTP 200)" ;;
+    503) pass "home page through nginx (:${PUBLIC_PORT}/ → HTTP 503, maintenance mode)" ;;
+    3??)
+      rpath="${redirect#*://}"
+      [ "$rpath" = "$redirect" ] || rpath="/${rpath#*/}"
+      if [ "$rpath" = "/" ]; then
+        flunk "home page redirects to itself ($code → ${redirect:-/}) — APP_BIND_HOST must be 'localhost'"
+      else
+        pass "home page through nginx (:${PUBLIC_PORT}/ → HTTP $code → $redirect)"
+      fi
+      ;;
+    2??) pass "home page through nginx (:${PUBLIC_PORT}/ → HTTP $code)" ;;
+    *) flunk "home page through nginx (:${PUBLIC_PORT}/ → HTTP $code)" ;;
+  esac
+
+  if [ -f "$MAINTENANCE_DROPIN" ]; then
+    warn "maintenance mode is ON ($MAINTENANCE_DROPIN)"
+  fi
+
+  echo ""
+  if [ "$fail" -eq 0 ]; then
+    log "All $ok checks passed"
+  else
+    err "$fail check(s) failed, $ok passed"
+  fi
+  return "$fail"
+}
+
+cmd_deploy() {
+  step "Deploy"
+  load_env
+  ensure_node
+  as_root true
+
+  ensure_nginx
+
+  log "Stopping app"
+  as_root systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+  kill_rogue_app_processes
+
+  clean_build
+  install_deps
+  build_app
+
+  cmd_systemd_install
+  check_app || true
+  check_nginx || true
+
+  validate_all
+}
+
+cmd_restart() {
+  step "Restart"
+  load_env
+  ensure_nginx
+  check_app || true
+  validate_all
+}
+
+cmd_start() {
+  load_env
+  ensure_nginx
+  if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+    step "App service"
+    log "systemd service $SERVICE_NAME already active (PID $(service_pid))"
+    remove_stray_user_unit
+  else
+    check_app || true
+  fi
+  validate_all
+}
+
+cmd_stop() {
+  load_env
+  step "Stopping app"
+  as_root systemctl stop "$SERVICE_NAME" || true
+  kill_rogue_app_processes
+  log "App stopped (nginx keeps the public port and answers 502)"
+}
+
+cmd_status() {
+  load_env
+  check_nginx || true
+  validate_all
+}
+
+cmd_nginx() {
+  load_env
+  if [ "${1:-}" = "--print" ]; then
+    render_nginx_conf
+    return
+  fi
+  step "Nginx"
+  install_nginx_conf
+}
+
+cmd_systemd_install() {
+  step "Systemd unit"
+  load_env
+
+  if [ ! -f "$UNIT_TEMPLATE" ]; then
+    err "Service template not found: $UNIT_TEMPLATE"
+    return 1
+  fi
+  if [ "$RUN_USER" = "root" ] || [ -z "$RUN_HOME" ]; then
+    err "Refusing to run the app as '$RUN_USER' — the checkout must be owned by an unprivileged user"
+    return 1
+  fi
+
+  local rendered
+  rendered="$(mktemp)"
+  render_unit > "$rendered"
+
+  remove_stray_user_unit
+
+  if [ -f "$SYSTEM_UNIT" ] && cmp -s "$rendered" "$SYSTEM_UNIT"; then
+    rm -f "$rendered"
+    log "$SYSTEM_UNIT already current"
+  else
+    as_root install -m 0644 -o root -g root "$rendered" "$SYSTEM_UNIT" || { rm -f "$rendered"; return 1; }
+    rm -f "$rendered"
+    as_root systemctl daemon-reload
+    log "Installed $SERVICE_NAME → $SYSTEM_UNIT (runs as $RUN_USER, node $(command -v node))"
+  fi
+  as_root systemctl enable --quiet "$SERVICE_NAME"
+}
+
+cmd_uninstall() {
+  step "Uninstall"
+  load_env_optional
+
+  step "Stopping app"
+  as_root systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+  kill_rogue_app_processes
+
+  step "Removing systemd service"
+  remove_stray_user_unit
+  if [ -f "$SYSTEM_UNIT" ]; then
+    as_root systemctl disable "$SERVICE_NAME" || true
+    as_root rm -rf "$SYSTEM_UNIT" "$MAINTENANCE_DROPIN_DIR"
+    as_root systemctl daemon-reload
+    as_root systemctl reset-failed "$SERVICE_NAME" 2>/dev/null || true
+    log "Removed $SYSTEM_UNIT"
+  else
+    warn "Service file not found: $SYSTEM_UNIT"
+  fi
+
+  step "Removing nginx vhost"
+  if [ -e "$NGINX_CONF_TARGET" ]; then
+    as_root rm -f "$NGINX_CONF_TARGET" && as_root systemctl reload nginx 2>/dev/null || true
+    log "Removed $NGINX_CONF_TARGET"
+  else
+    warn "nginx vhost not found: $NGINX_CONF_TARGET"
+  fi
+
+  step "Removing build artifacts and dependencies"
+  clean_build
+  rm -rf "$ROOT_DIR/node_modules" 2>/dev/null || true
+  log "Removed .next, .turbo and node_modules"
+
+  echo ""
+  log "Uninstall complete — source code preserved in $ROOT_DIR"
+}
+
+cmd_maintenance() {
+  case "${1:-status}" in
+    on|enable)
+      as_root mkdir -p "$MAINTENANCE_DROPIN_DIR"
+      printf '[Service]\nEnvironment=MAINTENANCE_MODE=1\n' | as_root tee "$MAINTENANCE_DROPIN" >/dev/null
+      as_root systemctl daemon-reload
+      log "Wrote $MAINTENANCE_DROPIN"
+      if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        as_root systemctl restart "$SERVICE_NAME"
+        log "Restarted $SERVICE_NAME with MAINTENANCE_MODE=1"
+      else
+        warn "$SERVICE_NAME is not active — run: scripts/manage.sh start"
+      fi
+      ;;
+    off|disable)
+      if [ -f "$MAINTENANCE_DROPIN" ]; then
+        as_root rm -f "$MAINTENANCE_DROPIN"
+        as_root rmdir "$MAINTENANCE_DROPIN_DIR" 2>/dev/null || true
+        as_root systemctl daemon-reload
+        log "Removed $MAINTENANCE_DROPIN"
+      else
+        log "Maintenance flag was not set"
+      fi
+      if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        as_root systemctl restart "$SERVICE_NAME"
+        log "Restarted $SERVICE_NAME"
+      fi
+      ;;
+    status)
+      if [ -f "$MAINTENANCE_DROPIN" ]; then
+        echo "maintenance: ON ($MAINTENANCE_DROPIN)"
+      else
+        echo "maintenance: OFF"
+      fi
+      if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        echo "service: active"
+      else
+        echo "service: inactive"
+      fi
+      ;;
+    *) err "Usage: manage.sh maintenance {on|off|status}"; return 1 ;;
+  esac
+}
+
+cmd_seo() {
+  local sub="${1:-audit}"
+  shift || true
+  ensure_node
+  case "$sub" in
+    audit)
+      load_env_optional
+      node "$ROOT_DIR/scripts/seo/audit.mjs" --base "${SEO_BASE:-http://127.0.0.1:$PUBLIC_PORT}" "$@"
+      ;;
+    indexnow|ping)
+      load_env_optional
+      node "$ROOT_DIR/scripts/seo/indexnow.mjs" "$@"
+      ;;
+    *) err "Usage: manage.sh seo {audit|indexnow} [options]"; return 1 ;;
+  esac
+}
+
+cmd_dev() {
+  ensure_node
+  load_env_optional
+  build_css
+  exec "$NEXT_BIN" dev -H "$DEV_HOST" -p "${PORT:-$DEV_PORT}"
+}
+
+cmd_build() {
+  load_env_optional
+  build_app
+}
+
+cmd_start_foreground() {
+  ensure_node
+  load_env_optional
+  if [ ! -x "$NEXT_BIN" ]; then
+    err "Missing Next binary at $NEXT_BIN — run: npm ci"
+    exit 1
+  fi
+  export NODE_ENV=production
+  exec "$NEXT_BIN" start -H "$APP_BIND_HOST" -p "$APP_PORT"
+}
+
+cmd_check() {
   ensure_node
   node -v
   npm -v
-  npx next --version || true
-  if [ ! -f "$ROOT_DIR/public/css/styles.css" ]; then
-    echo "Missing public/css/styles.css" >&2
-    exit 1
-  fi
-}
-
-deps() {
-  ensure_node
-  if [ -f "$ROOT_DIR/package-lock.json" ]; then
-    NODE_ENV=development npm ci --no-fund --audit=false
-  else
-    NODE_ENV=development npm install --no-fund --audit=false
-  fi
-}
-
-# sudo drops the environment, so the resolved topology is handed over
-# explicitly. The renderer still lets /etc/next-frontend.env win, which is what
-# keeps the proxy and the service reading one source of truth.
-sudo_wrap() {
-  local ENVS=("APP_PORT=$APP_PORT" "APP_UPSTREAM_HOST=$APP_UPSTREAM_HOST" "NGINX_PUBLIC_PORT=$PUBLIC_PORT" "NGINX_APP_CONF=$NGINX_APP_CONF")
-  # Forwarded only when it is actually set: an empty NGINX_LISTEN_ADDRESS means
-  # "every interface", so inventing one here would publish the port.
-  [ -n "${NGINX_LISTEN_ADDRESS+x}" ] && ENVS+=("NGINX_LISTEN_ADDRESS=$NGINX_LISTEN_ADDRESS")
-  [ -n "$ENV_FILE" ] && ENVS+=("ENV_FILE=$ENV_FILE")
-  if [ "$(id -u)" -eq 0 ]; then
-    env "${ENVS[@]}" "$@"
-    return
-  fi
-  if ! command -v sudo >/dev/null 2>&1; then
-    echo "This step needs root and sudo is not available: run it as root." >&2
-    return 1
-  fi
-  sudo env "${ENVS[@]}" "$@"
-}
-
-nginx_installed() {
-  [ -f "$NGINX_APP_CONF" ]
-}
-
-# The public port is nginx's to own. Starting the app without the vhost leaves
-# the site unreachable from the edge, which is worth saying out loud rather than
-# discovering through a 502 at the tunnel.
-nginx_warn_if_absent() {
-  if ! nginx_installed; then
-    echo "Warning: $NGINX_APP_CONF is missing — nothing is serving :$PUBLIC_PORT." >&2
-    echo "Run 'scripts/manage.sh nginx' to install the front door." >&2
-  fi
-}
-
-nginx_config() {
-  resolve_ports
-  if [ "${1:-}" = "--print" ]; then
-    exec "$NGINX_RENDER" --print
-  fi
-  sudo_wrap "$NGINX_RENDER"
-}
-
-# Every check the topology depends on, in the order a request travels: the app
-# on loopback, nginx on the public port, and a real response through the proxy.
-verify_stack() {
-  resolve_ports
-  local FAILED=0 CODE
-
-  if port_listening "$APP_PORT"; then
-    if port_loopback_only "$APP_PORT"; then
-      echo "  [OK] app upstream (port $APP_PORT) bound to loopback only"
-    else
-      echo "  [FAIL] app upstream (port $APP_PORT) is bound beyond loopback" >&2
-      FAILED=1
-    fi
-  else
-    echo "  [FAIL] nothing is listening on the app upstream port $APP_PORT" >&2
-    FAILED=1
-  fi
-
-  if nginx_installed; then
-    echo "  [OK] nginx vhost ($NGINX_APP_CONF)"
-  else
-    echo "  [FAIL] missing nginx vhost ($NGINX_APP_CONF)" >&2
-    FAILED=1
-  fi
-
-  local PUBLIC_ADDRESSES
-  PUBLIC_ADDRESSES="$(ss -lntH "sport = :$PUBLIC_PORT" 2>/dev/null | awk '{print $4}' | tr '\n' ' ')"
-  if [ -z "$PUBLIC_ADDRESSES" ]; then
-    echo "  [FAIL] nothing is listening on the public port $PUBLIC_PORT" >&2
-    FAILED=1
-  elif [ -n "$NGINX_LISTEN" ] && printf '%s' "$PUBLIC_ADDRESSES" | grep -qE "(^| )(0\.0\.0\.0|\[::\]):$PUBLIC_PORT( |$)"; then
-    # nginx cannot narrow a listen address on reload: it keeps the previous
-    # wildcard socket and the config on disk no longer describes what is bound.
-    echo "  [FAIL] port $PUBLIC_PORT is bound to ${PUBLIC_ADDRESSES% } but the vhost asks for $NGINX_LISTEN" >&2
-    echo "         nginx keeps the old socket across a reload — 'sudo systemctl restart nginx' rebinds it." >&2
-    FAILED=1
-  else
-    echo "  [OK] nginx public (port $PUBLIC_PORT on ${PUBLIC_ADDRESSES% })"
-  fi
-
-  # Sent the way the edge sends it: Host is the public name and TLS terminated
-  # upstream. A 307 back to "/" here is the APP_BIND_HOST trap, not a redirect.
-  local PROBE REDIRECT
-  PROBE="$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 20 \
-    -H "Host: ${VERIFY_HOST:-ethnos.app}" -H 'X-Forwarded-Proto: https' \
-    "http://127.0.0.1:$PUBLIC_PORT/" 2>/dev/null || true)"
-  CODE="${PROBE%% *}"
-  CODE="${CODE:-000}"
-  REDIRECT="${PROBE#* }"
-  case "$CODE" in
-    200) echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP 200)" ;;
-    503) echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP 503, maintenance mode)" ;;
-    3??)
-      local RPATH="${REDIRECT#*://}"
-      [ "$RPATH" = "$REDIRECT" ] || RPATH="/${RPATH#*/}"
-      if [ "$RPATH" = "/" ]; then
-        echo "  [FAIL] the home page redirects to itself ($CODE -> ${REDIRECT:-/})." >&2
-        echo "         APP_BIND_HOST must be 'localhost': an IP literal makes Next treat every" >&2
-        echo "         middleware rewrite as external, so every default-locale URL loops." >&2
-        FAILED=1
-      else
-        echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP $CODE -> $REDIRECT)"
-      fi
-      ;;
-    2??) echo "  [OK] home page through nginx (:$PUBLIC_PORT/ -> HTTP $CODE)" ;;
-    *) echo "  [FAIL] app not reachable through nginx (:$PUBLIC_PORT/ -> HTTP $CODE)" >&2; FAILED=1 ;;
-  esac
-
-  if [ "$FAILED" -ne 0 ]; then
-    return 1
-  fi
-  echo "All checks passed"
-}
-
-status() {
-  load_env
-  resolve_ports
-  maintenance_status
-  verify_stack
-}
-
-deploy() {
-  ensure_node
-  load_env
-  resolve_ports
-  # The build takes minutes and the nginx step needs root: asking for the
-  # password up front keeps the deploy from stalling on a prompt at the end.
-  if [ "${NO_NGINX:-0}" != "1" ] && [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
-    sudo -v
-  fi
-  clean
-  deps
-  export NODE_ENV=production
-  css
-  npx next build
-
-  local DEST="$HOME/.config/systemd/user/ethnos-app.service"
-  if [ ! -f "$DEST" ]; then
-    setup_service
-  fi
-
-  if [ "${NO_NGINX:-0}" = "1" ]; then
-    echo "Skipping the nginx front door (NO_NGINX=1)."
-  else
-    nginx_config
-  fi
-
-  systemctl --user restart "$SYSTEMD_SERVICE"
-  systemctl --user is-active --quiet "$SYSTEMD_SERVICE"
-
-  local waited=0
-  while [ "$waited" -lt "$DAEMON_READY_TIMEOUT" ] && ! port_listening "$APP_PORT"; do
-    sleep 1
-    waited=$((waited + 1))
-  done
-
-  echo
-  echo "-- Final validation --"
-  verify_stack
-}
-
-setup_service() {
-  local SRC="$ROOT_DIR/scripts/systemd/ethnos-app.service"
-  local DEST_DIR="$HOME/.config/systemd/user"
-  local DEST="$DEST_DIR/ethnos-app.service"
-
-  if [ ! -f "$SRC" ]; then
-    echo "Service unit not found at $SRC" >&2
-    exit 1
-  fi
-
-  mkdir -p "$DEST_DIR"
-  cp "$SRC" "$DEST"
-  echo "Installed service to $DEST"
-
-  systemctl --user daemon-reload
-  systemctl --user enable ethnos-app.service
-  echo "Service enabled."
-
-  if command -v loginctl >/dev/null 2>&1; then
-    if ! loginctl show-user "$USER" --property=Linger 2>/dev/null | grep -q "Linger=yes"; then
-      echo "Enabling linger for $USER (may require sudo)..."
-      loginctl enable-linger "$USER" 2>/dev/null || sudo loginctl enable-linger "$USER" || echo "Warning: could not enable linger. Service will stop on logout." >&2
-    fi
-  fi
-
-  echo "Setup complete. Use 'scripts/manage.sh deploy' to build, install the nginx front door and start."
-}
-
-uninstall() {
-  local DEST="$HOME/.config/systemd/user/ethnos-app.service"
-
-  echo "Uninstalling Ethnos..."
-
-  if command -v systemctl >/dev/null 2>&1; then
-    if systemctl --user is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
-      echo "Stopping service..."
-      systemctl --user stop "$SYSTEMD_SERVICE"
-    fi
-    if systemctl --user is-enabled --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
-      echo "Disabling service..."
-      systemctl --user disable "$SYSTEMD_SERVICE"
-    fi
-    if [ -f "$DEST" ]; then
-      echo "Removing service unit..."
-      rm -f "$DEST"
-      systemctl --user daemon-reload
-      systemctl --user reset-failed 2>/dev/null || true
-    fi
-  fi
-
-  stop
-
-  echo "Removing build artifacts..."
-  rm -rf "$ROOT_DIR/.next" "$ROOT_DIR/.turbo" 2>/dev/null || true
-
-  echo "Removing node_modules..."
-  rm -rf "$ROOT_DIR/node_modules" 2>/dev/null || true
-
-  rm -f "$PID_FILE" "$LOG_FILE" 2>/dev/null || true
-
-  echo "Uninstall complete. Source code preserved in $ROOT_DIR."
-}
-
-maintenance_is_active() {
-  [ -f "$MAINTENANCE_DROPIN_FILE" ]
-}
-
-maintenance_on() {
-  mkdir -p "$MAINTENANCE_DROPIN_DIR"
-  cat >"$MAINTENANCE_DROPIN_FILE" <<'UNIT'
-[Service]
-Environment=MAINTENANCE_MODE=1
-UNIT
-  echo "Wrote $MAINTENANCE_DROPIN_FILE"
-  if command -v systemctl >/dev/null 2>&1; then
-    systemctl $SYSTEMD_ARGS daemon-reload
-    if systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
-      systemctl $SYSTEMD_ARGS restart "$SYSTEMD_SERVICE"
-      echo "Restarted $SYSTEMD_SERVICE with MAINTENANCE_MODE=1"
-    else
-      echo "Service is not active. Start it with 'systemctl $SYSTEMD_ARGS start $SYSTEMD_SERVICE' to enter maintenance."
-    fi
-  else
-    echo "systemctl not available. Set MAINTENANCE_MODE=1 in the runtime env and restart the service manually."
-  fi
-}
-
-maintenance_off() {
-  if [ -f "$MAINTENANCE_DROPIN_FILE" ]; then
-    rm -f "$MAINTENANCE_DROPIN_FILE"
-    rmdir "$MAINTENANCE_DROPIN_DIR" 2>/dev/null || true
-    echo "Removed $MAINTENANCE_DROPIN_FILE"
-  else
-    echo "Maintenance flag was not set."
-  fi
-  if command -v systemctl >/dev/null 2>&1; then
-    systemctl $SYSTEMD_ARGS daemon-reload
-    if systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
-      systemctl $SYSTEMD_ARGS restart "$SYSTEMD_SERVICE"
-      echo "Restarted $SYSTEMD_SERVICE"
-    fi
-  fi
-}
-
-maintenance_status() {
-  if maintenance_is_active; then
-    echo "maintenance: ON ($MAINTENANCE_DROPIN_FILE)"
-  else
-    echo "maintenance: OFF"
-  fi
-  if command -v systemctl >/dev/null 2>&1; then
-    if systemctl $SYSTEMD_ARGS is-active --quiet "$SYSTEMD_SERVICE" 2>/dev/null; then
-      echo "service: active"
-    else
-      echo "service: inactive"
-    fi
-  fi
-}
-
-maintenance() {
-  local SUB="${2:-status}"
-  case "$SUB" in
-    on|enable|start) maintenance_on ;;
-    off|disable|stop) maintenance_off ;;
-    status|"") maintenance_status ;;
-    *)
-      echo "Usage: $0 maintenance {on|off|status}" >&2
-      exit 1
-      ;;
-  esac
-}
-
-seo_audit() {
-  ensure_node
-  resolve_ports
-  local TARGET="${SEO_BASE:-http://127.0.0.1:$PUBLIC_PORT}"
-  node "$ROOT_DIR/scripts/seo/audit.mjs" --base "$TARGET" "$@"
-}
-
-indexnow() {
-  ensure_node
-  load_env
-  node "$ROOT_DIR/scripts/seo/indexnow.mjs" "$@"
-}
-
-seo() {
-  local SUB="${1:-audit}"
-  shift || true
-  case "$SUB" in
-    audit) seo_audit "$@" ;;
-    indexnow|ping) indexnow "$@" ;;
-    *)
-      echo "Usage: $0 seo {audit|indexnow} [options]" >&2
-      exit 1
-      ;;
-  esac
+  "$NEXT_BIN" --version || true
+  [ -f "$ROOT_DIR/public/css/styles.css" ] || { err "Missing public/css/styles.css"; return 1; }
 }
 
 usage() {
-  echo "Usage: $0 {css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|nginx [--print]|status|verify|setup_service|uninstall|maintenance [on|off|status]|seo [audit|indexnow]}"
-  echo
-  echo "Ports: nginx serves :$PUBLIC_PORT and proxies to the app on $APP_BIND_HOST:$APP_PORT (dev: $DEV_HOST:$DEV_PORT)."
+  cat <<'USAGE'
+Ethnos App — unified control script
+
+Usage: manage.sh <command> [options]
+
+Lifecycle (with automatic verification):
+  deploy              Full deploy: nginx → stop app → clean → deps → css → build → unit → start + validate
+  restart             Restart the system unit (no rebuild), repair nginx, validate
+  start               Install/repair the nginx vhost, start the app if it is not running, validate
+  stop                Stop the app (nginx keeps the public port and answers 502)
+  status | verify     Validate the whole topology and report (never writes to /etc)
+
+Nginx (the app is only ever published through it):
+  nginx               Render and install the vhost, nginx -t, reload (needs sudo)
+  nginx --print       Print the rendered vhost without installing it
+
+Systemd:
+  systemd:install     Install/refresh the system unit /etc/systemd/system/ethnos-app.service
+                      (needs sudo; removes any user-scope copy — the app runs as exactly one system unit)
+  uninstall           Stop the app, remove the unit, vhost, build artifacts and node_modules
+
+Maintenance:
+  maintenance on|off|status   Toggle MAINTENANCE_MODE via a systemd drop-in (needs sudo)
+
+Build & development:
+  build               CSS + production build (does not restart)
+  css                 Regenerate public/css/styles.min.css
+  deps                npm ci
+  clean               Remove .next, .turbo and caches
+  cache_clean         Remove only the build caches
+  dev                 next dev on localhost:1210
+  check               Print node/npm/next versions
+  start_foreground    Run next start in the foreground (for non-systemd service managers)
+
+SEO:
+  seo audit           SEO conformance audit (SEO_BASE=… to retarget)
+  seo indexnow        Submit URLs to IndexNow
+
+USAGE
 }
 
-case "$CMD" in
-  css|dev|build|start|start_foreground|stop|restart|clean|cache_clean|check|deps|deploy|setup_service|uninstall|status)
-    "$CMD"
-    ;;
-  nginx)
-    shift
-    nginx_config "$@"
-    ;;
-  verify)
-    load_env
-    verify_stack
-    ;;
-  maintenance)
-    maintenance "$@"
-    ;;
-  seo)
-    shift
-    seo "$@"
-    ;;
-  *)
-    usage
-    exit 1
-    ;;
-esac
+main() {
+  local cmd="${1:-}"
+  shift || true
+
+  case "$cmd" in
+    deploy)                        cmd_deploy ;;
+    restart)                       cmd_restart ;;
+    start)                         cmd_start ;;
+    stop)                          cmd_stop ;;
+    status|verify)                 cmd_status ;;
+    nginx|nginx:install)           cmd_nginx "${1:-}" ;;
+    systemd:install|setup_service) cmd_systemd_install ;;
+    uninstall)                     cmd_uninstall ;;
+    maintenance)                   cmd_maintenance "${1:-status}" ;;
+    seo)                           cmd_seo "$@" ;;
+    build)                         cmd_build ;;
+    css)                           build_css ;;
+    deps)                          install_deps ;;
+    clean)                         clean_build ;;
+    cache_clean)                   clean_cache ;;
+    dev)                           cmd_dev ;;
+    check)                         cmd_check ;;
+    start_foreground)              cmd_start_foreground ;;
+    help|--help|-h|'')             usage ;;
+    *)                             err "Unknown command: $cmd"; usage; exit 1 ;;
+  esac
+}
+
+main "$@"

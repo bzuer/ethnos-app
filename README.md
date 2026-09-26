@@ -41,7 +41,7 @@ Next.js (App Router) frontend for Ethnos App. This project ports Flask/Jinja scr
 - `public/site.webmanifest` stays in English and advertises shortcuts for each locale.
 
 ## Environment and API
-- Environment resolution order in `scripts/manage.sh`: `ENV_FILE` -> `/etc/next-frontend.env` -> `config/env/next-frontend.env` -> `.env.local` -> `.env`.
+- `scripts/manage.sh` reads only `ENV_FILE` (default `/etc/next-frontend.env`); set `ENV_FILE=` to another path for local dev.
 - Environment templates: `.env.example` and `config/env/next-frontend.env.example`.
 - Environment should contain only secrets/keys: `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`.
 - Server-side requests add `x-access-key` from `ETHNOS_API_KEY`.
@@ -52,13 +52,12 @@ Next.js (App Router) frontend for Ethnos App. This project ports Flask/Jinja scr
 - Install: `npm install`
 - Dev (localhost:1210): `./bin/dev` or `npm run dev`, then open `http://localhost:1210`
 - Build: `npm run build`
-- Prod: `scripts/manage.sh deploy` — nginx serves `:1212` and proxies to the app on loopback `1202`. `./bin/start` or `scripts/manage.sh start` runs the same loopback daemon without touching nginx; `scripts/manage.sh nginx` installs the front door and `scripts/manage.sh verify` checks the whole path.
-- Foreground prod: `scripts/manage.sh start_foreground`
-- Daemon control: `scripts/manage.sh start|stop|restart`
-- Deploy: `scripts/manage.sh deploy`
+- Prod: `scripts/manage.sh deploy` — stops the app, rebuilds, (re)installs the system unit `ethnos-app.service` and the nginx vhost (`:1212` → loopback `1202`), starts and validates.
+- Control: `scripts/manage.sh start|stop|restart|status` (system unit + nginx; `status` is read-only).
+- `scripts/manage.sh help` lists every command; it mirrors `~/api/scripts/manage.sh`.
 
 ## Service Managers
-- Ubuntu: use `scripts/systemd/ethnos-next.service` and set `SYSTEMD_SERVICE=ethnos-next.service` for managed restarts.
+- Ubuntu: `scripts/manage.sh systemd:install` renders `scripts/systemd/ethnos-app.service` into the **system** unit `/etc/systemd/system/ethnos-app.service` (`User=` the invoking user) and removes any user-scope copy. Manage it with `sudo systemctl … ethnos-app`; never as a `--user` unit.
 - macOS: use `scripts/launchd/ethnos-next.plist` with `launchctl`.
 - Both templates assume the repository is in `~/app`; adjust the path if your checkout directory is different.
 - For both platforms, run `scripts/manage.sh deploy` after dependency or build-impacting changes.

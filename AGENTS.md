@@ -41,11 +41,11 @@ Operational directive: at the end of each session or significant change, create 
 ## Commands and Ports
 - Dev (localhost:1210): `./bin/dev` or `npm run dev` serves `http://localhost:1210`.
 - Build: `npm run build`.
-- Prod: nginx owns `:1212` and proxies to the app on loopback `1202` (`next start -H localhost`). `./bin/start` or `scripts/manage.sh start` runs that loopback daemon; `scripts/manage.sh nginx` installs the front door, `scripts/manage.sh verify` checks it.
-- Foreground prod: `scripts/manage.sh start_foreground` (for service managers).
-- Daemon control: `scripts/manage.sh start|stop|restart` with logs at `/tmp/ethnos-next.log`.
+- Prod: nginx owns `:1212` and proxies to the app on loopback `1202` (`next start -H localhost`), run by the system unit `ethnos-app.service`.
+- Control: `scripts/manage.sh start|stop|restart|status` (`./bin/start` = `start`); `status` is read-only validation.
+- Foreground prod: `scripts/manage.sh start_foreground` (only for non-systemd service managers).
 - Static preview: `python3 -m http.server -d docs/html-css 8080` then open `templates/pages/home.html`.
-- Deploy: `scripts/manage.sh deploy` runs clean, deps install, CSS build, prod build, and daemon restart.
+- Deploy: `scripts/manage.sh deploy` — nginx → stop app → clean → deps → CSS → build → system unit → start → validate.
 
 ## Build and Runtime
 - Node: use Active LTS `24.x` (`.nvmrc`), supported range `>=18.18 <25`.
@@ -85,7 +85,7 @@ Operational directive: at the end of each session or significant change, create 
 - Always commit at the end of a session or after major changes.
 
 ## Configuration and Security
-- Env source precedence in `scripts/manage.sh`: `ENV_FILE` -> `/etc/next-frontend.env` -> `config/env/next-frontend.env` -> `.env.local` -> `.env`.
+- `scripts/manage.sh` reads only `ENV_FILE` (default `/etc/next-frontend.env`).
 - Keep templates aligned in `.env.example` and `config/env/next-frontend.env.example`.
 - Core variables: `NODE_ENV=production`, `ETHNOS_UPSTREAM_API`, `ETHNOS_API_KEY`, `ETHNOS_API_KEY_2`, `NEXT_PUBLIC_DEV_API`.
 - Server-side requests add `x-access-key` from `ETHNOS_API_KEY`; never expose secrets to the client.
@@ -113,17 +113,13 @@ Operational directive: at the end of each session or significant change, create 
 - Example:
   `export default async function Page(props: { params: Promise<{ id: string }>, searchParams?: Promise<Record<string, string>> }) { const { id } = await props.params; const sp = (await props.searchParams) || {}; }`
 
-## Production Daemon
-- `scripts/manage.sh start|stop|restart` runs a background daemon on `localhost:1202` using `/tmp/ethnos-next.pid`; the public port `1212` belongs to nginx.
-- Linux `systemd` template: `scripts/systemd/ethnos-next.service` using `scripts/manage.sh start_foreground`.
+## Production Service
+- `scripts/manage.sh` mirrors `~/api/scripts/manage.sh`; `scripts/manage.sh help` lists every command.
+- The app runs only as the **system** unit `/etc/systemd/system/ethnos-app.service` (`User=server`), rendered from `scripts/systemd/ethnos-app.service` by `scripts/manage.sh systemd:install` (run on every deploy). Never run it as a `--user` unit; `status` fails on a user-scope copy or a legacy `ethnos-next.service`.
 - macOS `launchd` template: `scripts/launchd/ethnos-next.plist` using `scripts/manage.sh start_foreground`.
-- Service templates assume checkout path `~/app`; adjust paths when repository location differs.
-- Set `SYSTEMD_SERVICE=ethnos-next.service` for `scripts/manage.sh restart` and `scripts/manage.sh deploy` when using systemd.
-- Optional: `SYSTEMD_ARGS=--user` when running in user scope.
-- `scripts/manage.sh deploy` is the only deploy pipeline and restarts the service after builds.
-- Remove legacy pm2 or alternate managers before deploying.
-- Logs are stored at `/tmp/ethnos-next.log`.
-- Node `>=20 <25` is validated by `scripts/manage.sh`; 24.x preferred.
+- `scripts/manage.sh deploy` is the only deploy pipeline.
+- Logs: `journalctl -u ethnos-app -f`.
+- Node `>=20 <25` is validated by `scripts/manage.sh`; 24.x preferred, pinned into the unit at install time.
 
 ## SEO and Indexing
 - Keep metadata (head tags, manifest, robots) aligned with the anthropology and sociology focus.
