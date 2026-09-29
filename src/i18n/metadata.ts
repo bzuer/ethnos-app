@@ -13,6 +13,7 @@ import {
   localeUrl,
   withQuery
 } from '@/lib/site';
+import { composeDescription, fitTitle, type FittedTitle } from '@/lib/meta-text';
 
 export type PageMetadataOptions = {
   robots?: Metadata['robots'];
@@ -105,6 +106,15 @@ const toKeywords = (value?: string) => (value ? value.split(',').map((kw) => kw.
 
 export const buildLanguageAlternates = (path: string) => alternateUrls(path);
 
+export async function fitPageTitle(
+  locale: string,
+  candidates: unknown[],
+  truncate?: { text: unknown; tail?: unknown }
+): Promise<FittedTitle | undefined> {
+  const t = await getTranslations({ locale: resolveLocale(locale), namespace: 'metadata' });
+  return fitTitle(safeTranslate(t, 'site.titleTemplate') || '%s', candidates, truncate);
+}
+
 export async function buildPageMetadata(
   params: Promise<{ locale: string }>,
   key: string,
@@ -116,7 +126,8 @@ export async function buildPageMetadata(
   const t = await getTranslations({ locale: safeLocale, namespace: 'metadata' });
   const normalizedKey = key.startsWith('metadata.') ? key.slice('metadata.'.length) : key;
   const rawTitle = safeTranslate(t, `${normalizedKey}.title`) || safeTranslate(t, normalizedKey);
-  const description = safeTranslate(t, `${normalizedKey}.description`);
+  const rawDescription = safeTranslate(t, `${normalizedKey}.description`);
+  const description = rawDescription ? composeDescription(rawDescription) : undefined;
   const keywords = toKeywords(safeTranslate(t, `${normalizedKey}.keywords`));
   const canonicalPath = path ? withQuery(path, options?.query) : undefined;
   const canonical = canonicalPath ? localeUrl(safeLocale, canonicalPath) : undefined;
@@ -128,7 +139,9 @@ export async function buildPageMetadata(
     : undefined;
   const ogLocale = openGraphLocales[safeLocale];
   const image = siteOpenGraphImage();
-  const title = rawTitle && options?.absoluteTitle ? { absolute: rawTitle } : rawTitle;
+  const title = rawTitle && options?.absoluteTitle
+    ? { absolute: rawTitle }
+    : fitTitle(safeTranslate(t, 'site.titleTemplate') || '%s', [rawTitle]);
 
   return {
     metadataBase,

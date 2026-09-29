@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly IndexNow submission for Ethnos
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=10min
+Persistent=true
+Unit=ethnos-indexnow.service
+
+[Install]
+WantedBy=timers.target

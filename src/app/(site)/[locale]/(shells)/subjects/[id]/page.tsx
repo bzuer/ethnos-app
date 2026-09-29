@@ -8,7 +8,8 @@ import { getSubject, getSubjectWorksByTerm, getSubjectWorksPage } from '@/lib/en
 import { subjectTerm } from '@/lib/subjects';
 import { formatNumber } from '@/lib/format';
 import JsonLd from '@/components/common/JsonLd';
-import { buildPageMetadata } from '@/i18n/metadata';
+import { buildPageMetadata, fitPageTitle } from '@/i18n/metadata';
+import { composeDescription } from '@/lib/meta-text';
 import { localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
@@ -35,13 +36,17 @@ export async function generateMetadata(props: {
   const term = subjectTerm(subject, locale);
   if (!term) return base;
   const t = await getTranslations({ locale, namespace: 'metadata.descriptors' });
-  const description = [t('subjectDetail', { term }), page > 1 ? t('pageSuffix', { page }) : '']
-    .filter(Boolean)
-    .join(' ');
+  const worksCount = Number(subject.works_count) || 0;
+  const description = composeDescription(t('subjectDetail', { term }), [
+    worksCount > 0 ? t('worksIndexed', { count: worksCount }) : '',
+    t('entityRecord'),
+    t('entityRecordShort')
+  ], { suffix: page > 1 ? t('pageSuffix', { page }) : '' });
+  const pageTitle = await fitPageTitle(locale, [term]);
   const canonicalUrl = localeUrl(locale as Locale, paginatedPath(`/subjects/${id}`, page));
   return {
     ...base,
-    title: term,
+    title: pageTitle || base.title,
     description,
     openGraph: base.openGraph ? { ...base.openGraph, title: term, description, url: canonicalUrl } : undefined,
     twitter: { ...(base.twitter || {}), title: term, description }

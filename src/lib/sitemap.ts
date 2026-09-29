@@ -1,39 +1,62 @@
 import 'server-only';
+import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { locales, type Locale } from '@/i18n/config';
-import { listDocPaths } from './docs';
+import { listDocPages } from './docs';
+import { listRecentlyAddedWorks } from './endpoints';
 import { alternateUrls, localeUrl } from './site';
 
-export type SitemapSection = 'pages' | 'works' | 'venues' | 'persons';
+export type SitemapSection = 'pages' | 'recent' | 'works' | 'venues' | 'persons';
 export type ChangeFrequency = 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
 export type SitemapEntry = {
   path: string;
-  lastModified: Date;
+  lastModified?: Date;
   changeFrequency: ChangeFrequency;
   priority: number;
 };
+export type SitemapSectionData = {
+  entries: SitemapEntry[];
+  lastModified?: Date;
+};
 
-export const SITEMAP_SECTIONS: SitemapSection[] = ['pages', 'works', 'venues', 'persons'];
+export const SITEMAP_SECTIONS: SitemapSection[] = ['pages', 'recent', 'works', 'venues', 'persons'];
 export const SITEMAP_URL_LIMIT = 50000;
+export const RECENT_WORKS_WINDOW_DAYS = 30;
 
-type TopEntity = Exclude<SitemapSection, 'pages'>;
+type CuratedSection = Extract<SitemapSection, 'works' | 'venues' | 'persons'>;
 
-const topListDir = path.join(process.cwd(), 'public', 'xml-list');
+const execFileAsync = promisify(execFile);
+const RECENT_CACHE_MS = 15 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-const TOP_LIST_FILES: Record<TopEntity, string> = {
+const CURATED_FILES: Record<CuratedSection, string> = {
   works: 'top_works.xml',
   venues: 'top_venues.xml',
   persons: 'top_persons.xml'
 };
 
-const MINIMUM_ENTRIES: Record<TopEntity, number> = {
+type SourceFile = { tracked: string; absolute: string };
+
+const curatedSource = (file: string): SourceFile => ({
+  tracked: `public/xml-list/${file}`,
+  absolute: path.join(process.cwd(), 'public', 'xml-list', file)
+});
+
+const docSource = (file: string): SourceFile => ({
+  tracked: `docs/${file}`,
+  absolute: path.join(process.cwd(), 'docs', file)
+});
+
+const MINIMUM_ENTRIES: Record<CuratedSection, number> = {
   works: 500,
   venues: 250,
   persons: 100
 };
 
-const ENTITY_META: Record<TopEntity, { changeFrequency: ChangeFrequency; priority: number }> = {
+const ENTITY_META: Record<CuratedSection | 'recent', { changeFrequency: ChangeFrequency; priority: number }> = {
+  recent: { changeFrequency: 'weekly', priority: 0.6 },
   works: { changeFrequency: 'monthly', priority: 0.6 },
   venues: { changeFrequency: 'weekly', priority: 0.7 },
   persons: { changeFrequency: 'monthly', priority: 0.5 }
@@ -42,13 +65,17 @@ const ENTITY_META: Record<TopEntity, { changeFrequency: ChangeFrequency; priorit
 const STATIC_PAGES: Array<{ path: string; changeFrequency: ChangeFrequency; priority: number }> = [
   { path: '/', changeFrequency: 'daily', priority: 1 },
   { path: '/search', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/venues', changeFrequency: 'weekly', priority: 0.8 },
-  ...listDocPaths().map((docPath) => ({ path: docPath, changeFrequency: 'monthly' as ChangeFrequency, priority: 0.6 })),
+  { path: '/venues', changeFrequency: 'weekly', priority: 0.8 }
+];
+
+const TRAILING_PAGES: Array<{ path: string; changeFrequency: ChangeFrequency; priority: number }> = [
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.2 },
   { path: '/license', changeFrequency: 'yearly', priority: 0.2 }
 ];
 
-const sectionCache = new Map<SitemapSection, SitemapEntry[]>();
+const staticCache = new Map<SitemapSection, Promise<SitemapSectionData>>();
+const sourceDates = new Map<string, Promise<Date | undefined>>();
+let recentCache: { at: number; data: SitemapSectionData } | null = null;
 
 export function sitemapSectionPath(section: SitemapSection) {
   return `/sitemaps/${section}.xml`;
@@ -59,16 +86,23 @@ export function parseSitemapSection(value: string): SitemapSection | null {
   return (SITEMAP_SECTIONS as string[]).includes(normalized) ? (normalized as SitemapSection) : null;
 }
 
-export async function buildSitemapSection(section: SitemapSection): Promise<SitemapEntry[]> {
-  const cached = sectionCache.get(section);
-  if (cached) return cached;
-  const entries = section === 'pages' ? await buildStaticEntries() : await buildEntityEntries(section);
-  sectionCache.set(section, entries);
-  return entries;
+export function maxEntriesPerSection() {
+  return Math.floor(SITEMAP_URL_LIMIT / locales.length);
+}
+
+export async function buildSitemapSection(section: SitemapSection): Promise<SitemapSectionData> {
+  if (section === 'recent') return buildRecentSection();
+  let pending = staticCache.get(section);
+  if (!pending) {
+    pending = section === 'pages' ? buildPagesSection() : buildCuratedSection(section);
+    staticCache.set(section, pending);
+    pending.catch(() => staticCache.delete(section));
+  }
+  return pending;
 }
 
 export async function renderSitemapSection(section: SitemapSection) {
-  const entries = await buildSitemapSection(section);
+  const { entries } = await buildSitemapSection(section);
   const rows: string[] = [];
   for (const entry of entries) {
     const languages = alternateUrls(entry.path);
@@ -88,11 +122,7 @@ export async function renderSitemapSection(section: SitemapSection) {
 export async function renderSitemapIndex() {
   const rows = await Promise.all(
     SITEMAP_SECTIONS.map(async (section) => {
-      const entries = await buildSitemapSection(section);
-      const lastModified = entries.reduce<Date | null>((acc, entry) => {
-        if (!acc || entry.lastModified > acc) return entry.lastModified;
-        return acc;
-      }, null);
+      const { lastModified } = await buildSitemapSection(section);
       return [
         '  <sitemap>',
         `    <loc>${escapeXml(localeUrl('en', sitemapSectionPath(section)))}</loc>`,
@@ -120,49 +150,59 @@ function renderUrl(locale: Locale, entry: SitemapEntry, languages: Record<string
     '  <url>',
     `    <loc>${escapeXml(localeUrl(locale, entry.path))}</loc>`,
     ...alternates,
-    `    <lastmod>${entry.lastModified.toISOString()}</lastmod>`,
+    entry.lastModified ? `    <lastmod>${entry.lastModified.toISOString()}</lastmod>` : '',
     `    <changefreq>${entry.changeFrequency}</changefreq>`,
     `    <priority>${entry.priority.toFixed(1)}</priority>`,
     '  </url>'
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
-async function buildStaticEntries(): Promise<SitemapEntry[]> {
-  const [lastModified, docsModified] = await Promise.all([resolveBuildDate(), resolveDocsDate()]);
-  const docPaths = new Set(listDocPaths());
-  return STATIC_PAGES.map((page) => ({
-    ...page,
-    lastModified: docPaths.has(page.path) ? docsModified : lastModified
-  }));
+async function buildPagesSection(): Promise<SitemapSectionData> {
+  const docEntries = await Promise.all(
+    listDocPages().map(async (page) => ({
+      path: page.path,
+      lastModified: newestDate(await Promise.all(page.sources.map((file) => resolveSourceDate(docSource(file))))),
+      changeFrequency: 'monthly' as ChangeFrequency,
+      priority: 0.6
+    }))
+  );
+  const entries: SitemapEntry[] = [...STATIC_PAGES, ...docEntries, ...TRAILING_PAGES];
+  return { entries, lastModified: newestDate(entries.map((entry) => entry.lastModified)) };
 }
 
-async function resolveDocsDate() {
+async function buildRecentSection(): Promise<SitemapSectionData> {
+  if (recentCache && Date.now() - recentCache.at < RECENT_CACHE_MS) return recentCache.data;
   try {
-    const entries = await fs.readdir(path.join(process.cwd(), 'docs', 'data_doc'));
-    const stats = await Promise.all(
-      entries
-        .filter((entry) => entry.endsWith('.md'))
-        .map((entry) => fs.stat(path.join(process.cwd(), 'docs', 'data_doc', entry)))
-    );
-    const newest = stats.reduce<Date | null>((acc, stat) => (!acc || stat.mtime > acc ? stat.mtime : acc), null);
-    return newest ?? (await resolveBuildDate());
-  } catch {
-    return resolveBuildDate();
+    const works = await listRecentlyAddedWorks({
+      limit: maxEntriesPerSection(),
+      since: new Date(Date.now() - RECENT_WORKS_WINDOW_DAYS * DAY_MS)
+    });
+    const entries: SitemapEntry[] = works.map((work) => ({
+      path: `/works/${work.id}`,
+      lastModified: work.addedAt ?? undefined,
+      ...ENTITY_META.recent
+    }));
+    const data = { entries, lastModified: newestDate(entries.map((entry) => entry.lastModified)) };
+    recentCache = { at: Date.now(), data };
+    return data;
+  } catch (error) {
+    if (recentCache) return recentCache.data;
+    if (process.env.NEXT_PHASE !== 'phase-production-build') throw error;
+    console.warn('Sitemap recent works unavailable at build time; the section will fill on its first revalidation', error);
+    return { entries: [] };
   }
 }
 
-async function buildEntityEntries(section: TopEntity): Promise<SitemapEntry[]> {
-  const filePath = path.join(topListDir, TOP_LIST_FILES[section]);
-  const meta = ENTITY_META[section];
+async function buildCuratedSection(section: CuratedSection): Promise<SitemapSectionData> {
+  const source = curatedSource(CURATED_FILES[section]);
   let xml = '';
-  let lastModified = new Date();
   try {
-    const [content, stats] = await Promise.all([fs.readFile(filePath, 'utf-8'), fs.stat(filePath)]);
-    xml = content;
-    lastModified = stats.mtime;
+    xml = await fs.readFile(path.join(process.cwd(), 'public', 'xml-list', CURATED_FILES[section]), 'utf-8');
   } catch (error) {
     console.error('Sitemap source unavailable', section, error);
-    return [];
+    return { entries: [] };
   }
   const seen = new Set<string>();
   const entries: SitemapEntry[] = [];
@@ -170,20 +210,20 @@ async function buildEntityEntries(section: TopEntity): Promise<SitemapEntry[]> {
     const normalized = normalizeTopItem(match[1] ?? '', section);
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
-    entries.push({ path: normalized, lastModified, changeFrequency: meta.changeFrequency, priority: meta.priority });
+    entries.push({ path: normalized, ...ENTITY_META[section] });
   }
   if (entries.length < MINIMUM_ENTRIES[section]) {
     console.warn(`Sitemap ${section} entries below expectation: ${entries.length}`);
   }
-  const maxEntries = Math.floor(SITEMAP_URL_LIMIT / locales.length);
+  const maxEntries = maxEntriesPerSection();
   if (entries.length > maxEntries) {
     console.warn(`Sitemap ${section} truncated to ${maxEntries} entries to stay within the 50000 URL limit`);
-    return entries.slice(0, maxEntries);
+    entries.length = maxEntries;
   }
-  return entries;
+  return { entries, lastModified: await resolveSourceDate(source) };
 }
 
-function normalizeTopItem(value: string, section: TopEntity) {
+function normalizeTopItem(value: string, section: CuratedSection) {
   const trimmed = (value || '').trim();
   if (!trimmed) return null;
   const withoutOrigin = trimmed.replace(/^https?:\/\/[^/]+/i, '');
@@ -201,13 +241,33 @@ function normalizeTopItem(value: string, section: TopEntity) {
   return `/${section}/${id}`;
 }
 
-async function resolveBuildDate() {
-  try {
-    const stats = await fs.stat(path.join(process.cwd(), 'package.json'));
-    return stats.mtime;
-  } catch {
-    return new Date();
+function resolveSourceDate(source: SourceFile): Promise<Date | undefined> {
+  let pending = sourceDates.get(source.tracked);
+  if (!pending) {
+    pending = readSourceDate(source);
+    sourceDates.set(source.tracked, pending);
   }
+  return pending;
+}
+
+async function readSourceDate(source: SourceFile): Promise<Date | undefined> {
+  try {
+    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%cI', '--', source.tracked], {
+      cwd: process.cwd(),
+      timeout: 5000
+    });
+    const committed = new Date(stdout.trim());
+    if (stdout.trim() && !Number.isNaN(committed.getTime())) return committed;
+  } catch {}
+  try {
+    return (await fs.stat(source.absolute)).mtime;
+  } catch {
+    return undefined;
+  }
+}
+
+function newestDate(dates: Array<Date | undefined>) {
+  return dates.reduce<Date | undefined>((acc, date) => (date && (!acc || date > acc) ? date : acc), undefined);
 }
 
 function escapeXml(value: string) {

@@ -1,0 +1,17 @@
+[Unit]
+Description=Ethnos IndexNow submission of new and changed URLs
+After=network-online.target nginx.service ethnos-app.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__RUN_USER__
+Group=__RUN_GROUP__
+WorkingDirectory=__WORKDIR__
+EnvironmentFile=__ENV_FILE__
+Environment=PATH=__NODE_DIR__:/usr/local/bin:/usr/bin:/bin
+ExecStart=__NODE_BIN__ __WORKDIR__/scripts/seo/indexnow.mjs --source http://127.0.0.1:__PUBLIC_PORT__ --section all --new --limit 10000
+TimeoutStartSec=15min
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ethnos-indexnow

@@ -3,7 +3,8 @@ import JsonLd from '@/components/common/JsonLd';
 import LocaleLink from '@/components/common/LocaleLink';
 import { buildPageMetadata } from '@/i18n/metadata';
 import type { Locale } from '@/i18n/config';
-import { DOCS_PATH, DOC_COLLECTIONS, docChapterPath, docCollectionPath } from '@/lib/docs';
+import { notFound } from 'next/navigation';
+import { DOCS_PATH, docChapterPath, docCollectionPath, listPublishedChapters, listPublishedCollections } from '@/lib/docs';
 import { buildBreadcrumbList } from '@/lib/structured-data';
 
 export const dynamic = 'force-static';
@@ -15,6 +16,8 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 
 export default async function DocsIndexPage(props: { params: Promise<{ locale: string }> }) {
   const { locale } = await props.params;
+  const collections = listPublishedCollections();
+  if (collections.length === 0) notFound();
   const t = await getTranslations({ locale, namespace: 'docs' });
   const crumbs = await getTranslations({ locale, namespace: 'metadata.breadcrumbs' });
 
@@ -28,7 +31,7 @@ export default async function DocsIndexPage(props: { params: Promise<{ locale: s
       />
       <h1 className="page-title" id="page-title">{t('title')}</h1>
       <p className="doc-lead">{t('lead')}</p>
-      {DOC_COLLECTIONS.map((collection) => (
+      {collections.map((collection) => (
         <section key={collection.id} className="doc-collection" aria-labelledby={`${collection.id}-heading`}>
           <h2 className="title-section" id={`${collection.id}-heading`}>{t(`collections.${collection.id}.title`)}</h2>
           <p className="doc-collection-summary">{t(`collections.${collection.id}.summary`)}</p>
@@ -43,7 +46,7 @@ export default async function DocsIndexPage(props: { params: Promise<{ locale: s
                   </tr>
                 </thead>
                 <tbody>
-                  {collection.chapters.map((chapter) => (
+                  {listPublishedChapters(collection).map((chapter) => (
                     <tr key={chapter.slug}>
                       <td>{chapter.number}</td>
                       <td>

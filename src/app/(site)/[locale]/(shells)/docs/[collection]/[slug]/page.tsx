@@ -4,16 +4,19 @@ import DocArticle from '@/components/common/DocArticle';
 import DocChapterNav from '@/components/common/DocChapterNav';
 import DocContents from '@/components/common/DocContents';
 import JsonLd from '@/components/common/JsonLd';
-import { buildPageMetadata } from '@/i18n/metadata';
+import { buildPageMetadata, fitPageTitle } from '@/i18n/metadata';
+import { composeDescription } from '@/lib/meta-text';
 import type { Locale } from '@/i18n/config';
 import { localeUrl } from '@/lib/site';
 import {
   DOCS_PATH,
-  DOC_COLLECTIONS,
   docChapterPath,
   docCollectionPath,
   getDocChapter,
-  getDocCollection
+  getDocChapterEntry,
+  getDocCollection,
+  listPublishedChapters,
+  listPublishedCollections
 } from '@/lib/docs';
 import { buildBreadcrumbList, buildTechArticleNode } from '@/lib/structured-data';
 
@@ -21,25 +24,28 @@ export const dynamic = 'force-static';
 export const revalidate = false;
 
 export function generateStaticParams() {
-  return DOC_COLLECTIONS.flatMap((collection) =>
-    collection.chapters.map((chapter) => ({ collection: collection.id, slug: chapter.slug }))
+  return listPublishedCollections().flatMap((collection) =>
+    listPublishedChapters(collection).map((chapter) => ({ collection: collection.id, slug: chapter.slug }))
   );
 }
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; collection: string; slug: string }> }) {
   const { locale, collection, slug } = await props.params;
   const manifest = getDocCollection(collection);
-  const entry = manifest ? manifest.chapters.find((chapter) => chapter.slug === slug) : null;
+  const entry = manifest ? getDocChapterEntry(manifest, slug) : null;
   const path = manifest && entry ? docChapterPath(manifest.id, entry.slug) : DOCS_PATH;
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.docsChapter', path);
   if (!manifest || !entry) return base;
   const t = await getTranslations({ locale, namespace: 'docs' });
   const title = t(`chapters.${manifest.id}.${entry.slug}.title`);
-  const description = t(`chapters.${manifest.id}.${entry.slug}.summary`);
+  const description = composeDescription(t(`chapters.${manifest.id}.${entry.slug}.summary`), [
+    t('chapterContext', { number: entry.number, collection: t(`collections.${manifest.id}.title`) })
+  ]);
+  const pageTitle = await fitPageTitle(locale, [title]);
   const url = localeUrl(locale as Locale, path);
   return {
     ...base,
-    title,
+    title: pageTitle || base.title,
     description,
     openGraph: base.openGraph ? { ...base.openGraph, type: 'article', title, description, url } : undefined,
     twitter: { ...(base.twitter || {}), title, description }

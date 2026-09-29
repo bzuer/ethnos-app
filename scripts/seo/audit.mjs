@@ -9,12 +9,14 @@ const DEFAULT_BASE = 'http://127.0.0.1:1212';
 const CANONICAL_ORIGIN = 'https://ethnos.app';
 const LOCALES = ['en', 'pt', 'es'];
 const LOCALE_PREFIX = { en: '', pt: '/pt', es: '/es' };
-const SITEMAP_SECTIONS = ['pages', 'works', 'venues', 'persons'];
+const SITEMAP_SECTIONS = ['pages', 'recent', 'works', 'venues', 'persons'];
+const DATED_SECTIONS = ['recent'];
 const SITEMAP_URL_LIMIT = 50000;
 const SITEMAP_BYTE_LIMIT = 50 * 1024 * 1024;
 const TITLE_MAX = 70;
-const DESCRIPTION_MIN = 50;
-const DESCRIPTION_MAX = 320;
+const DESCRIPTION_MIN = 120;
+const DESCRIPTION_MAX = 160;
+const LASTMOD_TOLERANCE_MS = 5 * 60 * 1000;
 
 const results = [];
 let currentGroup = '';
@@ -38,11 +40,12 @@ function advise(condition, label, detail = '') {
 }
 
 function parseArgs(argv) {
-  const options = { base: DEFAULT_BASE, sampleSize: 3, skipEntities: false };
+  const options = { base: DEFAULT_BASE, sampleSize: 3, probeSize: 10, skipEntities: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--base') options.base = argv[++index];
     else if (arg === '--sample') options.sampleSize = Number(argv[++index]) || 1;
+    else if (arg === '--probe') options.probeSize = Math.max(0, Number(argv[++index]) || 0);
     else if (arg === '--skip-entities') options.skipEntities = true;
     else if (arg === '--help' || arg === '-h') options.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -60,6 +63,8 @@ async function request(base, pathname, init) {
 
 function decodeXml(value) {
   return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal)))
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -158,8 +163,14 @@ async function auditSitemaps(base) {
   check(locs.length === SITEMAP_SECTIONS.length, `sitemap index lists ${SITEMAP_SECTIONS.length} sections`, `found ${locs.length}`);
 
   const sitemapUrls = [];
+  const sectionUrls = {};
+  const indexLastmods = Array.from(index.body.matchAll(/<lastmod>([^<]+)<\/lastmod>/gi)).map((match) => match[1]);
+  const futureIndex = indexLastmods.filter((value) => !isValidLastmod(value));
+  check(futureIndex.length === 0, 'sitemap index <lastmod> values are valid dates, never in the future', futureIndex.join(', '));
   for (const loc of locs) {
     const pathname = toCanonicalPath(loc);
+    const sectionName = (pathname.match(/\/sitemaps\/([a-z]+)\.xml$/) || [])[1] || pathname;
+    sectionUrls[sectionName] = [];
     const section = await request(base, pathname);
     check(section.status === 200, `${pathname} responds 200`, `status ${section.status}`);
     check(section.body.startsWith('<?xml'), `${pathname} starts with an XML declaration`);
@@ -170,10 +181,16 @@ async function auditSitemaps(base) {
 
     let alternateFailures = 0;
     let originFailures = 0;
+    let lastmodFailures = 0;
+    let undated = 0;
     for (const block of urls) {
       const loc2 = decodeXml((block.match(/<loc>([^<]+)<\/loc>/i) || [])[1] || '');
       if (!loc2.startsWith(CANONICAL_ORIGIN)) originFailures += 1;
       sitemapUrls.push(loc2);
+      sectionUrls[sectionName].push(loc2);
+      const lastmod = (block.match(/<lastmod>([^<]+)<\/lastmod>/i) || [])[1];
+      if (lastmod === undefined) undated += 1;
+      else if (!isValidLastmod(lastmod)) lastmodFailures += 1;
       const alternates = Array.from(block.matchAll(/hreflang="([^"]+)"\s+href="([^"]+)"/gi))
         .map((match) => ({ lang: match[1], href: decodeXml(match[2]) }));
       const langs = new Set(alternates.map((entry) => entry.lang));
@@ -182,9 +199,29 @@ async function auditSitemaps(base) {
       if (!complete || !hrefs.has(loc2)) alternateFailures += 1;
     }
     check(originFailures === 0, `${pathname} <loc> values use the canonical origin`, `${originFailures} offending URLs`);
+    check(lastmodFailures === 0, `${pathname} <lastmod> values are valid dates, never in the future`, `${lastmodFailures} offending URLs`);
+    if (DATED_SECTIONS.includes(sectionName)) {
+      check(undated === 0, `${pathname} dates every URL with <lastmod>`, `${undated} undated URLs`);
+    }
     check(alternateFailures === 0, `${pathname} alternates are complete and self-referential`, `${alternateFailures} offending URLs`);
   }
-  return sitemapUrls;
+  return { sitemapUrls, sectionUrls };
+}
+
+function isValidLastmod(value) {
+  const time = Date.parse(value);
+  return Number.isFinite(time) && time <= Date.now() + LASTMOD_TOLERANCE_MS;
+}
+
+async function auditSitemapTargets(base, sectionUrls, probeSize) {
+  group('sitemap targets');
+  for (const [section, urls] of Object.entries(sectionUrls)) {
+    const sample = pickSample(urls, '/', probeSize);
+    for (const pathname of sample) {
+      const response = await request(base, pathname);
+      check(response.status === 200, `${section}: ${pathname} responds 200`, `status ${response.status}`);
+    }
+  }
 }
 
 async function auditManifests(base) {
@@ -238,13 +275,13 @@ async function auditPage(base, pathname, expectations) {
   check(titles.length === 1, `${pathname} has exactly one <title>`, `${titles.length} found`);
   const title = titles[0] || '';
   check(title.trim().length > 0, `${pathname} title is not empty`);
-  advise(title.length <= TITLE_MAX, `${pathname} title fits ${TITLE_MAX} characters`, `${title.length}: ${title}`);
+  check(title.length <= TITLE_MAX, `${pathname} title fits ${TITLE_MAX} characters`, `${title.length}: ${title}`);
 
   const descriptions = metaContent(head, 'description');
   check(descriptions.length === 1, `${pathname} has exactly one meta description`, `${descriptions.length} found`);
   const description = descriptions[0] || '';
   check(description.length > 0, `${pathname} description is not empty`);
-  advise(description.length >= DESCRIPTION_MIN && description.length <= DESCRIPTION_MAX,
+  check(description.length >= DESCRIPTION_MIN && description.length <= DESCRIPTION_MAX,
     `${pathname} description length is ${DESCRIPTION_MIN}-${DESCRIPTION_MAX}`, `${description.length}: ${description.slice(0, 90)}`);
 
   const canonicalTags = linkHrefs(head, 'canonical');
@@ -344,24 +381,33 @@ function pickSample(urls, prefix, count) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log(`Usage: node scripts/seo/audit.mjs [--base <url>] [--sample <n>] [--skip-entities]`);
+    console.log(`Usage: node scripts/seo/audit.mjs [--base <url>] [--sample <n>] [--probe <n>] [--skip-entities]`);
     return;
   }
   console.log(`SEO audit against ${options.base}\n`);
 
   await auditRobots(options.base);
   await auditIndexNowKey(options.base);
-  const sitemapUrls = await auditSitemaps(options.base);
+  const { sitemapUrls, sectionUrls } = await auditSitemaps(options.base);
+  if (options.probeSize > 0) await auditSitemapTargets(options.base, sectionUrls, options.probeSize);
   await auditManifests(options.base);
 
+  const docPaths = (sectionUrls.pages || []).map(toCanonicalPath).filter((pathname) => pathname.startsWith('/docs'));
+  const docCollection = docPaths.find((pathname) => /^\/docs\/[^/]+$/.test(pathname));
+  const docChapter = docPaths.find((pathname) => /^\/docs\/[^/]+\/[^/]+$/.test(pathname));
   for (const locale of LOCALES) {
     await auditPage(options.base, localizedPath(locale, '/'), { locale, jsonLdTypes: ['WebSite', 'Organization'] });
     await auditPage(options.base, localizedPath(locale, '/search'), { locale });
     await auditPage(options.base, localizedPath(locale, '/venues'), { locale });
-    await auditPage(options.base, localizedPath(locale, '/docs'), { locale, jsonLdTypes: ['BreadcrumbList'] });
+    if (docPaths.length > 0) await auditPage(options.base, localizedPath(locale, '/docs'), { locale, jsonLdTypes: ['BreadcrumbList'] });
   }
-  await auditPage(options.base, '/docs/corpus', { locale: 'en', jsonLdTypes: ['BreadcrumbList', 'CollectionPage'] });
-  await auditPage(options.base, '/docs/corpus/the-problem', { locale: 'en', jsonLdTypes: ['BreadcrumbList', 'TechArticle'] });
+  if (docCollection) await auditPage(options.base, docCollection, { locale: 'en', jsonLdTypes: ['BreadcrumbList', 'CollectionPage'] });
+  if (docChapter) await auditPage(options.base, docChapter, { locale: 'en', jsonLdTypes: ['BreadcrumbList', 'TechArticle'] });
+  if (docPaths.length === 0) {
+    group('documentation');
+    const unpublished = await request(options.base, '/docs');
+    check(unpublished.status === 404, 'unpublished documentation answers 404', `status ${unpublished.status}`);
+  }
   await auditPage(options.base, '/privacy', { locale: 'en' });
   await auditPage(options.base, '/license', { locale: 'en' });
   await auditPage(options.base, '/search/results', { locale: 'en', noindex: true });
@@ -371,7 +417,8 @@ async function main() {
 
   if (!options.skipEntities) {
     const samples = [
-      ...pickSample(sitemapUrls, '/works/', options.sampleSize).map((pathname) => ({ pathname, jsonLdTypes: ['BreadcrumbList'] })),
+      ...pickSample(sectionUrls.recent || [], '/works/', options.sampleSize).map((pathname) => ({ pathname, jsonLdTypes: ['BreadcrumbList'] })),
+      ...pickSample(sectionUrls.works || [], '/works/', options.sampleSize).map((pathname) => ({ pathname, jsonLdTypes: ['BreadcrumbList'] })),
       ...pickSample(sitemapUrls, '/venues/', options.sampleSize).map((pathname) => ({ pathname, jsonLdTypes: ['Periodical', 'BreadcrumbList'] })),
       ...pickSample(sitemapUrls, '/persons/', options.sampleSize).map((pathname) => ({ pathname, jsonLdTypes: ['Person', 'BreadcrumbList'] }))
     ];

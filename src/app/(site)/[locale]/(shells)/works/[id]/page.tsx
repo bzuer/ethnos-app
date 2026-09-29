@@ -7,7 +7,8 @@ import WorkCitationList from './WorkCitationList';
 import WorkContributorRows from './WorkContributorRows';
 import WorkSectionTabs from './WorkSectionTabs';
 import JsonLd from '@/components/common/JsonLd';
-import { buildPageMetadata, siteOpenGraphImage } from '@/i18n/metadata';
+import { buildPageMetadata, fitPageTitle, siteOpenGraphImage } from '@/i18n/metadata';
+import { composeDescription } from '@/lib/meta-text';
 import { localeUrl } from '@/lib/site';
 import { buildBreadcrumbList, buildDoiIdentifier, withSitePublisher } from '@/lib/structured-data';
 import { locales, type Locale } from '@/i18n/config';
@@ -42,28 +43,30 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const titleBase = work?.title || (typeof base.title === 'string' ? base.title : '');
   const fullTitle = subtitle ? `${titleBase}: ${subtitle}` : titleBase;
   const year = publication?.year || work?.publication_year || work?.year;
-  const titleWithYear = fullTitle && year ? `${fullTitle} (${year})` : fullTitle;
-  const cleanedAbstract = sanitizeWorkAbstract(work?.abstract);
-  const buildDescription = (text: string, limit = 170) => {
-    const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
-    let acc = '';
-    for (const sentence of sentences) {
-      const candidate = acc ? `${acc} ${sentence}` : sentence;
-      if (candidate.length <= limit) {
-        acc = candidate;
-      } else {
-        break;
-      }
-    }
-    if (!acc) acc = text.slice(0, limit).replace(/\s+\S*$/, '').trimEnd();
-    if (acc && !/[.!?]$/.test(acc)) acc = `${acc}.`;
-    return acc;
-  };
-  const abstractSnippet = cleanedAbstract ? buildDescription(cleanedAbstract) : buildDescription(getWorkAbstractSnippet(work, 220));
+  const yearTag = year ? `(${year})` : '';
+  const titleWithYear = fullTitle && yearTag ? `${fullTitle} ${yearTag}` : fullTitle;
+  const pageTitle = await fitPageTitle(
+    locale,
+    [titleWithYear, fullTitle, titleBase && yearTag ? `${titleBase} ${yearTag}` : '', titleBase],
+    { text: titleBase || fullTitle, tail: yearTag }
+  );
   const authorNames = pickContributorsByRole(pickContributorEntries(work), 'AUTHOR').map(formatContributorName).filter(Boolean);
   const authorSummary = pickReferenceAuthors(work);
-  const descriptionRaw = abstractSnippet || [fullTitle || titleBase, authorSummary, year].filter(Boolean).join('. ');
-  const description = descriptionRaw && !/[.!?…]$/.test(descriptionRaw) ? `${descriptionRaw}.` : descriptionRaw;
+  const venueName = venue?.name || work?.venue_name || '';
+  const comparable = (value: unknown) => String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  const venueLine = venueName && ![titleBase, fullTitle].some((title) => comparable(title) === comparable(venueName)) ? venueName : '';
+  const byline = authorSummary ? (yearTag ? `${authorSummary} ${yearTag}` : authorSummary) : (year ? String(year) : '');
+  const descriptors = await getTranslations({ locale, namespace: 'metadata.descriptors' });
+  const abstractText = getWorkAbstractSnippet(work, 0);
+  const description = abstractText
+    ? composeDescription(abstractText, [byline, venueLine, descriptors('workRecordMedium'), descriptors('workRecordShort')])
+    : composeDescription(fullTitle, [
+        byline,
+        venueLine,
+        descriptors('workRecord'),
+        descriptors('workRecordMedium'),
+        descriptors('workRecordShort')
+      ]);
   const canonicalUrl = localeUrl(locale as Locale, `/works/${id}`);
   const ogLocale = openGraphLocaleMap[locale] || 'en_US';
   const alternateLocale = locales.filter((code) => code !== locale).map((code) => openGraphLocaleMap[code] || 'en_US');
@@ -81,7 +84,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const openGraph = isBookType
     ? {
         title: ogTitle,
-        description: abstractSnippet || description || base.description || '',
+        description: description || base.description || '',
         type: 'book' as const,
         releaseDate: publication?.publication_date || work?.publication_date || (year ? String(year) : undefined),
         authors: articleAuthors,
@@ -93,7 +96,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
       }
     : {
         title: ogTitle,
-        description: abstractSnippet || description || base.description || '',
+        description: description || base.description || '',
         type: 'article' as const,
         publishedTime: publication?.publication_date || work?.publication_date || (year ? String(year) : undefined),
         authors: articleAuthors,
@@ -106,7 +109,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
       };
   return {
     ...base,
-    title: titleWithYear || base.title,
+    title: pageTitle || base.title,
     description: description || base.description,
     keywords: keywords.length ? keywords : undefined,
     openGraph,

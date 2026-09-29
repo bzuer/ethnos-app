@@ -484,82 +484,82 @@
   "metadata": {
     "subjectsDetail": {
       "title": "Materia",
-      "description": "Detalle de la materia con sus obras clasificadas en el catálogo de antropología y sociología.",
+      "description": "Registro de materia en la bibliografía Ethnos con las obras de antropología y sociología clasificadas en ella: recientes, más citadas y más antiguas.",
       "keywords": "materia, palabra clave, obras, clasificación, antropología, sociología, Ethnos"
     },
     "institutionsDetail": {
       "title": "Detalles de la Institución",
-      "description": "Perfil de la institución con trabajos, autores principales, tendencia de producción, rol de financiamiento y organizaciones relacionadas.",
+      "description": "Perfil institucional en la bibliografía Ethnos con sus obras, publicaciones más citadas y más antiguas, investigación financiada y exportación.",
       "keywords": "perfil de institución, ROR, OpenAlex, producción de investigación, antropología, sociología"
     },
     "home": {
       "title": "Ethnos Bibliography — Investigación en Antropología y Sociología",
-      "description": "Página principal de Ethnos Bibliography con actualizaciones, revistas destacadas y acceso rápido a datos de antropología y sociología.",
+      "description": "Ethnos Bibliography: catálogo abierto de referencias en antropología, sociología y etnografía, con obras recientes, revistas destacadas y búsqueda.",
       "keywords": "bibliografía, antropología, sociología, revistas académicas, catálogo abierto, Ethnos"
     },
     "search": {
       "title": "Búsqueda",
-      "description": "Formulario de búsqueda avanzada para filtrar obras por título, autor, revista, tema, año, tipo e idioma.",
+      "description": "Búsqueda avanzada en la bibliografía Ethnos: filtre obras de antropología y sociología por título, autor, revista, materia, año, tipo e idioma.",
       "keywords": "búsqueda avanzada, antropología, sociología, consulta académica, Ethnos"
     },
     "results": {
       "title": "Resultados",
-      "description": "Redirección heredada para mantener el acceso a enlaces de resultados anteriores en Ethnos.",
+      "description": "Dirección de búsqueda heredada para enlaces antiguos; redirige a la página de resultados de Ethnos en antropología, sociología y etnografía.",
       "keywords": "resultados heredados, redirección, búsqueda bibliográfica, Ethnos"
     },
     "venues": {
       "title": "Revistas",
-      "description": "Directorio de revistas académicas con datos de cobertura, indicadores y contexto editorial para antropología y sociología.",
+      "description": "Directorio de revistas académicas y fuentes de libros en antropología y sociología, ordenadas por relevancia, con cobertura, métricas y editoriales.",
       "keywords": "revistas, antropología, sociología, métricas Scopus, Open Access, Ethnos"
     },
     "venuesDetail": {
       "title": "Detalles de la Revista",
-      "description": "Perfil detallado de revista con métricas (SJR, SNIP, CiteScore), identificadores y descripción editorial.",
+      "description": "Perfil de revista en la bibliografía Ethnos con métricas SJR, SNIP y CiteScore, identificadores, descripción editorial, materias y obras indexadas.",
       "keywords": "métricas de revistas, SJR, SNIP, CiteScore, antropología, sociología"
     },
     "works": {
       "title": "Obras",
-      "description": "Catálogo de obras indexadas y programas de curaduría en Ethnos Bibliography.",
+      "description": "Catálogo de obras indexadas en la bibliografía Ethnos de antropología y sociología, con resúmenes, citas, referencias y herramientas de exportación.",
       "keywords": "obras, antropología, sociología, catálogo bibliográfico, Ethnos"
     },
     "workDetail": {
       "title": "Detalles de la Obra",
-      "description": "Registro bibliográfico completo con DOI, autores, referencias, citas y herramientas de exportación.",
+      "description": "Registro bibliográfico completo en Ethnos con autores, DOI e identificadores, resumen, citas, referencias, impacto y exportación BibTeX, RIS y APA.",
       "keywords": "metadados, DOI, antropología, sociología, citas, Open Access"
     },
     "searchResults": {
       "title": "Resultados de la Búsqueda",
-      "description": "Lista de resultados de búsqueda con metadados, filtros aplicados y paginación.",
+      "description": "Resultados de búsqueda de la bibliografía Ethnos: obras de antropología y sociología con metadatos, filtros aplicados, total y paginación.",
       "keywords": "resultados de búsqueda, antropología, sociología, investigación bibliográfica"
     },
     "searchGlobal": {
       "title": "Búsqueda Global",
-      "description": "Búsqueda unificada que devuelve obras, con autores e instituciones relacionados como refinamientos.",
+      "description": "Búsqueda unificada en la bibliografía Ethnos que devuelve obras, con autores e instituciones relacionados ofrecidos como refinamientos.",
       "keywords": "búsqueda global, obras, autores, instituciones, investigación bibliográfica"
     },
     "lists": {
       "title": "Mi Lista",
-      "description": "Interfaz de lista personal para guardar obras y exportar referencias en formatos BibTeX y RIS.",
+      "description": "Lista de lectura personal en Ethnos: guarde obras mientras navega y exporte las referencias en BibTeX, RIS o APA para su gestor bibliográfico.",
       "keywords": "lista de lectura, exportación bibliográfica, BibTeX, RIS, referencias"
     },
     "persons": {
       "title": "Detalles de la Persona",
-      "description": "Registro de autoridad de investigador con identificadores ORCID, Lattes, afiliaciones y producción académica.",
+      "description": "Registro de investigador en la bibliografía Ethnos con ORCID y Lattes, afiliación, publicaciones, áreas de especialidad y exportación de citas.",
       "keywords": "perfil académico, autor, antropología, sociología, ORCID, Lattes"
     },
     "license": {
       "title": "Licencia MIT",
-      "description": "Términos de licencia que regulan la distribución y reutilización del frontend de Ethnos Bibliography bajo licencia MIT.",
+      "description": "Términos de la licencia MIT del frontend de Ethnos Bibliography: permiso para usar, copiar, modificar y distribuir el software, sin garantía alguna.",
       "keywords": "licencia MIT, licencia open source, Ethnos Bibliography, licenciamiento del frontend"
     },
     "privacy": {
       "title": "Privacidad y Cookies",
-      "description": "Política de privacidad y cookies sobre el tratamiento de localidad, almacenamiento local y obtención de datos en el servidor.",
+      "description": "Política de privacidad y cookies de Ethnos Bibliography: cookie de idioma, almacenamiento local de la lista de lectura y consultas en el servidor.",
       "keywords": "privacidad, cookies, local storage, manejo de datos, Ethnos Bibliography"
     },
     "maintenance": {
       "title": "Mantenimiento",
-      "description": "Ethnos Bibliography está temporalmente fuera de servicio por mantenimiento programado.",
+      "description": "Ethnos Bibliography está temporalmente fuera de servicio por mantenimiento programado. El catálogo de antropología y sociología vuelve pronto.",
       "keywords": "mantenimiento, interrupción programada, Ethnos Bibliography"
     },
     "breadcrumbs": {
@@ -579,11 +579,21 @@
       "personOrcid": "ORCID: {value}.",
       "subjectDetail": "Obras indexadas bajo la materia {term} en la bibliografía de antropología y sociología de Ethnos.",
       "institutionDetail": "Obras, autores y producción de investigación de {name} indexados en la bibliografía de antropología y sociología de Ethnos.",
-      "pageSuffix": "Página {page}."
+      "pageSuffix": "Página {page}.",
+      "worksIndexed": "{count, plural, one {# obra indexada} other {# obras indexadas}} en Ethnos.",
+      "personRecord": "Lista de publicaciones, áreas de especialidad y exportación en BibTeX, RIS y APA.",
+      "personRecordShort": "Lista de publicaciones y exportación de citas.",
+      "venueProfile": "{name} en la bibliografía de antropología y sociología de Ethnos: perfil con métricas, identificadores, materias y obras indexadas.",
+      "venuePublisher": "Publicado por {publisher}.",
+      "entityRecord": "Obras recientes, más citadas y más antiguas, con exportación en BibTeX, RIS y APA.",
+      "entityRecordShort": "Lista de obras y exportación de citas.",
+      "workRecord": "Registro bibliográfico con citas, referencias, identificadores y exportación en BibTeX, RIS y APA.",
+      "workRecordMedium": "Registro bibliográfico con citas, referencias y exportación.",
+      "workRecordShort": "Registro bibliográfico en Ethnos."
     },
     "notFound": {
       "title": "Página No Encontrada",
-      "description": "La dirección solicitada no corresponde a ningún registro del catálogo Ethnos Bibliography.",
+      "description": "La dirección solicitada no corresponde a ningún registro del catálogo Ethnos Bibliography. Busque obras de antropología y sociología.",
       "keywords": "no encontrada, página inexistente, Ethnos Bibliography"
     },
     "site": {
@@ -595,7 +605,7 @@
     },
     "docs": {
       "title": "Documentation",
-      "description": "Documentation for the Ethnos bibliographic corpus: how the data is assembled, repaired, scored and published.",
+      "description": "Documentation for the Ethnos bibliographic corpus: how the data is assembled from its sources, repaired, scored for relevance and published.",
       "keywords": "documentation, bibliographic corpus, data pipeline, anthropology, Ethnos Bibliography"
     },
     "docsCorpus": {
@@ -605,7 +615,7 @@
     },
     "docsChapter": {
       "title": "Documentation",
-      "description": "A chapter of the Ethnos corpus documentation.",
+      "description": "A chapter of the Ethnos corpus documentation, describing how the anthropology and sociology bibliography is collected, repaired and published.",
       "keywords": "documentation, bibliographic corpus, Ethnos Bibliography"
     }
   },
@@ -656,6 +666,7 @@
     "next": "Next",
     "indexLink": "Contents",
     "chapterLabel": "Chapter",
+    "chapterContext": "Chapter {number} of {collection}, the documentation of how the Ethnos anthropology and sociology bibliography is built.",
     "sourceLanguage": "This documentation is available in English only. A translated edition is not published yet.",
     "table": {
       "number": "No.",

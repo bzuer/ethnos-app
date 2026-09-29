@@ -7,11 +7,13 @@ import { buildPageMetadata } from '@/i18n/metadata';
 import type { Locale } from '@/i18n/config';
 import {
   DOCS_PATH,
-  DOC_COLLECTIONS,
   docChapterPath,
   docCollectionPath,
   getDocCollection,
-  getDocCollectionIndex
+  getDocCollectionIndex,
+  isDocCollectionPublished,
+  listPublishedChapters,
+  listPublishedCollections
 } from '@/lib/docs';
 import { buildBreadcrumbList, buildCollectionPageNode } from '@/lib/structured-data';
 
@@ -19,7 +21,7 @@ export const dynamic = 'force-static';
 export const revalidate = false;
 
 export function generateStaticParams() {
-  return DOC_COLLECTIONS.map((collection) => ({ collection: collection.id }));
+  return listPublishedCollections().map((collection) => ({ collection: collection.id }));
 }
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; collection: string }> }) {
@@ -32,12 +34,13 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 export default async function DocCollectionPage(props: { params: Promise<{ locale: string; collection: string }> }) {
   const { locale, collection } = await props.params;
   const manifest = getDocCollection(collection);
-  if (!manifest) notFound();
+  if (!manifest || !isDocCollectionPublished(manifest)) notFound();
+  const chapters = listPublishedChapters(manifest);
   const document = await getDocCollectionIndex(manifest);
   const t = await getTranslations({ locale, namespace: 'docs' });
   const crumbs = await getTranslations({ locale, namespace: 'metadata.breadcrumbs' });
   const title = t(`collections.${manifest.id}.title`);
-  const first = manifest.chapters[0];
+  const first = chapters[0];
 
   return (
     <div className="page-header" lang="en" aria-labelledby="page-title">
@@ -55,7 +58,7 @@ export default async function DocCollectionPage(props: { params: Promise<{ local
           name: title,
           description: t(`collections.${manifest.id}.summary`),
           inLanguage: 'en',
-          entries: manifest.chapters.map((chapter) => ({
+          entries: chapters.map((chapter) => ({
             name: t(`chapters.${manifest.id}.${chapter.slug}.title`),
             path: docChapterPath(manifest.id, chapter.slug)
           }))

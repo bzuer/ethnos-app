@@ -1,5 +1,5 @@
 import 'server-only';
-import { promises as fs } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { inlineText, parseMarkdown, slugifyHeading, type BlockNode, type InlineNode } from './markdown';
 
@@ -75,28 +75,70 @@ export function getDocCollection(id: string): DocCollection | null {
   return DOC_COLLECTIONS.find((collection) => collection.id === id) ?? null;
 }
 
-export function getDocChapterEntry(collection: DocCollection, slug: string): DocChapterEntry | null {
-  return collection.chapters.find((chapter) => chapter.slug === slug) ?? null;
+const sourcePresence = new Map<string, boolean>();
+
+function hasSourceContent(sourceFile: string) {
+  const cached = sourcePresence.get(sourceFile);
+  if (cached !== undefined) return cached;
+  let present = false;
+  try {
+    present = readFileSync(path.join(DOCS_ROOT, sourceFile), 'utf8').trim().length > 0;
+  } catch {
+    present = false;
+  }
+  sourcePresence.set(sourceFile, present);
+  return present;
 }
 
-export function listDocPaths(): string[] {
-  const paths = [DOCS_PATH];
-  for (const collection of DOC_COLLECTIONS) {
-    paths.push(docCollectionPath(collection.id));
-    for (const chapter of collection.chapters) paths.push(docChapterPath(collection.id, chapter.slug));
+export function docChapterSource(collection: DocCollection, chapter: DocChapterEntry) {
+  return `${collection.directory}/${chapter.file}`;
+}
+
+export function listPublishedChapters(collection: DocCollection): DocChapterEntry[] {
+  return collection.chapters.filter((chapter) => hasSourceContent(docChapterSource(collection, chapter)));
+}
+
+export function listPublishedCollections(): DocCollection[] {
+  return DOC_COLLECTIONS.filter((collection) => listPublishedChapters(collection).length > 0);
+}
+
+export function isDocCollectionPublished(collection: DocCollection) {
+  return listPublishedChapters(collection).length > 0;
+}
+
+export function getDocChapterEntry(collection: DocCollection, slug: string): DocChapterEntry | null {
+  return listPublishedChapters(collection).find((chapter) => chapter.slug === slug) ?? null;
+}
+
+export type DocPage = { path: string; sources: string[] };
+
+export function listDocPages(): DocPage[] {
+  const collections = listPublishedCollections();
+  if (collections.length === 0) return [];
+  const source = (collection: DocCollection, file: string) => `${collection.directory}/${file}`;
+  const pages: DocPage[] = [];
+  const everything: string[] = [];
+  for (const collection of collections) {
+    const chapters = listPublishedChapters(collection).map((chapter) => ({
+      path: docChapterPath(collection.id, chapter.slug),
+      sources: [source(collection, chapter.file)]
+    }));
+    const collectionSources = [source(collection, collection.indexFile), ...chapters.flatMap((chapter) => chapter.sources)];
+    everything.push(...collectionSources);
+    pages.push({ path: docCollectionPath(collection.id), sources: collectionSources }, ...chapters);
   }
-  return paths;
+  return [{ path: DOCS_PATH, sources: everything }, ...pages];
 }
 
 const routeBySourceFile = buildRouteMap();
 
 function buildRouteMap() {
   const routes = new Map<string, string>();
-  for (const collection of DOC_COLLECTIONS) {
+  for (const collection of listPublishedCollections()) {
     routes.set(`${collection.directory}/${collection.indexFile}`, docCollectionPath(collection.id));
     routes.set(collection.directory, docCollectionPath(collection.id));
-    for (const chapter of collection.chapters) {
-      routes.set(`${collection.directory}/${chapter.file}`, docChapterPath(collection.id, chapter.slug));
+    for (const chapter of listPublishedChapters(collection)) {
+      routes.set(docChapterSource(collection, chapter), docChapterPath(collection.id, chapter.slug));
     }
   }
   return routes;
@@ -109,17 +151,18 @@ export async function getDocCollectionIndex(collection: DocCollection): Promise<
 }
 
 export async function getDocChapter(collection: DocCollection, slug: string): Promise<DocChapter | null> {
-  const entry = getDocChapterEntry(collection, slug);
-  if (!entry) return null;
-  const index = collection.chapters.indexOf(entry);
-  const document = await loadDocument(`${collection.directory}/${entry.file}`, entry.number);
+  const chapters = listPublishedChapters(collection);
+  const index = chapters.findIndex((chapter) => chapter.slug === slug);
+  if (index < 0) return null;
+  const entry = chapters[index];
+  const document = await loadDocument(docChapterSource(collection, entry), entry.number);
   return {
     ...document,
     collection: collection.id,
     slug: entry.slug,
     number: entry.number,
-    previous: index > 0 ? collection.chapters[index - 1] : null,
-    next: index < collection.chapters.length - 1 ? collection.chapters[index + 1] : null
+    previous: index > 0 ? chapters[index - 1] : null,
+    next: index < chapters.length - 1 ? chapters[index + 1] : null
   };
 }
 

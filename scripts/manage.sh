@@ -10,6 +10,8 @@ LEGACY_UNITS="ethnos-next.service"
 SYSTEM_UNIT_DIR=/etc/systemd/system
 SYSTEM_UNIT="$SYSTEM_UNIT_DIR/$SERVICE_NAME"
 UNIT_TEMPLATE="$ROOT_DIR/scripts/systemd/ethnos-app.service"
+INDEXNOW_SERVICE="ethnos-indexnow.service"
+INDEXNOW_TIMER="ethnos-indexnow.timer"
 RUN_USER="$(stat -c %U "$ROOT_DIR")"
 RUN_GROUP="$(stat -c %G "$ROOT_DIR")"
 RUN_HOME="$(getent passwd "$RUN_USER" | cut -d: -f6 || true)"
@@ -223,7 +225,7 @@ kill_rogue_app_processes() {
 
 render_unit() {
   ensure_node
-  local node_bin
+  local node_bin template="${1:-$UNIT_TEMPLATE}"
   node_bin="$(command -v node)"
   sed \
     -e "s|__NODE_BIN__|${node_bin}|g" \
@@ -235,12 +237,60 @@ render_unit() {
     -e "s|__ENV_FILE__|${ENV_FILE}|g" \
     -e "s|__BIND_HOST__|${APP_BIND_HOST}|g" \
     -e "s|__APP_PORT__|${APP_PORT}|g" \
-    "$UNIT_TEMPLATE"
+    -e "s|__PUBLIC_PORT__|${PUBLIC_PORT}|g" \
+    "$template"
 }
 
 unit_is_current() {
   [ -r "$SYSTEM_UNIT" ] || return 1
   [ "$(render_unit 2>/dev/null)" = "$(cat "$SYSTEM_UNIT")" ]
+}
+
+indexnow_enabled() {
+  case "${INDEXNOW_AUTOSUBMIT:-}" in
+    1|true|TRUE|on|yes) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+indexnow_units_current() {
+  local name
+  for name in "$INDEXNOW_SERVICE" "$INDEXNOW_TIMER"; do
+    [ -r "$SYSTEM_UNIT_DIR/$name" ] || return 1
+    [ "$(render_unit "$ROOT_DIR/scripts/systemd/$name" 2>/dev/null)" = "$(cat "$SYSTEM_UNIT_DIR/$name")" ] || return 1
+  done
+}
+
+install_indexnow_timer() {
+  local name rendered changed=0
+  for name in "$INDEXNOW_SERVICE" "$INDEXNOW_TIMER"; do
+    rendered="$(mktemp)"
+    render_unit "$ROOT_DIR/scripts/systemd/$name" > "$rendered"
+    if [ -f "$SYSTEM_UNIT_DIR/$name" ] && cmp -s "$rendered" "$SYSTEM_UNIT_DIR/$name"; then
+      rm -f "$rendered"
+    else
+      as_root install -m 0644 -o root -g root "$rendered" "$SYSTEM_UNIT_DIR/$name" || { rm -f "$rendered"; return 1; }
+      rm -f "$rendered"
+      changed=1
+    fi
+  done
+  if [ "$changed" -eq 1 ]; then
+    as_root systemctl daemon-reload
+    log "Installed $INDEXNOW_TIMER (hourly IndexNow submission of new URLs, runs as $RUN_USER)"
+  else
+    log "$INDEXNOW_TIMER already current"
+  fi
+  as_root systemctl enable --now --quiet "$INDEXNOW_TIMER"
+}
+
+remove_indexnow_timer() {
+  if [ ! -e "$SYSTEM_UNIT_DIR/$INDEXNOW_TIMER" ] && [ ! -e "$SYSTEM_UNIT_DIR/$INDEXNOW_SERVICE" ]; then
+    return 0
+  fi
+  as_root systemctl disable --now "$INDEXNOW_TIMER" 2>/dev/null || true
+  as_root rm -f "$SYSTEM_UNIT_DIR/$INDEXNOW_TIMER" "$SYSTEM_UNIT_DIR/$INDEXNOW_SERVICE"
+  as_root systemctl daemon-reload
+  log "Removed $INDEXNOW_TIMER"
 }
 
 wait_for_app() {
@@ -510,6 +560,21 @@ validate_all() {
     *) flunk "home page through nginx (:${PUBLIC_PORT}/ → HTTP $code)" ;;
   esac
 
+  if indexnow_enabled; then
+    if systemctl is-active --quiet "$INDEXNOW_TIMER" 2>/dev/null && indexnow_units_current; then
+      pass "IndexNow timer active ($INDEXNOW_TIMER)"
+    else
+      flunk "IndexNow timer inactive or stale ($INDEXNOW_TIMER) — run: scripts/manage.sh systemd:install"
+    fi
+    local indexnow_result
+    indexnow_result="$(systemctl show "$INDEXNOW_SERVICE" --property=Result --value 2>/dev/null || true)"
+    if [ -n "$indexnow_result" ] && [ "$indexnow_result" != "success" ]; then
+      warn "last IndexNow run ended with '$indexnow_result' — check: journalctl -u $INDEXNOW_SERVICE"
+    fi
+  elif [ -e "$SYSTEM_UNIT_DIR/$INDEXNOW_TIMER" ]; then
+    warn "$INDEXNOW_TIMER is installed but INDEXNOW_AUTOSUBMIT is off — run: scripts/manage.sh systemd:install to remove it"
+  fi
+
   if [ -f "$MAINTENANCE_DROPIN" ]; then
     warn "maintenance mode is ON ($MAINTENANCE_DROPIN)"
   fi
@@ -620,6 +685,12 @@ cmd_systemd_install() {
     log "Installed $SERVICE_NAME → $SYSTEM_UNIT (runs as $RUN_USER, node $(command -v node))"
   fi
   as_root systemctl enable --quiet "$SERVICE_NAME"
+
+  if indexnow_enabled; then
+    install_indexnow_timer
+  else
+    remove_indexnow_timer
+  fi
 }
 
 cmd_uninstall() {
@@ -631,6 +702,7 @@ cmd_uninstall() {
   kill_rogue_app_processes
 
   step "Removing systemd service"
+  remove_indexnow_timer
   remove_stray_user_unit
   if [ -f "$SYSTEM_UNIT" ]; then
     as_root systemctl disable "$SERVICE_NAME" || true
@@ -716,7 +788,11 @@ cmd_seo() {
       load_env_optional
       node "$ROOT_DIR/scripts/seo/indexnow.mjs" "$@"
       ;;
-    *) err "Usage: manage.sh seo {audit|indexnow} [options]"; return 1 ;;
+    indexnow:new)
+      load_env_optional
+      node "$ROOT_DIR/scripts/seo/indexnow.mjs" --source "http://127.0.0.1:$PUBLIC_PORT" --section all --new "$@"
+      ;;
+    *) err "Usage: manage.sh seo {audit|indexnow|indexnow:new} [options]"; return 1 ;;
   esac
 }
 
@@ -771,6 +847,8 @@ Nginx (the app is only ever published through it):
 Systemd:
   systemd:install     Install/refresh the system unit /etc/systemd/system/ethnos-app.service
                       (needs sudo; removes any user-scope copy — the app runs as exactly one system unit)
+                      and, when INDEXNOW_AUTOSUBMIT=1 in the env file, the hourly ethnos-indexnow.timer
+                      (removed again when the flag is off)
   uninstall           Stop the app, remove the unit, vhost, build artifacts and node_modules
 
 Maintenance:
@@ -788,7 +866,8 @@ Build & development:
 
 SEO:
   seo audit           SEO conformance audit (SEO_BASE=… to retarget)
-  seo indexnow        Submit URLs to IndexNow
+  seo indexnow        Submit URLs to IndexNow (see --help)
+  seo indexnow:new    Submit only new or changed sitemap URLs, as the hourly timer does
 
 USAGE
 }

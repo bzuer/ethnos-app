@@ -484,82 +484,82 @@
   "metadata": {
     "subjectsDetail": {
       "title": "Subject",
-      "description": "Subject detail with its classified works in the anthropology and sociology catalog.",
+      "description": "Subject record in the Ethnos bibliography with the anthropology and sociology works classified under it: recent, most cited and earliest titles.",
       "keywords": "subject, keyword, works, classification, anthropology, sociology, Ethnos"
     },
     "institutionsDetail": {
       "title": "Institution Details",
-      "description": "Institution profile with works, top authors, production trend, funding role, and related organizations.",
+      "description": "Institution profile in the Ethnos bibliography with its works, most cited and earliest publications, funded research and citation exports.",
       "keywords": "institution profile, ROR, OpenAlex, research output, anthropology, sociology"
     },
     "home": {
       "title": "Ethnos Bibliography — Anthropology & Sociology Research",
-      "description": "Ethnos Bibliography homepage featuring updates, featured journals, and quick access to anthropology and sociology data.",
+      "description": "Ethnos Bibliography: open reference catalog for anthropology, sociology and ethnography, with recent works, leading journals and bibliographic search.",
       "keywords": "bibliography, anthropology, sociology, academic journals, open catalog, Ethnos"
     },
     "search": {
       "title": "Search",
-      "description": "Advanced search form to filter works by title, author, journal, subject, year, type, and language.",
+      "description": "Advanced search across the Ethnos bibliography: filter anthropology and sociology works by title, author, journal, subject, year, type and language.",
       "keywords": "advanced search, anthropology, sociology, scholarly query, Ethnos"
     },
     "results": {
       "title": "Results",
-      "description": "Legacy search redirect to maintain access to previous result links within Ethnos.",
+      "description": "Legacy search address kept for older links; it forwards to the Ethnos results page for anthropology, sociology and ethnography works.",
       "keywords": "legacy results, search redirect, bibliography routing, Ethnos"
     },
     "venues": {
       "title": "Journals",
-      "description": "Directory of academic journals with coverage data, metrics, and publisher context for anthropology and sociology.",
+      "description": "Directory of academic journals and book sources for anthropology and sociology, ranked by relevance, with coverage, metrics, indexing and publishers.",
       "keywords": "journals, anthropology, sociology, Scopus metrics, Open Access, Ethnos"
     },
     "venuesDetail": {
       "title": "Journal Details",
-      "description": "Detailed journal profile featuring SJR, SNIP, and CiteScore metrics, identifiers, and editorial description.",
+      "description": "Journal profile in the Ethnos bibliography with SJR, SNIP and CiteScore metrics, identifiers, editorial description, subjects and indexed works.",
       "keywords": "journal metrics, SJR, SNIP, CiteScore, anthropology, sociology"
     },
     "works": {
       "title": "Works",
-      "description": "Catalog of indexed works and bibliographic curation within Ethnos Bibliography.",
+      "description": "Catalog of works indexed in the Ethnos bibliography for anthropology and sociology, with abstracts, citations, references and export tools.",
       "keywords": "works, anthropology, sociology, bibliographic catalog, Ethnos"
     },
     "workDetail": {
       "title": "Work Details",
-      "description": "Full bibliographic record featuring DOI, authors, references, citations, and export tools.",
+      "description": "Full bibliographic record in Ethnos with authors, DOI and identifiers, abstract, citations, references, impact metrics and BibTeX, RIS and APA export.",
       "keywords": "metadata, DOI, anthropology, sociology, citations, Open Access"
     },
     "searchResults": {
       "title": "Search Results",
-      "description": "Search result list displaying metadata, applied filters, and pagination.",
+      "description": "Search results from the Ethnos bibliography: anthropology and sociology works with metadata, active filters, result counts and pagination.",
       "keywords": "search results, anthropology, sociology, bibliographic research"
     },
     "searchGlobal": {
       "title": "Global Search",
-      "description": "Unified search returning works, with related authors and institutions as refinements.",
+      "description": "Unified search over the Ethnos bibliography that returns works, with related authors and institutions offered as refinements of the query.",
       "keywords": "global search, works, authors, institutions, bibliographic research"
     },
     "lists": {
       "title": "My List",
-      "description": "Personal list interface to save works and export references in BibTeX and RIS formats.",
+      "description": "Personal reading list in Ethnos: save works while browsing and export the references in BibTeX, RIS or APA format for your citation manager.",
       "keywords": "reading list, bibliography export, BibTeX, RIS, references"
     },
     "persons": {
       "title": "Person Details",
-      "description": "Researcher authority record including ORCID, Lattes identifiers, affiliations, and academic production.",
+      "description": "Researcher record in the Ethnos bibliography with ORCID and Lattes identifiers, affiliation, publications, subject expertise and citation exports.",
       "keywords": "academic profile, author, anthropology, sociology, ORCID, Lattes"
     },
     "license": {
       "title": "MIT License",
-      "description": "License terms governing the Ethnos Bibliography frontend distribution and reuse under the MIT license.",
+      "description": "MIT license terms for the Ethnos Bibliography frontend: permission to use, copy, modify and distribute the software, and its warranty disclaimer.",
       "keywords": "MIT license, open source license, Ethnos Bibliography, frontend licensing"
     },
     "privacy": {
       "title": "Privacy and Cookies",
-      "description": "Privacy and cookies policy covering locale handling, local storage, and server-side data fetching for Ethnos Bibliography.",
+      "description": "Privacy and cookies policy of Ethnos Bibliography: the language preference cookie, local storage for reading lists, and server-side data fetching.",
       "keywords": "privacy, cookies, local storage, data handling, Ethnos Bibliography"
     },
     "maintenance": {
       "title": "Maintenance",
-      "description": "Ethnos Bibliography is temporarily offline for scheduled maintenance.",
+      "description": "Ethnos Bibliography is temporarily offline for scheduled maintenance. The anthropology and sociology catalog will be back shortly; please retry soon.",
       "keywords": "maintenance, scheduled downtime, Ethnos Bibliography"
     },
     "breadcrumbs": {
@@ -579,11 +579,21 @@
       "personOrcid": "ORCID: {value}.",
       "subjectDetail": "Works indexed under the subject {term} in the Ethnos anthropology and sociology bibliography.",
       "institutionDetail": "Works, authors, and research output of {name} indexed in the Ethnos anthropology and sociology bibliography.",
-      "pageSuffix": "Page {page}."
+      "pageSuffix": "Page {page}.",
+      "worksIndexed": "{count, plural, one {# work} other {# works}} indexed in Ethnos.",
+      "personRecord": "Publication list, subject expertise and BibTeX, RIS and APA exports.",
+      "personRecordShort": "Publication list and citation exports.",
+      "venueProfile": "{name} in the Ethnos anthropology and sociology bibliography: profile with metrics, identifiers, subjects and indexed works.",
+      "venuePublisher": "Published by {publisher}.",
+      "entityRecord": "Recent, most cited and earliest works, with BibTeX, RIS and APA export.",
+      "entityRecordShort": "Works list and citation exports.",
+      "workRecord": "Bibliographic record with citations, references, identifiers and BibTeX, RIS and APA export.",
+      "workRecordMedium": "Bibliographic record with citations, references and exports.",
+      "workRecordShort": "Bibliographic record in Ethnos."
     },
     "notFound": {
       "title": "Page Not Found",
-      "description": "The requested address does not match any record in the Ethnos Bibliography catalog.",
+      "description": "The requested address does not match any record in the Ethnos Bibliography catalog. Search the anthropology and sociology works or start again.",
       "keywords": "not found, missing page, Ethnos Bibliography"
     },
     "site": {
@@ -595,7 +605,7 @@
     },
     "docs": {
       "title": "Documentation",
-      "description": "Documentation for the Ethnos bibliographic corpus: how the data is assembled, repaired, scored and published.",
+      "description": "Documentation for the Ethnos bibliographic corpus: how the data is assembled from its sources, repaired, scored for relevance and published.",
       "keywords": "documentation, bibliographic corpus, data pipeline, anthropology, Ethnos Bibliography"
     },
     "docsCorpus": {
@@ -605,7 +615,7 @@
     },
     "docsChapter": {
       "title": "Documentation",
-      "description": "A chapter of the Ethnos corpus documentation.",
+      "description": "A chapter of the Ethnos corpus documentation, describing how the anthropology and sociology bibliography is collected, repaired and published.",
       "keywords": "documentation, bibliographic corpus, Ethnos Bibliography"
     }
   },
@@ -656,6 +666,7 @@
     "next": "Next",
     "indexLink": "Contents",
     "chapterLabel": "Chapter",
+    "chapterContext": "Chapter {number} of {collection}, the documentation of how the Ethnos anthropology and sociology bibliography is built.",
     "sourceLanguage": "This documentation is available in English only. A translated edition is not published yet.",
     "table": {
       "number": "No.",

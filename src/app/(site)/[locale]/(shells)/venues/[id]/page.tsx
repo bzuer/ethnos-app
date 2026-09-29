@@ -11,7 +11,8 @@ import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
 import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import JsonLd from '@/components/common/JsonLd';
-import { alternateOpenGraphLocales, buildPageMetadata, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
+import { alternateOpenGraphLocales, buildPageMetadata, fitPageTitle, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
+import { composeDescription } from '@/lib/meta-text';
 import { SITE_NAME, localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
@@ -180,24 +181,18 @@ export async function generateMetadata(props: {
   const workTitles = works.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
   const workAuthors = works.flatMap((work) => (Array.isArray(work?.authors) ? work.authors : []).map(pickAuthorName)).filter(Boolean);
   const other = buildVenueMeta(venue, locale, id, workTitles);
-  const name = venue?.name || base.title || '';
-  const descriptionSource = getVenueDescription(venue) || base.description || '';
-  const buildDescription = (text: string, limit = 170) => {
-    const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
-    let acc = '';
-    for (const sentence of sentences) {
-      const candidate = acc ? `${acc} ${sentence}` : sentence;
-      if (candidate.length <= limit) {
-        acc = candidate;
-      } else {
-        break;
-      }
-    }
-    if (!acc) acc = text.slice(0, limit).replace(/\s+\S*$/, '').trimEnd();
-    if (acc && !/[.!?…]$/.test(acc)) acc = `${acc}.`;
-    return acc;
-  };
-  const description = descriptionSource ? buildDescription(descriptionSource) : undefined;
+  const name = venue?.name ? String(venue.name) : '';
+  const descriptors = await getTranslations({ locale, namespace: 'metadata.descriptors' });
+  const summary = getVenueDescription(venue);
+  const publisherName = venue?.publisher?.name ? String(venue.publisher.name) : '';
+  const worksCount = Number(venue?.works_count) || 0;
+  const description = composeDescription(summary || (name ? descriptors('venueProfile', { name }) : base.description), [
+    publisherName ? descriptors('venuePublisher', { publisher: publisherName }) : '',
+    worksCount > 0 ? descriptors('worksIndexed', { count: worksCount }) : '',
+    descriptors('entityRecord'),
+    descriptors('entityRecordShort')
+  ], { suffix: page > 1 ? descriptors('pageSuffix', { page }) : '' });
+  const pageTitle = await fitPageTitle(locale, [name]);
   const canonicalUrl = localeUrl(locale as Locale, paginatedPath(`/venues/${id}`, page));
   const ogLocale = openGraphLocales[locale as Locale] || openGraphLocales.en;
   const alternateLocale = alternateOpenGraphLocales(locale as Locale);
@@ -211,7 +206,7 @@ export async function generateMetadata(props: {
   ].map((k) => (k ? String(k) : '')).filter(Boolean)));
   return {
     ...base,
-    title: name || base.title,
+    title: pageTitle || base.title,
     description: description || base.description,
     keywords: keywords.length ? keywords : base.keywords,
     alternates: base.alternates,

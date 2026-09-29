@@ -1,6 +1,7 @@
 import { SITEMAP_SECTIONS, parseSitemapSection, renderSitemapSection } from '@/lib/sitemap';
 
 export const dynamic = 'force-static';
+export const revalidate = 3600;
 export const dynamicParams = false;
 
 export function generateStaticParams() {

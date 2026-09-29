@@ -8,7 +8,8 @@ import PersonWorksList from './PersonWorksList';
 import { getPersonsWorks, getPersonsWorksFirst, getPersonsWorksProminent } from '@/lib/endpoints';
 import { buildIdentifierHref } from '@/lib/identifiers';
 import JsonLd from '@/components/common/JsonLd';
-import { alternateOpenGraphLocales, buildPageMetadata, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
+import { alternateOpenGraphLocales, buildPageMetadata, fitPageTitle, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
+import { composeDescription } from '@/lib/meta-text';
 import { SITE_NAME, localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import { type Locale } from '@/i18n/config';
@@ -119,18 +120,23 @@ export async function generateMetadata(props: {
   const ids = person?.identifiers || {};
   const orcid = ids?.orcid || person?.orcid;
   const publicUrl = localeUrl(safeLocale, paginatedPath(`/persons/${id}`, page));
-  const description = [
-    personName ? t('personProfile', { name: personName }) : '',
-    affiliations ? t('personAffiliations', { value: affiliations }) : '',
-    orcid ? t('personOrcid', { value: String(orcid) }) : '',
-    page > 1 ? t('pageSuffix', { page }) : ''
-  ].filter(Boolean).join(' ');
+  const worksCount = Number(person?.metrics?.works_count ?? person?.works_count) || 0;
+  const description = personName
+    ? composeDescription(t('personProfile', { name: personName }), [
+        affiliations ? t('personAffiliations', { value: affiliations }) : '',
+        worksCount > 0 ? t('worksIndexed', { count: worksCount }) : '',
+        orcid ? t('personOrcid', { value: String(orcid) }) : '',
+        t('personRecord'),
+        t('personRecordShort')
+      ], { fill: 'max', suffix: page > 1 ? t('pageSuffix', { page }) : '' })
+    : '';
+  const pageTitle = await fitPageTitle(safeLocale, [personName]);
   const ogTitle = personName || SITE_NAME;
   const ogImage = siteOpenGraphImage();
   const other = buildPersonMeta(person, locale, id);
   return {
     ...base,
-    title: personName || base.title,
+    title: pageTitle || base.title,
     description: description || base.description,
     openGraph: {
       title: ogTitle,

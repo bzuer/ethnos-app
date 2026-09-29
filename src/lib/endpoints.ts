@@ -41,7 +41,57 @@ export async function getHomeTopVenues(limit = 25, page = 1) {
   }
 }
 
-const SEARCH_FILTER_KEYS = ['type', 'work_type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
+export type RecentlyAddedWork = { id: number; addedAt: Date | null };
+
+const RECENT_WORKS_PAGE_SIZE = 100;
+const RECENT_WORKS_CONCURRENCY = 4;
+
+function readAddedAt(row: any): Date | null {
+  if (!row?.added_to_database) return null;
+  const date = new Date(row.added_to_database);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export async function listRecentlyAddedWorks(options: { limit: number; since?: Date }): Promise<RecentlyAddedWork[]> {
+  const limit = Math.max(0, Math.floor(options.limit));
+  const since = options.since ? options.since.getTime() : 0;
+  const works: RecentlyAddedWork[] = [];
+  const seen = new Set<number>();
+  let nextPage = 1;
+  let done = limit === 0;
+  while (!done) {
+    const pages = Array.from({ length: RECENT_WORKS_CONCURRENCY }, (_, offset) => nextPage + offset);
+    nextPage += pages.length;
+    const envelopes = await Promise.all(
+      pages.map((page) =>
+        fetchJson<any>(`/works?limit=${RECENT_WORKS_PAGE_SIZE}&page=${page}&sort_by=id&sort_order=DESC`, { timeoutMs: 15000 })
+      )
+    );
+    for (const envelope of envelopes) {
+      const rows: any[] = Array.isArray(envelope?.data) ? envelope.data : [];
+      for (const row of rows) {
+        const id = Number(row?.id);
+        if (!Number.isInteger(id) || id <= 0 || seen.has(id)) continue;
+        const addedAt = readAddedAt(row);
+        if (addedAt && addedAt.getTime() < since) {
+          done = true;
+          break;
+        }
+        seen.add(id);
+        works.push({ id, addedAt });
+        if (works.length >= limit) {
+          done = true;
+          break;
+        }
+      }
+      if (rows.length < RECENT_WORKS_PAGE_SIZE || envelope?.pagination?.hasNext === false) done = true;
+      if (done) break;
+    }
+  }
+  return works;
+}
+
+const SEARCH_FILTER_KEYS =['type', 'work_type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
 
 export async function searchWorks(params: Record<string, string | number | boolean | undefined>) {
   const base = new URLSearchParams();
