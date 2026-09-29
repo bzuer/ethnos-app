@@ -130,6 +130,11 @@ async function auditRobots(base) {
     check(probe.status === 200, `sitemap ${sitemap} is reachable`, `status ${probe.status}`);
   }
   const disallowed = Array.from(body.matchAll(/^disallow:\s*(\S+)/gim)).map((match) => match[1]);
+  for (const prefix of ['', '/pt', '/es']) {
+    for (const trap of ['/search/results', '/search/global']) {
+      check(disallowed.includes(`${prefix}${trap}`), `Disallow ${prefix}${trap} fences off the unbounded search URL space`);
+    }
+  }
   const indexablePrefixes = ['/works', '/persons', '/venues', '/institutions', '/subjects', '/search'];
   for (const rule of disallowed) {
     if (rule === '/') continue;
@@ -179,7 +184,8 @@ async function auditSitemaps(base) {
     check(urls.length > 0, `${pathname} contains URLs`);
     check(urls.length <= SITEMAP_URL_LIMIT, `${pathname} is under ${SITEMAP_URL_LIMIT} URLs`, `${urls.length} URLs`);
 
-    let alternateFailures = 0;
+    let prefixedFailures = 0;
+    let alternateBlocks = 0;
     let originFailures = 0;
     let lastmodFailures = 0;
     let undated = 0;
@@ -191,19 +197,17 @@ async function auditSitemaps(base) {
       const lastmod = (block.match(/<lastmod>([^<]+)<\/lastmod>/i) || [])[1];
       if (lastmod === undefined) undated += 1;
       else if (!isValidLastmod(lastmod)) lastmodFailures += 1;
-      const alternates = Array.from(block.matchAll(/hreflang="([^"]+)"\s+href="([^"]+)"/gi))
-        .map((match) => ({ lang: match[1], href: decodeXml(match[2]) }));
-      const langs = new Set(alternates.map((entry) => entry.lang));
-      const hrefs = new Set(alternates.map((entry) => entry.href));
-      const complete = LOCALES.every((locale) => langs.has(locale)) && langs.has('x-default');
-      if (!complete || !hrefs.has(loc2)) alternateFailures += 1;
+      const locPath = toCanonicalPath(loc2);
+      if (['/en', '/pt', '/es'].some((prefix) => locPath === prefix || locPath.startsWith(`${prefix}/`))) prefixedFailures += 1;
+      if (block.includes('xhtml:link')) alternateBlocks += 1;
     }
     check(originFailures === 0, `${pathname} <loc> values use the canonical origin`, `${originFailures} offending URLs`);
     check(lastmodFailures === 0, `${pathname} <lastmod> values are valid dates, never in the future`, `${lastmodFailures} offending URLs`);
     if (DATED_SECTIONS.includes(sectionName)) {
       check(undated === 0, `${pathname} dates every URL with <lastmod>`, `${undated} undated URLs`);
     }
-    check(alternateFailures === 0, `${pathname} alternates are complete and self-referential`, `${alternateFailures} offending URLs`);
+    check(prefixedFailures === 0, `${pathname} lists only canonical default-locale URLs`, `${prefixedFailures} locale-prefixed URLs`);
+    check(alternateBlocks === 0, `${pathname} carries no sitemap hreflang (the page <head> declares it)`, `${alternateBlocks} URLs with xhtml:link`);
   }
   return { sitemapUrls, sectionUrls };
 }
@@ -270,6 +274,11 @@ async function auditPage(base, pathname, expectations) {
   const html = response.body;
   const head = extractHead(html);
   check(Boolean(head), `${pathname} exposes a <head>`);
+  check(!response.headers.get('set-cookie'), `${pathname} sets no cookie`, response.headers.get('set-cookie') || '');
+  const cacheControl = response.headers.get('cache-control') || '';
+  check(!/no-store|private/i.test(cacheControl), `${pathname} is cacheable by a shared cache`, cacheControl || 'missing');
+  const prefixedLinks = (html.match(/href="\/en(?:\/|"|\?)/g) || []).length;
+  check(prefixedLinks === 0, `${pathname} links to no /en-prefixed URL`, `${prefixedLinks} links`);
 
   const titles = extractTag(head, /<title>([\s\S]*?)<\/title>/gi);
   check(titles.length === 1, `${pathname} has exactly one <title>`, `${titles.length} found`);
@@ -352,6 +361,13 @@ async function auditStatuses(base) {
   group('status codes');
   const missing = await request(base, '/works/000000000');
   check(missing.status === 404, 'unknown work returns 404', `status ${missing.status}`);
+  const legacyEnglish = await request(base, '/en/search');
+  check(legacyEnglish.status === 308, '/en/search redirects permanently', `status ${legacyEnglish.status}`);
+  check((legacyEnglish.headers.get('location') || '').endsWith('/search'), '/en/search redirects to /search', legacyEnglish.headers.get('location') || '');
+  const negotiated = await request(base, '/search', { headers: { cookie: 'NEXT_LOCALE=pt' } });
+  check(negotiated.status === 307 && (negotiated.headers.get('location') || '').endsWith('/pt/search'),
+    'an unprefixed URL sends a pt-cookie visitor to /pt/…', `status ${negotiated.status} → ${negotiated.headers.get('location') || ''}`);
+  check(/no-store/.test(negotiated.headers.get('cache-control') || ''), 'the negotiated redirect is never cached', negotiated.headers.get('cache-control') || 'missing');
   const bogus = await request(base, '/this-page-does-not-exist');
   check(bogus.status === 404, 'unknown path returns 404', `status ${bogus.status}`);
   for (const legacy of ['/journals', '/journals/all', '/results', '/works']) {

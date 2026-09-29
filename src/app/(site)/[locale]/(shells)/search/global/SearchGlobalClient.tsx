@@ -108,7 +108,7 @@ export default function SearchGlobalClient({ formAction }: Props) {
           </ul>
           {data.works.total > works.length ? (
             <div className="action-links">
-              <LocaleLink className="action-btn btn-positive" href={`/search/results?q=${encodeURIComponent(query)}`}>
+              <LocaleLink className="action-btn btn-positive" rel="nofollow" href={`/search/results?q=${encodeURIComponent(query)}`}>
                 {t('searchGlobal.seeAllWorks', { count: data.works.total })}
               </LocaleLink>
             </div>

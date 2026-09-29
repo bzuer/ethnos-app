@@ -32,6 +32,10 @@ const crawlableAsset = [
 const nextConfig = {
   reactStrictMode: true,
   images: { unoptimized: true },
+  cacheMaxMemorySize: 256 * 1024 * 1024,
+  experimental: {
+    isrFlushToDisk: false
+  },
   turbopack: {
     root: new URL('.', import.meta.url).pathname
   },

@@ -29,7 +29,7 @@ export default function SubjectLinks({ subjects, filters }: Props) {
         const term = String(subject.term).trim();
         return (
           <span key={`${term}-${idx}`}>
-            <LocaleLink prefetch={false} className="subject-link" href={buildSearchHref(term, filters)}>{term}</LocaleLink>
+            <LocaleLink className="subject-link" rel="nofollow" href={buildSearchHref(term, filters)}>{term}</LocaleLink>
             {subject.note ? <span className="subject-count"> ({subject.note})</span> : null}
             {idx < items.length - 1 ? ' · ' : ''}
           </span>

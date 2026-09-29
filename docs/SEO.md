@@ -95,6 +95,7 @@ title template, description, abstract and keyword set.
 
 | Page | Robots |
 |------|--------|
+| `/search/results`, `/search/global` (all locales) | additionally `Disallow`ed in robots.txt — see Robots |
 | `/`, `/search`, `/venues`, `/privacy`, `/license`, the published `/docs` tree, and every entity detail page | index, follow |
 | `/search/results`, `/search/global` | noindex, follow — internal search results |
 | `/lists` | noindex, follow — client-only personal reading list |
@@ -136,14 +137,18 @@ page — never hand-roll `dangerouslySetInnerHTML={{ __html: JSON.stringify(...)
 
 ## Sitemaps
 
-`/sitemap.xml` is a **sitemap index** over five sections. Each section lists one `<url>` per locale
-per resource, and every entry carries the full `xhtml:link` alternate set including itself and
-`x-default` — the bidirectional form Google requires.
+`/sitemap.xml` is a **sitemap index** over five sections. Each section lists **one `<url>` per
+resource, at its canonical default-locale URL**, with no `/pt`/`/es` twins and no `xhtml:link`
+alternates (decided 2026-09-28). hreflang is declared in every page's `<head>` — complete, including
+itself and `x-default`, and reciprocal — which Google and Bing accept as the sole hreflang source; the
+pt/es variants hold the same bibliographic record with translated chrome and are discovered through
+it. Listing the twins had tripled every resource and capped a file at 16,666 resources; a file now
+holds 50,000 at about a quarter of the bytes.
 
 | Section | Contents | Source | `<lastmod>` |
 |---------|----------|--------|-------------|
 | `pages` | `/`, `/search`, `/venues`, the published documentation tree, `/privacy`, `/license` | `STATIC_PAGES` + `listDocPages()` in `src/lib/sitemap.ts` | documentation pages only: git commit date of the source |
-| `recent` | every work added in the last 30 days, newest first, up to 16,666 works | `listRecentlyAddedWorks` → `/works?sort_by=id&sort_order=DESC` | the work's `added_to_database` |
+| `recent` | every work added in the last 90 days, newest first, up to 50,000 works | `listRecentlyAddedWorks` → `/works?sort_by=id&sort_order=DESC` | the work's `added_to_database` |
 | `works` | curated most-cited works | `public/xml-list/top_works.xml` | none |
 | `venues` | curated best-scored venues | `public/xml-list/top_venues.xml` | none |
 | `persons` | curated highest-h-index persons | `public/xml-list/top_persons.xml` | none |
@@ -171,9 +176,9 @@ per resource, and every entry carries the full `xhtml:link` alternate set includ
   unlinked from the chrome means the sitemap is its only discovery path while it is published.
 - The curated lists use a bespoke `<item>works/123</item>` format. `normalizeTopItem` tolerates a
   leading origin, a plural or singular prefix, and rejects ids that are not URL-safe.
-- Each section is capped at `50000 / locales.length` resources so no file can exceed the 50,000 URL
-  limit once tripled across locales; the cap and the "below expectation" floors log to the build.
-  `recent` fills its file (~28 MB uncompressed, well under the 50 MB limit; served compressed).
+- Each section is capped at `SITEMAP_URL_LIMIT` (50,000) resources; the cap and the "below
+  expectation" floors log to the build. `recent` fills its file (~9 MB uncompressed at the cap).
+  The curated lists use a small fraction of that — regenerating them with larger counts costs nothing.
 - **Noindex pages are never listed.** `/lists` and `/search/global` were removed from the sitemap
   when they became `noindex`.
 
@@ -193,18 +198,19 @@ The layout links the manifest through `metadata.manifest`, not a hand-written `<
 
 ## Robots
 
-`public/robots.txt` is static and hand-maintained. It:
+`public/robots.txt` is static, hand-maintained and deliberately minimal (the owner cut the earlier
+49-line version with content signals and AI-crawler blocks to this in September 2026). It:
 
-- carries the Cloudflare content-signals preamble **and the matching `Content-Signal:` directives**
-  (`search=yes, ai-input=no, ai-train=no` for `*`) — the preamble without the directives, which is
-  what the file used to ship, grants and restricts nothing;
 - allows everything for the wildcard group;
-- blocks generative-AI crawlers in one grouped stanza. `Applebot-Extended` is blocked, **not**
-  `Applebot`: `Applebot` is Apple's search crawler and blocking it removes the site from Siri,
-  Spotlight and Safari suggestions;
+- disallows `/search/results` and `/search/global` under all three locale prefixes — the one
+  exception to "never Disallow a noindex page": their query strings are an unbounded crawl space
+  (entity pages link `?author=…&subject=…` combinations, and 20 hours of 2026-09-28 traffic
+  produced 159k requests over 29k distinct result URLs), every rendered page fires a search server
+  action, and they are noindex anyway. The links into them carry `rel="nofollow"`;
 - points at `https://ethnos.app/sitemap.xml`.
 
-There are no per-locale robots files. `robots.txt` is only valid at the origin root.
+The audit requires the six search Disallow lines. There are no per-locale robots files;
+`robots.txt` is only valid at the origin root.
 
 ## HTTP status contract
 
@@ -215,6 +221,16 @@ There are no per-locale robots files. `robots.txt` is only valid at the origin r
 - Legacy routes under `(redirects)` answer **308 Permanent Redirect** via `permanentRedirect` from
   `@/i18n/routing`, so link equity transfers.
 - `/doi/{doi}` keeps a temporary redirect: the DOI-to-work mapping is data, not a URL rename.
+- `/en` and `/en/…` answer **308** to the unprefixed URL: with `localePrefix: 'as-needed'` the
+  default-locale prefix is never canonical. No internal link produces it (`LocaleLink` never passes
+  `locale` to next-intl's `Link`, which would force the prefix), so it only catches legacy URLs.
+- An unprefixed URL requested with a `NEXT_LOCALE=pt|es` cookie, or with a pt/es Accept-Language and
+  no cookie, answers **307** to the prefixed URL with `Cache-Control: private, no-store`. Unprefixed
+  URLs therefore always render English, and Portuguese content always sits at a `/pt` URL whose
+  canonical matches the address bar.
+- Entity detail pages are ISR (`s-maxage=86400`); `?page=N` on persons, venues, institutions and
+  subjects is rewritten to an internal `…/p/N` route, and a direct `…/p/N` request answers 308 back
+  to `?page=N`.
 - Maintenance mode returns 503 with `Retry-After`, which Google treats as temporary.
 
 ## Response headers
@@ -273,9 +289,11 @@ The audit fails the build on any conformance error and reports advisories separa
 so a failure means a page bypassed it.
 
 It verifies robots directives and sitemap reachability, sitemap XML validity, URL and byte limits,
-`<lastmod>` values that parse and are never in the future (and are present on every `recent` URL), a
-sample of every section's URLs answering 200, hreflang completeness and reciprocity, manifest validity and asset reachability for all three
-locales, and — per sampled page — a single non-empty title, a single description, a single
+`<lastmod>` values that parse and are never in the future (and are present on every `recent` URL),
+canonical-only sitemap URLs without `xhtml:link`, a sample of every section's URLs answering 200, the
+search Disallow lines, the `/en` 308 and the negotiated 307, hreflang completeness in every page head,
+no `Set-Cookie`, no `private`/`no-store` `Cache-Control` and no `/en`-prefixed link on any audited
+page, manifest validity and asset reachability for all three locales, and — per sampled page — a single non-empty title, a single description, a single
 self-referential canonical, the full hreflang set, `<html lang>`, the robots directive matching the
 page's expected indexability, the Open Graph and Twitter set with a reachable image, the locale
 manifest link, parseable JSON-LD of the expected types, 404s for unknown entities, and 308s for

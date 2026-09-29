@@ -3,10 +3,10 @@ import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { locales, type Locale } from '@/i18n/config';
+import { defaultLocale } from '@/i18n/config';
 import { listDocPages } from './docs';
 import { listRecentlyAddedWorks } from './endpoints';
-import { alternateUrls, localeUrl } from './site';
+import { localeUrl } from './site';
 
 export type SitemapSection = 'pages' | 'recent' | 'works' | 'venues' | 'persons';
 export type ChangeFrequency = 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
@@ -23,7 +23,7 @@ export type SitemapSectionData = {
 
 export const SITEMAP_SECTIONS: SitemapSection[] = ['pages', 'recent', 'works', 'venues', 'persons'];
 export const SITEMAP_URL_LIMIT = 50000;
-export const RECENT_WORKS_WINDOW_DAYS = 30;
+export const RECENT_WORKS_WINDOW_DAYS = 90;
 
 type CuratedSection = Extract<SitemapSection, 'works' | 'venues' | 'persons'>;
 
@@ -87,7 +87,7 @@ export function parseSitemapSection(value: string): SitemapSection | null {
 }
 
 export function maxEntriesPerSection() {
-  return Math.floor(SITEMAP_URL_LIMIT / locales.length);
+  return SITEMAP_URL_LIMIT;
 }
 
 export async function buildSitemapSection(section: SitemapSection): Promise<SitemapSectionData> {
@@ -103,17 +103,10 @@ export async function buildSitemapSection(section: SitemapSection): Promise<Site
 
 export async function renderSitemapSection(section: SitemapSection) {
   const { entries } = await buildSitemapSection(section);
-  const rows: string[] = [];
-  for (const entry of entries) {
-    const languages = alternateUrls(entry.path);
-    for (const locale of locales) {
-      rows.push(renderUrl(locale, entry, languages));
-    }
-  }
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
-    ...rows,
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...entries.map(renderUrl),
     '</urlset>',
     ''
   ].join('\n');
@@ -142,14 +135,10 @@ export async function renderSitemapIndex() {
   ].join('\n');
 }
 
-function renderUrl(locale: Locale, entry: SitemapEntry, languages: Record<string, string>) {
-  const alternates = Object.entries(languages).map(
-    ([code, href]) => `    <xhtml:link rel="alternate" hreflang="${escapeXml(code)}" href="${escapeXml(href)}" />`
-  );
+function renderUrl(entry: SitemapEntry) {
   return [
     '  <url>',
-    `    <loc>${escapeXml(localeUrl(locale, entry.path))}</loc>`,
-    ...alternates,
+    `    <loc>${escapeXml(localeUrl(defaultLocale, entry.path))}</loc>`,
     entry.lastModified ? `    <lastmod>${entry.lastModified.toISOString()}</lastmod>` : '',
     `    <changefreq>${entry.changeFrequency}</changefreq>`,
     `    <priority>${entry.priority.toFixed(1)}</priority>`,
@@ -217,7 +206,7 @@ async function buildCuratedSection(section: CuratedSection): Promise<SitemapSect
   }
   const maxEntries = maxEntriesPerSection();
   if (entries.length > maxEntries) {
-    console.warn(`Sitemap ${section} truncated to ${maxEntries} entries to stay within the 50000 URL limit`);
+    console.warn(`Sitemap ${section} truncated to ${maxEntries} entries to stay within the ${SITEMAP_URL_LIMIT} URL limit`);
     entries.length = maxEntries;
   }
   return { entries, lastModified: await resolveSourceDate(source) };

@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /search/results
+Disallow: /search/global
+Disallow: /pt/search/results
+Disallow: /pt/search/global
+Disallow: /es/search/results
+Disallow: /es/search/global
 Sitemap: https://ethnos.app/sitemap.xml
-

@@ -123,8 +123,8 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   };
 }
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const dynamic = 'force-static';
+export const revalidate = 86400;
 
 export default async function WorkDetailPage(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;

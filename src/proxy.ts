@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import createMiddleware from 'next-intl/middleware';
-import { defaultLocale, localePrefix, locales, type Locale } from './i18n/config';
-
-const intlMiddleware = createMiddleware({
-  defaultLocale,
-  locales,
-  localePrefix
-});
+import { defaultLocale, locales, type Locale } from './i18n/config';
 
 const MAINTENANCE_RETRY_AFTER = '3600';
+const PAGINATED_ENTITIES = ['persons', 'venues', 'institutions', 'subjects'];
+const PAGE_SEGMENT = 'p';
+const ENTITY_PATH = new RegExp(`^/(${PAGINATED_ENTITIES.join('|')})/([^/]+)$`);
+const ENTITY_PAGE_PATH = new RegExp(`^/(${PAGINATED_ENTITIES.join('|')})/([^/]+)/${PAGE_SEGMENT}/([^/]+)$`);
 
 function isMaintenanceMode() {
   const flag = process.env.MAINTENANCE_MODE;
@@ -20,20 +17,84 @@ function isMaintenanceMode() {
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (shouldBypassIntl(pathname)) return NextResponse.next();
-  const prefixed = hasLocalePrefix(pathname);
-  const resolvedLocale = prefixed ? extractLocaleFromPath(pathname) ?? defaultLocale : detectPreferredLocale(request);
+  const pathLocale = extractLocaleFromPath(pathname);
+  const resolvedLocale = pathLocale ?? detectPreferredLocale(request);
   if (isMaintenanceMode() && !isMaintenanceTarget(pathname)) {
     return buildMaintenanceResponse(request, resolvedLocale);
   }
-  if (!prefixed) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/${resolvedLocale}${pathname === '/' ? '' : pathname}`;
-    const response = NextResponse.rewrite(url);
-    setLocaleHeaders(response, resolvedLocale);
-    return response;
+  const barePath = pathLocale ? stripLocale(pathname) : pathname;
+  if (pathLocale === defaultLocale) {
+    return canonicalRedirect(request, barePath, request.nextUrl.searchParams);
   }
-  const response = intlMiddleware(request);
-  setLocaleHeaders(response, resolvedLocale);
+  const segmentPage = ENTITY_PAGE_PATH.exec(barePath);
+  if (segmentPage) {
+    const query = new URLSearchParams(request.nextUrl.searchParams);
+    const page = resolvePage(segmentPage[3]);
+    if (page > 1) query.set('page', String(page));
+    else query.delete('page');
+    return canonicalRedirect(request, prefixPath(pathLocale, `/${segmentPage[1]}/${segmentPage[2]}`), query);
+  }
+  if (!pathLocale && resolvedLocale !== defaultLocale && isReadRequest(request)) {
+    return negotiatedRedirect(request, resolvedLocale);
+  }
+  const locale = pathLocale ?? resolvedLocale;
+  const internalPath = `/${locale}${paginatedInternalPath(barePath, request.nextUrl.searchParams)}`.replace(/\/$/, '');
+  const target = internalPath || `/${locale}`;
+  const response = target === pathname
+    ? NextResponse.next()
+    : NextResponse.rewrite(rewriteUrl(request, target));
+  setLocaleHeaders(response, locale, !pathLocale);
+  return response;
+}
+
+function isReadRequest(request: NextRequest) {
+  return request.method === 'GET' || request.method === 'HEAD';
+}
+
+function resolvePage(value: string | null) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.floor(parsed);
+}
+
+function paginatedInternalPath(barePath: string, searchParams: URLSearchParams) {
+  const page = resolvePage(searchParams.get('page'));
+  if (page < 2 || !ENTITY_PATH.test(barePath)) return barePath;
+  return `${barePath}/${PAGE_SEGMENT}/${page}`;
+}
+
+function rewriteUrl(request: NextRequest, pathname: string) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.searchParams.delete('page');
+  return url;
+}
+
+function prefixPath(locale: Locale | undefined, path: string) {
+  if (!locale || locale === defaultLocale) return path;
+  return path === '/' ? `/${locale}` : `/${locale}${path}`;
+}
+
+function stripLocale(pathname: string) {
+  const rest = pathname.replace(/^\/[^/]+/, '');
+  return rest || '/';
+}
+
+function canonicalRedirect(request: NextRequest, pathname: string, searchParams: URLSearchParams) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = searchParams.toString();
+  const response = NextResponse.redirect(url, 308);
+  response.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  return response;
+}
+
+function negotiatedRedirect(request: NextRequest, locale: Locale) {
+  const url = request.nextUrl.clone();
+  url.pathname = prefixPath(locale, request.nextUrl.pathname);
+  const response = NextResponse.redirect(url, 307);
+  response.headers.set('Cache-Control', 'private, no-store');
+  response.headers.set('Vary', 'Cookie, Accept-Language');
   return response;
 }
 
@@ -49,7 +110,7 @@ function buildMaintenanceResponse(request: NextRequest, locale: Locale) {
   const response = NextResponse.rewrite(url, { status: 503 });
   response.headers.set('Retry-After', MAINTENANCE_RETRY_AFTER);
   response.headers.set('Cache-Control', 'no-store');
-  setLocaleHeaders(response, locale);
+  setLocaleHeaders(response, locale, false);
   return response;
 }
 
@@ -78,18 +139,15 @@ function resolveLocaleFromHeader(value: string | null): Locale | undefined {
   return undefined;
 }
 
-function hasLocalePrefix(pathname: string) {
-  return locales.some((locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`));
-}
-
 function extractLocaleFromPath(pathname: string): Locale | undefined {
   const segment = pathname.split('/')[1];
   if (segment && locales.includes(segment as Locale)) return segment as Locale;
   return undefined;
 }
 
-function setLocaleHeaders(response: NextResponse, locale: Locale) {
+function setLocaleHeaders(response: NextResponse, locale: Locale, negotiated: boolean) {
   response.headers.set('x-next-intl-locale', locale);
+  if (!negotiated) return;
   const existingVary = response.headers.get('vary');
   const values = new Set((existingVary ? existingVary.split(',') : []).map((entry) => entry.trim()).filter(Boolean));
   values.add('accept-language');

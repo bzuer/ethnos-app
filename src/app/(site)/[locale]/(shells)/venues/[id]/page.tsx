@@ -17,8 +17,8 @@ import { SITE_NAME, localeUrl, paginatedPath, resolvePageParam } from '@/lib/sit
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const dynamic = 'force-static';
+export const revalidate = 86400;
 
 const pickText = (values: Array<string | null | undefined>) => {
   for (const value of values) {
@@ -164,11 +164,10 @@ const addIdentifierValues = (
 
 
 export async function generateMetadata(props: {
-  params: Promise<{ locale: string; id: string }>;
-  searchParams?: Promise<{ page?: string }>;
+  params: Promise<{ locale: string; id: string; page?: string }>;
 }) {
-  const { id, locale } = await props.params;
-  const page = resolvePageParam((await props.searchParams)?.page);
+  const { id, locale, page: pageParam } = await props.params;
+  const page = resolvePageParam(pageParam);
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`, {
     query: page > 1 ? { page } : undefined
   });
@@ -230,12 +229,11 @@ export async function generateMetadata(props: {
   };
 }
 
-export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams?: Promise<{ page?: string }> }) {
-  const { id, locale } = await props.params;
+export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string; page?: string }> }) {
+  const { id, locale, page: pageParam } = await props.params;
   let venue = await getVenue(id);
   if (!venue) notFound();
-  const sp = (await props.searchParams) || {};
-  const page = Number(sp.page || '1') || 1;
+  const page = resolvePageParam(pageParam);
   const limit = 25;
   let worksPage: any = null;
   try { worksPage = await getVenueWorksPage(id, page, limit); } catch {}
