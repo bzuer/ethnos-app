@@ -296,6 +296,12 @@ edge (Cloudflare) → nginx :1212 → node …/next start -H localhost -p 1202  
 - **As of 2026-09-30 no Cache Rule is applied**: every page and every client navigation answers `cf-cache-status: DYNAMIC` and travels the tunnel to Node, while edge hits (`/robots.txt`, `/_next/static/*`) answer in 30–70 ms. The stylesheet is worse off: `/css/styles.min.css` carries `public, max-age=0, must-revalidate` (`next.config.mjs#immutableCss`), so Cloudflare **revalidates it at the origin on every request** (`cf-cache-status: REVALIDATED`), and it is render-blocking — a first visit shows nothing until the origin answers (one MISS took 35 s). See [`docs/PERFORMANCE_DIAGNOSIS.md`](docs/PERFORMANCE_DIAGNOSIS.md) §3.3.
 - **Speed Brain** (Speed → Optimization) injects the `speculation-rules: "/cdn-cgi/speculation"` header seen on every response and prefetches documents on hover; leave it off unless measured, since it re-adds the prefetch traffic the app no longer generates.
 - The scraper traffic behind the 2026-09-28 numbers (headless Chrome 103–117 on Windows from many addresses, following `/search/results` → entity → `/search/results`) ignores robots.txt; a rate-limiting rule on `/search/results` and on POSTs is the edge-side answer.
+- **Measured on .175, 2026-09-30** ([`docs/PERFORMANCE_DIAGNOSIS.md`](docs/PERFORMANCE_DIAGNOSIS.md) §2.6):
+  - **Volume:** 3,400–9,600 req/min reached nginx.
+  - **Who:** 8 of the top 10 user agents are outdated desktop Chrome builds (103/107/108/110/116/117/131/133, ~1.58 M requests), with no search engine among them.
+  - **What:** ~1.4 M hits on stale `/en/*` URLs and ~1.23 M on the robots-disallowed search surfaces.
+  - **Effect:** 643k nginx connect timeouts and 110k read timeouts; Node at 150% CPU and 4.8 GB RSS.
+  - **Response:** the operator put the zone in Cloudflare's *Under Attack* mode that day. While it is on, probes of `https://ethnos.app` see the challenge (`cf-mitigated: challenge`) instead of the origin, so origin latency has to be read from the nginx log on the host.
 
 ### Nginx front door
 

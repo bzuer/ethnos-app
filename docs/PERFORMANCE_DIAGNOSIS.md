@@ -139,6 +139,27 @@ own request even when the prefetch finished first. `kind: 'full'` was worse (3 r
   upstream change, still to be identified). `ss -lntH 'sport = :1202'` showed `Recv-Q 0`, meaning
   no accept backlog at that moment.
 - This confirms §3.1: the latency comes from request volume against single-threaded capacity.
+- Wider window, 16:39–17:00: 3,428–9,621 req/min. The **9,621 at 16:44** is the retry flood that
+  arrived as the app came back from the deploy's build window (502s), straight into an empty
+  memory cache.
+- Snapshot at 17:07:58, during a 1,888 req/min burst: **`Recv-Q 140`** on `:1202` (140
+  connections waiting for Node to accept them). `next-server` at **150% CPU** with **4.8 GB RSS**
+  22 minutes after start; the ISR cache is capped at 256 MiB, so most of that is in-flight
+  renders, including ones their clients already abandoned. `mariadbd` held 6.3 GB, leaving 2.5 GB
+  of 15 GB available. Once the load dropped, `/privacy` from inside the box took 3–130 ms.
+- nginx error log: **643,175** `upstream timed out … while connecting` (the 5.07 s 504s) and
+  **109,950** `… while reading` (the 60 s 504s). `NRestarts=0`; no `heap`/`fatal` in the journal.
+- Top paths (whole access log): `/works/N` 1,015,976 · `/en/search/results` 703,787 ·
+  `/search/results` 526,383 · `/en/works/N` 429,165 · `/en/persons/N` 209,927 · `/persons/N`
+  166,539 · `/es/works/N` 61,118 · `/en/institutions/N` 52,305 · `/site.webmanifest` 43,855 ·
+  `/pt/works/N` 43,542. **`/en/*` alone is ~1.4 M requests**: stale URLs that each cost a
+  Node-served 308 plus the follow-up request. The robots-disallowed search surfaces take ~1.23 M.
+- Top user agents: 8 of the 10 are **outdated desktop Chrome builds** (131, 116, 133, 110, 107,
+  108, 117, 103; ~1.58 M requests together), plus Chrome 146/Linux (274k) and Safari 26/macOS
+  (175k). No search-engine crawler appears in the top 10. This is the headless-Chrome scraper fleet
+  described under Production Service › Cloudflare edge, and it ignores `robots.txt`.
+- `journalctl -u ethnos-indexnow --since -12h` returned no entries, so **IndexNow is not a factor**
+  on .175. The IndexNow bullet in §3.1 is ruled out.
 
 ## 3. Causes, ranked
 
@@ -150,9 +171,13 @@ being unavailable. Contributing factors, from strongest evidence to weakest:
 - **Unique-URL crawler traffic is all ISR misses**, and each miss is ~45% dearer than before
   (§2.4). Next renders on one thread per process, so everything, including cache hits and
   prerendered pages, queues behind those renders.
-- **Traffic sources added by `fac4ab8`**: IndexNow pushes up to 10,000 new URLs/hour to
-  Bing/Yandex/Seznam/Naver, which then crawl them promptly (all misses), and the 50,000-URL
-  `recent` sitemap exposes more fresh URLs. Plausible, not yet measured on .175.
+- **The traffic is a headless-Chrome scraper fleet** (§2.6): outdated Chrome user agents, ~1.4 M
+  stale `/en/*` URLs answered by Node with a 308, ~1.23 M hits on robots-disallowed search
+  surfaces. *Ruled out:* IndexNow-driven crawling (no timer runs on .175, and no search engine
+  appears among the top user agents).
+- **Overload feeds on itself**: requests abandoned at nginx's 60 s timeout keep rendering, the
+  process grew to 4.8 GB RSS under load, and garbage collection on that heap blocks the event loop
+  further.
 - **Shared host**: on .175 the API, MariaDB and Manticore compete for the same CPU.
 - **Gzip on the main thread** (§2.4) and the **4xx double fetch** (§3.5) add constant overhead.
 
@@ -238,8 +263,15 @@ Ordered by effect on what users feel. Nothing below has been applied.
 - **Cache Rule for HTML and RSC** that respects origin `Cache-Control` (already specified under
   Production Service › Cloudflare edge in CLAUDE.md, still not applied): repeat views drop to
   30–70 ms and stop reaching Node.
-- **Rate-limiting rule** on the scraper pattern (`/works/*`, `/search/results`, POSTs from headless
-  Chrome 103–117). This removes the load that saturates .175.
+- **WAF custom rule, Managed Challenge (or Block)** for the outdated Chrome builds seen in §2.6,
+  excluding verified bots. `contains` works on every plan (`matches`/regex needs a paid one):
+  `(http.user_agent contains "Chrome/103.0.0.0" or http.user_agent contains "Chrome/107.0.0.0" or http.user_agent contains "Chrome/108.0.0.0" or http.user_agent contains "Chrome/110.0.0.0" or http.user_agent contains "Chrome/116.0.0.0" or http.user_agent contains "Chrome/117.0.0.0" or http.user_agent contains "Chrome/131.0.0.0" or http.user_agent contains "Chrome/133.0.0.0") and not cf.client.bot`.
+  This covers ~1.58 M of the logged requests.
+- **Redirect Rule for `/en` and `/en/*` → the unprefixed URL (308, query preserved)** at the edge,
+  so ~1.4 M stale-URL hits never cross the tunnel. As a fallback, a cacheable 308 Cache Rule, or
+  answering the 308 in nginx instead of Node.
+- **Rate-limiting rule** on `/search/results` (GET and the server-action POSTs), which
+  `robots.txt` already disallows.
 
 ### 5.2 Prototype: warm chrome navigation (frontend, validated in the lab)
 
