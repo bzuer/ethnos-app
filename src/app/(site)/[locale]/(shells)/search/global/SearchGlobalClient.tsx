@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
@@ -18,31 +18,27 @@ const EMPTY: GlobalSearchResult = {
   institutions: { total: 0, results: [] }
 };
 
+const subscribeNever = () => () => {};
+
 export default function SearchGlobalClient({ formAction }: Props) {
   const t = useTranslations();
   const searchParams = useSearchParams();
-  const [mounted, setMounted] = useState(false);
-  const [data, setData] = useState<GlobalSearchResult>(EMPTY);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => { setMounted(true); }, []);
-
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   const query = mounted ? String(searchParams?.get('q') || '').trim() : '';
+  const hasQuery = query.length >= 2;
+  const [result, setResult] = useState<{ query: string; data: GlobalSearchResult } | null>(null);
 
   useEffect(() => {
-    if (!query || query.length < 2) {
-      setData(EMPTY);
-      setLoading(false);
-      return;
-    }
+    if (!hasQuery) return undefined;
     let cancelled = false;
-    setLoading(true);
     actSearchGlobal(query, 10)
-      .then((res) => { if (!cancelled) setData(res); })
-      .catch(() => { if (!cancelled) setData(EMPTY); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .then((res) => { if (!cancelled) setResult({ query, data: res }); })
+      .catch(() => { if (!cancelled) setResult({ query, data: EMPTY }); });
     return () => { cancelled = true; };
-  }, [query]);
+  }, [query, hasQuery]);
+
+  const loading = hasQuery && result?.query !== query;
+  const data = hasQuery && result?.query === query ? result.data : EMPTY;
 
   const resultLabels: WorkResultLabels = useMemo(() => ({
     titleUnavailable: t('common.entities.titleUnavailable'),
@@ -60,7 +56,6 @@ export default function SearchGlobalClient({ formAction }: Props) {
   const works = data.works.results;
   const persons = data.persons.results;
   const institutions = data.institutions.results;
-  const hasQuery = Boolean(query && query.length >= 2);
   const showNoResults = mounted && hasQuery && !loading && works.length === 0;
   const showStartPrompt = mounted && !hasQuery;
 
