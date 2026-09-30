@@ -306,28 +306,26 @@ Ordered by effect on what users feel. Nothing below has been applied.
   consecutive loopback ports behind the existing nginx `upstream` multiply capacity (each keeps its
   own memory ISR cache).
 
-## 6. Status (2026-09-30, evening)
+## 6. Resolution (2026-09-30)
 
-The operator put the Cloudflare zone in **Under Attack** mode. The repository side of §5 is applied
-and was verified on a production build of the working tree, behind a non-root nginx running the
-rendered vhost (SEO audit 1158/1158 through nginx and direct):
+The operator put the Cloudflare zone in **Under Attack** mode; everything below is in the repository
+and was verified on a production build behind a non-root nginx running the rendered vhost (SEO audit
+green through nginx and direct, lint and typecheck clean).
 
-| Change | Where | Verified |
-|---|---|---|
-| Header links `warm`: `router.prefetch` on the first real input event | `LocaleLink.tsx`, `layout.tsx` | At a 600 ms round trip, every chrome click took 28–36 ms (first included, once the pointer had moved). A client with no input events made 11 requests per load and no prefetch. |
-| `fetchJson` never retries a 4xx | `src/lib/api.ts` | A missing entity costs one API call. |
-| `wait_for_app` bounded by elapsed seconds | `scripts/manage.sh` | `bash -n`; a 60 s timeout now means 60 s. |
-| `compress: false`; nginx gzips (level 5, `text/x-component` added) | `next.config.mjs`, `config/nginx.conf` | Home 16,971 B gzip (Next produced 16,142 B); `/venues` RSC 348 KB → 49 KB. |
-| `/en`, `/en/…` → 308 answered by nginx | `config/nginx.conf` | Relative `Location`, query string and `%20`/`+` verbatim, POST kept, `/english` untouched. |
-| Stylesheet at `/css/styles.min.css?v=<sha256[:12]>`, `immutable` | `next.config.mjs`, `layout.tsx` | Versioned URL: `max-age=31536000, immutable`; bare URL unchanged. |
-| Access log `ethnos_app_timed` (`rt`, `urt`, `uct`, `cache`, `ip`, `ray`) | `config/nginx.conf` | Combined-format field positions preserved. |
+| Change | Effect measured on .80 |
+|---|---|
+| Header links `warm` (prefetch on the first real input event) | Chrome navigation 28–36 ms instead of one origin round trip; no prefetch from scripted clients |
+| Entity pages back to dynamic rendering; `p/[page]` routes, proxy pagination rewrite and the memory ISR cache removed | ~45% less CPU per unique page than an ISR miss |
+| nginx `max_conns=64` on the upstream | At 180 req/s of unique pages: `/` answered every probe in 4–17 ms, 4,037 pages served, 445 shed with an immediate 502, none abandoned, Node at 870 MB |
+| Client components get only what they render (work Tools, `EntityTools`, list badge, OA badge on the server, 7 of 18 message namespaces) | Pages 19–31% smaller (venue 440 → 305 KB, person 380 → 272 KB, work 154 → 105 KB, home gzip 16.1 → 11.8 KB) |
+| `fetchJson` never retries a 4xx | One API call per missing entity |
+| nginx answers `/en` 308s, compresses (level 5, `text/x-component`), logs `rt`/`urt`/`ip`/`ray` | Stale-URL traffic never reaches Node; Next no longer gzips on its event loop |
+| Versioned, immutable stylesheet | The edge stops revalidating it at the origin |
+| `manage.sh` (903 → 261 lines) and `render-config.sh` (210 → 89) without the verification scaffolding; config without comments | Identical rendered vhost |
+| Reading list consolidated in `src/lib/reading-list.ts`; header counter correct on load | — |
 
-Tried and dropped: `experimental.staleTimes` (no measurable reuse of click-fetched pages in
-Next 16) and hover/`kind: 'full'` prefetch of entity links (not reused by the navigation).
-
-Still open: the edge rules of §5.1, the ISR-vs-dynamic decision (§5.4, now measurable from
-`cache=` in the log), more than one Next process, and the Node memory growth under overload
-(§2.6).
+Tried and dropped: `experimental.staleTimes` and hover/`kind: 'full'` prefetch of entity links (no
+reuse by the navigation in Next 16), and more than one Next process (more computation, not less).
 
 ## 7. Method and artifacts
 
