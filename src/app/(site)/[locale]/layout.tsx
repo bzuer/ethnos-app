@@ -113,6 +113,12 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   };
 }
 
+function stylesheetPath() {
+  if (process.env.NODE_ENV === 'development') return '/css/styles.css';
+  const version = process.env.ETHNOS_CSS_VERSION;
+  return version ? `/css/styles.min.css?v=${version}` : '/css/styles.min.css';
+}
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
@@ -121,7 +127,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   if (!locales.includes(locale as Locale)) notFound();
   setRequestLocale(locale as Locale);
-  const cssPath = process.env.NODE_ENV === 'development' ? '/css/styles.css' : '/css/styles.min.css';
+  const cssPath = stylesheetPath();
   const messages = await getMessages();
   const t = await getTranslations({ locale, namespace: 'layout' });
   const navLinks: NavLinks = {
@@ -180,13 +186,13 @@ function Header({ navLabel, navLinks, listCounterLabel }: { navLabel: string; na
     <header className="global-header" role="banner">
       <p className="title-primary">ETHNOS_APP</p>
       <nav className="main-navigation" role="navigation" aria-label={navLabel}>
-        <LocaleLink className="nav-breadcrumb" href="/">{navLinks.home}</LocaleLink>
+        <LocaleLink warm className="nav-breadcrumb" href="/">{navLinks.home}</LocaleLink>
         <span className="breadcrumb-separator" aria-hidden="true"> • </span>
-        <LocaleLink className="nav-breadcrumb" href="/search">{navLinks.search}</LocaleLink>
+        <LocaleLink warm className="nav-breadcrumb" href="/search">{navLinks.search}</LocaleLink>
         <span className="breadcrumb-separator" aria-hidden="true"> • </span>
-        <LocaleLink className="nav-breadcrumb" href="/venues">{navLinks.journals}</LocaleLink>
+        <LocaleLink warm className="nav-breadcrumb" href="/venues">{navLinks.journals}</LocaleLink>
         <span className="breadcrumb-separator" aria-hidden="true"> • </span>
-        <LocaleLink className="nav-breadcrumb" href="/lists" aria-describedby="reading-list-counter">
+        <LocaleLink warm className="nav-breadcrumb" href="/lists" aria-describedby="reading-list-counter">
           {navLinks.lists} <span id="reading-list-counter" className="list-counter" aria-label={listCounterLabel}>0</span>
         </LocaleLink>
       </nav>

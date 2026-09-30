@@ -306,7 +306,30 @@ Ordered by effect on what users feel. Nothing below has been applied.
   consecutive loopback ports behind the existing nginx `upstream` multiply capacity (each keeps its
   own memory ISR cache).
 
-## 6. Method and artifacts
+## 6. Status (2026-09-30, evening)
+
+The operator put the Cloudflare zone in **Under Attack** mode. The repository side of §5 is applied
+and was verified on a production build of the working tree, behind a non-root nginx running the
+rendered vhost (SEO audit 1158/1158 through nginx and direct):
+
+| Change | Where | Verified |
+|---|---|---|
+| Header links `warm`: `router.prefetch` on the first real input event | `LocaleLink.tsx`, `layout.tsx` | At a 600 ms round trip, every chrome click took 28–36 ms (first included, once the pointer had moved). A client with no input events made 11 requests per load and no prefetch. |
+| `fetchJson` never retries a 4xx | `src/lib/api.ts` | A missing entity costs one API call. |
+| `wait_for_app` bounded by elapsed seconds | `scripts/manage.sh` | `bash -n`; a 60 s timeout now means 60 s. |
+| `compress: false`; nginx gzips (level 5, `text/x-component` added) | `next.config.mjs`, `config/nginx.conf` | Home 16,971 B gzip (Next produced 16,142 B); `/venues` RSC 348 KB → 49 KB. |
+| `/en`, `/en/…` → 308 answered by nginx | `config/nginx.conf` | Relative `Location`, query string and `%20`/`+` verbatim, POST kept, `/english` untouched. |
+| Stylesheet at `/css/styles.min.css?v=<sha256[:12]>`, `immutable` | `next.config.mjs`, `layout.tsx` | Versioned URL: `max-age=31536000, immutable`; bare URL unchanged. |
+| Access log `ethnos_app_timed` (`rt`, `urt`, `uct`, `cache`, `ip`, `ray`) | `config/nginx.conf` | Combined-format field positions preserved. |
+
+Tried and dropped: `experimental.staleTimes` (no measurable reuse of click-fetched pages in
+Next 16) and hover/`kind: 'full'` prefetch of entity links (not reused by the navigation).
+
+Still open: the edge rules of §5.1, the ISR-vs-dynamic decision (§5.4, now measurable from
+`cache=` in the log), more than one Next process, and the Node memory growth under overload
+(§2.6).
+
+## 7. Method and artifacts
 
 - Builds: HEAD (`b4a300d`, live unit on :1202), baseline `3fe6de9` and the §5.2 prototype, each
   built in a scratch copy with `/etc/next-frontend.env` and served on its own loopback port. The live

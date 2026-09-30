@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
@@ -21,9 +23,24 @@ const cspHeaderName = process.env.CSP_ENFORCE === '1'
   ? 'Content-Security-Policy'
   : 'Content-Security-Policy-Report-Only';
 
-const immutableCss = [
+function stylesheetVersion() {
+  try {
+    const css = readFileSync(new URL('./public/css/styles.min.css', import.meta.url));
+    return createHash('sha256').update(css).digest('hex').slice(0, 12);
+  } catch {
+    return '';
+  }
+}
+
+const revalidatedCss = [
   { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }
 ];
+
+const versionedCss = [
+  { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }
+];
+
+const versionQuery = [{ type: 'query', key: 'v' }];
 
 const crawlableAsset = [
   { key: 'Cache-Control', value: 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400' }
@@ -31,6 +48,10 @@ const crawlableAsset = [
 
 const nextConfig = {
   reactStrictMode: true,
+  compress: false,
+  env: {
+    ETHNOS_CSS_VERSION: stylesheetVersion()
+  },
   images: { unoptimized: true },
   cacheMaxMemorySize: 256 * 1024 * 1024,
   experimental: {
@@ -50,8 +71,9 @@ const nextConfig = {
           { key: cspHeaderName, value: contentSecurityPolicy }
         ]
       },
-      { source: '/css/styles.css', headers: immutableCss },
-      { source: '/css/styles.min.css', headers: immutableCss },
+      { source: '/css/styles.css', headers: revalidatedCss },
+      { source: '/css/styles.min.css', headers: revalidatedCss },
+      { source: '/css/styles.min.css', has: versionQuery, headers: versionedCss },
       { source: '/robots.txt', headers: crawlableAsset },
       { source: '/sitemap.xml', headers: crawlableAsset },
       { source: '/sitemaps/:path*', headers: crawlableAsset }
