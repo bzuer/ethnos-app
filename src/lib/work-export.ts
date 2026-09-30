@@ -135,6 +135,39 @@ export function pickScimagFile(files: any[]) {
   return files.find((file: any) => file?.scimag_id) || null;
 }
 
+export type WorkAccessLinks = {
+  doi?: string;
+  sciHub?: string;
+  libgen?: string;
+  openAccess?: string;
+};
+
+export function buildWorkAccessLinks(work: any): WorkAccessLinks {
+  const files = Array.isArray(work?.files) ? work.files : [];
+  const doi = work?.doi || work?.publication?.doi;
+  const scimagFile = pickScimagFile(files);
+  const libgenFile = pickLibgenFile(files);
+  const sciHubTarget = scimagFile ? (scimagFile.doi || doi) : null;
+  return {
+    doi: doi ? `https://doi.org/${encodeURIComponent(String(doi))}` : undefined,
+    sciHub: sciHubTarget ? `https://sci-hub.st/${encodeURIComponent(String(sciHubTarget))}` : undefined,
+    libgen: libgenFile ? `https://libgen.la/ads.php?md5=${encodeURIComponent(String(libgenFile.md5))}` : undefined,
+    openAccess: buildFileOpenAccessUrl(pickOpenAccessFile(files)) || undefined
+  };
+}
+
+export function toListItem(work: any) {
+  return {
+    id: work?.id,
+    title: work?.title || null,
+    authors: work?.authors || work?.authors_preview || work?.author_string || null,
+    publication_year: work?.publication?.year || work?.publication_year || work?.year || null,
+    venue_id: work?.venue?.id || work?.venue_id || null,
+    venue_name: work?.venue?.name || work?.venue_name || null,
+    type: work?.work_type || work?.type || null
+  };
+}
+
 export function normWork(source: any) {
   if (!source) return null;
   const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)

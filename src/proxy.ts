@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { defaultLocale, locales, type Locale } from './i18n/config';
 
 const MAINTENANCE_RETRY_AFTER = '3600';
-const PAGINATED_ENTITIES = ['persons', 'venues', 'institutions', 'subjects'];
-const PAGE_SEGMENT = 'p';
-const ENTITY_PATH = new RegExp(`^/(${PAGINATED_ENTITIES.join('|')})/([^/]+)$`);
-const ENTITY_PAGE_PATH = new RegExp(`^/(${PAGINATED_ENTITIES.join('|')})/([^/]+)/${PAGE_SEGMENT}/([^/]+)$`);
 
 function isMaintenanceMode() {
   const flag = process.env.MAINTENANCE_MODE;
@@ -24,21 +20,13 @@ export default function proxy(request: NextRequest) {
   }
   const barePath = pathLocale ? stripLocale(pathname) : pathname;
   if (pathLocale === defaultLocale) {
-    return canonicalRedirect(request, barePath, request.nextUrl.searchParams);
-  }
-  const segmentPage = ENTITY_PAGE_PATH.exec(barePath);
-  if (segmentPage) {
-    const query = new URLSearchParams(request.nextUrl.searchParams);
-    const page = resolvePage(segmentPage[3]);
-    if (page > 1) query.set('page', String(page));
-    else query.delete('page');
-    return canonicalRedirect(request, prefixPath(pathLocale, `/${segmentPage[1]}/${segmentPage[2]}`), query);
+    return canonicalRedirect(request, barePath);
   }
   if (!pathLocale && resolvedLocale !== defaultLocale && isReadRequest(request)) {
     return negotiatedRedirect(request, resolvedLocale);
   }
   const locale = pathLocale ?? resolvedLocale;
-  const internalPath = `/${locale}${paginatedInternalPath(barePath, request.nextUrl.searchParams)}`.replace(/\/$/, '');
+  const internalPath = `/${locale}${barePath}`.replace(/\/$/, '');
   const target = internalPath || `/${locale}`;
   const response = target === pathname
     ? NextResponse.next()
@@ -51,22 +39,9 @@ function isReadRequest(request: NextRequest) {
   return request.method === 'GET' || request.method === 'HEAD';
 }
 
-function resolvePage(value: string | null) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 1) return 1;
-  return Math.floor(parsed);
-}
-
-function paginatedInternalPath(barePath: string, searchParams: URLSearchParams) {
-  const page = resolvePage(searchParams.get('page'));
-  if (page < 2 || !ENTITY_PATH.test(barePath)) return barePath;
-  return `${barePath}/${PAGE_SEGMENT}/${page}`;
-}
-
 function rewriteUrl(request: NextRequest, pathname: string) {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
-  url.searchParams.delete('page');
   return url;
 }
 
@@ -80,10 +55,9 @@ function stripLocale(pathname: string) {
   return rest || '/';
 }
 
-function canonicalRedirect(request: NextRequest, pathname: string, searchParams: URLSearchParams) {
+function canonicalRedirect(request: NextRequest, pathname: string) {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
-  url.search = searchParams.toString();
   const response = NextResponse.redirect(url, 308);
   response.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=86400');
   return response;

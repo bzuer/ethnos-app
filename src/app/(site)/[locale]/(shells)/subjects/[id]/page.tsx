@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
+import { exportFilename } from '@/lib/entity-export';
 import { WorkResultList, type WorkResultLabels } from '@/components/common/WorkResultItem';
 import { getSubject, getSubjectWorksByTerm, getSubjectWorksPage } from '@/lib/endpoints';
 import { subjectTerm } from '@/lib/subjects';
@@ -14,14 +15,14 @@ import { localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
-export const dynamic = 'force-static';
-export const revalidate = 86400;
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: {
-  params: Promise<{ locale: string; id: string; page?: string }>;
+  params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const { id, locale, page: pageParam } = await props.params;
-  const page = resolvePageParam(pageParam);
+  const { id, locale } = await props.params;
+  const page = resolvePageParam((await props.searchParams).page);
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.subjectsDetail', `/subjects/${id}`, {
     query: page > 1 ? { page } : undefined
   });
@@ -52,11 +53,11 @@ export async function generateMetadata(props: {
   };
 }
 
-export default async function SubjectDetailPage(props: { params: Promise<{ locale: string; id: string; page?: string }> }) {
-  const { id, locale, page: pageParam } = await props.params;
+export default async function SubjectDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
+  const { id, locale } = await props.params;
   const subject = await getSubject(id);
   if (!subject) notFound();
-  const page = resolvePageParam(pageParam);
+  const page = resolvePageParam((await props.searchParams).page);
   const limit = 25;
 
   const canonicalTerm = subject.term || '';
@@ -149,7 +150,7 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
     {
       key: 'tools',
       label: t('subjects.sections.tools'),
-      content: <EntityTools kind="subject" entity={subject} worksCount={Number(worksCount) || 0} entityExportLabel={t('subjects.tools.exportSubject')} />
+      content: <EntityTools kind="subject" entityId={id} filename={exportFilename('subject', subject)} worksCount={Number(worksCount) || 0} entityExportLabel={t('subjects.tools.exportSubject')} />
     }
   ];
 

@@ -2,13 +2,12 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { actGetEntityExportWorks } from '@/lib/actions';
+import { actGetEntityExportWorks, actGetEntityRecord } from '@/lib/actions';
 import { showNotification } from '@/lib/notify';
 import { EXPORT_MIME, downloadBlob, downloadJson, downloadText } from '@/lib/download';
 import {
   buildEntityExport,
   buildWorksExport,
-  exportFilename,
   type EntityExportWorks,
   type EntityKind
 } from '@/lib/entity-export';
@@ -18,23 +17,35 @@ export type { EntityKind };
 
 type Props = {
   kind: EntityKind;
-  entity: any;
+  entityId: string | number;
+  filename: string;
   worksCount: number;
   entityExportLabel: string;
 };
 
-export default function EntityTools({ kind, entity, worksCount, entityExportLabel }: Props) {
+export default function EntityTools({ kind, entityId, filename: base, worksCount, entityExportLabel }: Props) {
   const t = useTranslations();
   const [busy, setBusy] = useState(false);
   const cacheRef = useRef<EntityExportWorks | null>(null);
-  const base = exportFilename(kind, entity);
   const hasWorks = Number(worksCount) > 0;
   const disabled = !hasWorks || busy;
 
   const onExportEntity = useCallback(() => {
-    downloadJson(`${base}.json`, buildEntityExport(kind, entity));
-    showNotification(t('common.messages.jsonExported'), 'success');
-  }, [base, entity, kind, t]);
+    setBusy(true);
+    void (async () => {
+      try {
+        const record = await actGetEntityRecord(kind, entityId);
+        if (!record) {
+          showNotification(t('common.states.unableToLoadWorks'), 'error');
+          return;
+        }
+        downloadJson(`${base}.json`, buildEntityExport(kind, record));
+        showNotification(t('common.messages.jsonExported'), 'success');
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [base, entityId, kind, t]);
 
   const runWorksExport = useCallback((
     exporter: (result: EntityExportWorks) => void | Promise<void>,
@@ -44,7 +55,7 @@ export default function EntityTools({ kind, entity, worksCount, entityExportLabe
     setBusy(true);
     void (async () => {
       try {
-        const result = cacheRef.current || await actGetEntityExportWorks(kind, entity?.id);
+        const result = cacheRef.current || await actGetEntityExportWorks(kind, entityId);
         cacheRef.current = result;
         if (!result.works.length) {
           showNotification(
@@ -64,14 +75,14 @@ export default function EntityTools({ kind, entity, worksCount, entityExportLabe
         setBusy(false);
       }
     })();
-  }, [disabled, entity, kind, t]);
+  }, [disabled, entityId, kind, t]);
 
   const onExportWorksJson = useCallback(() => {
     runWorksExport(
-      (result) => downloadJson(`${base}-works.json`, buildWorksExport(result.works, { kind, entity, scope: result.scope })),
+      (result) => downloadJson(`${base}-works.json`, buildWorksExport(result.works, { kind, entity: { id: entityId }, scope: result.scope })),
       t('common.messages.jsonExported')
     );
-  }, [base, entity, kind, runWorksExport, t]);
+  }, [base, entityId, kind, runWorksExport, t]);
 
   const onExportWorksBib = useCallback(() => {
     runWorksExport((result) => {
@@ -103,7 +114,7 @@ export default function EntityTools({ kind, entity, worksCount, entityExportLabe
 
   return (
     <div className="tools-actions">
-      <button type="button" className="action-btn btn-positive" onClick={onExportEntity}>{entityExportLabel}</button>
+      <button type="button" className="action-btn btn-positive" onClick={onExportEntity} disabled={busy}>{entityExportLabel}</button>
       <button type="button" className="action-btn btn-positive" onClick={onExportWorksJson} disabled={disabled}>{t('common.tools.exportWorksJson')}</button>
       <button type="button" className="action-btn btn-positive" onClick={onExportWorksBib} disabled={disabled}>{t('common.tools.exportWorksBib')}</button>
       <button type="button" className="action-btn btn-positive" onClick={onExportWorksRis} disabled={disabled}>{t('common.tools.exportWorksRis')}</button>

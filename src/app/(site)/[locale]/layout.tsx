@@ -6,6 +6,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import JsonLd from '@/components/common/JsonLd';
 import LocaleLink from '@/components/common/LocaleLink';
 import LocaleSwitcher from '@/components/common/LocaleSwitcher';
+import ReadingListCounter from '@/components/common/ReadingListCounter';
 import ScrollTools from '@/components/common/ScrollTools';
 import { locales, type Locale } from '@/i18n/config';
 import {
@@ -113,6 +114,12 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   };
 }
 
+const CLIENT_NAMESPACES = ['layout', 'common', 'search', 'results', 'venues', 'lists', 'searchGlobal'];
+
+function pickClientMessages(messages: Record<string, unknown>) {
+  return Object.fromEntries(CLIENT_NAMESPACES.map((namespace) => [namespace, messages[namespace]]));
+}
+
 function stylesheetPath() {
   if (process.env.NODE_ENV === 'development') return '/css/styles.css';
   const version = process.env.ETHNOS_CSS_VERSION;
@@ -128,7 +135,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   if (!locales.includes(locale as Locale)) notFound();
   setRequestLocale(locale as Locale);
   const cssPath = stylesheetPath();
-  const messages = await getMessages();
+  const messages = pickClientMessages(await getMessages());
   const t = await getTranslations({ locale, namespace: 'layout' });
   const navLinks: NavLinks = {
     home: t('nav.home'),
@@ -193,7 +200,7 @@ function Header({ navLabel, navLinks, listCounterLabel }: { navLabel: string; na
         <LocaleLink warm className="nav-breadcrumb" href="/venues">{navLinks.journals}</LocaleLink>
         <span className="breadcrumb-separator" aria-hidden="true"> • </span>
         <LocaleLink warm className="nav-breadcrumb" href="/lists" aria-describedby="reading-list-counter">
-          {navLinks.lists} <span id="reading-list-counter" className="list-counter" aria-label={listCounterLabel}>0</span>
+          {navLinks.lists} <ReadingListCounter label={listCounterLabel} />
         </LocaleLink>
       </nav>
     </header>

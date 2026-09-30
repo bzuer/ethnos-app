@@ -1,9 +1,9 @@
 import { cache } from 'react';
-import { fetchJson, isMissingEntityError, unwrapData } from './api';
+import { fetchJson, getVenue, isMissingEntityError, unwrapData } from './api';
 import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
-import { normalizePersonDetail, normalizePersonWorkItem } from './works';
+import { normalizePersonDetail, normalizePersonWorkItem, normalizeWorkDetail } from './works';
 import { mergeWorkLists, type EntityExportWorks, type EntityKind } from './entity-export';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
@@ -470,3 +470,33 @@ export async function getEntityExportWorks(kind: EntityKind, id: string | number
     scope: { works: 'first_page', year: null, limit: EXPORT_PAGE_SIZE, truncated: items.length < (Number.isFinite(reported) ? reported : items.length) }
   };
 }
+
+export async function getEntityRecord(kind: EntityKind, id: string | number) {
+  if (kind === 'venue') return getVenue(id);
+  if (kind === 'institution') return getInstitution(id);
+  if (kind === 'subject') return getSubject(id);
+  const envelope: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(id))}`);
+  const raw = envelope?.data || envelope?.person || envelope || null;
+  return raw ? normalizePersonDetail(raw) : null;
+}
+
+export const loadWork = cache(async (id: string) => {
+  const safeId = encodeURIComponent(id);
+  const [workResult, metricsResult] = await Promise.allSettled([
+    fetchJson<any>(`/works/${safeId}?include_citations=true&include_references=true`),
+    fetchJson<any>(`/works/${safeId}/metrics`)
+  ]);
+  if (workResult.status === 'rejected') {
+    if (isMissingEntityError(workResult.reason)) return null;
+    throw workResult.reason;
+  }
+  const envelope: any = workResult.value;
+  const raw = envelope?.data || envelope?.work || envelope || null;
+  if (!raw) return null;
+  const work = normalizeWorkDetail(raw);
+  if (work && typeof work === 'object' && metricsResult.status === 'fulfilled') {
+    const md: any = metricsResult.value?.data || metricsResult.value || null;
+    if (md && typeof md === 'object') (work as any).authoritative_metrics = md;
+  }
+  return work;
+});

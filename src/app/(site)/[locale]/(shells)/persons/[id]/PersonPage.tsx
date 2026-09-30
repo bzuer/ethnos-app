@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
+import { exportFilename } from '@/lib/entity-export';
 import SubjectLinks from '@/components/common/SubjectLinks';
 import PersonWorksList from './PersonWorksList';
 import { getPersonsWorks, getPersonsWorksFirst, getPersonsWorksProminent } from '@/lib/endpoints';
@@ -96,10 +97,11 @@ const sortByRecency = (items: any[]): any[] => {
 
 
 export async function generateMetadata(props: {
-  params: Promise<{ locale: string; id: string; page?: string }>;
+  params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const { id, locale, page: pageParam } = await props.params;
-  const page = resolvePageParam(pageParam);
+  const { id, locale } = await props.params;
+  const page = resolvePageParam((await props.searchParams).page);
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.persons', `/persons/${id}`, {
     ogType: 'profile',
     query: page > 1 ? { page } : undefined
@@ -157,9 +159,9 @@ export async function generateMetadata(props: {
   };
 }
 
-export default async function PersonPage(props: { params: Promise<{ locale: string; id: string; page?: string }> }) {
-  const { id, locale, page: pageParam } = await props.params;
-  const page = resolvePageParam(pageParam);
+export default async function PersonPage(props: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
+  const { id, locale } = await props.params;
+  const page = resolvePageParam((await props.searchParams).page);
   const data: any = await getPersonsWorks(id, page, 25);
   const person = data?.person || null;
   const worksPage = data?.works || null;
@@ -282,7 +284,7 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
     {
       key: 'tools',
       label: t('persons.sections.tools'),
-      content: <EntityTools kind="person" entity={person} worksCount={personWorksCount} entityExportLabel={t('persons.tools.exportPerson')} />
+      content: <EntityTools kind="person" entityId={id} filename={exportFilename('person', person)} worksCount={personWorksCount} entityExportLabel={t('persons.tools.exportPerson')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 

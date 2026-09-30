@@ -276,7 +276,7 @@ async function auditPage(base, pathname, expectations) {
   check(Boolean(head), `${pathname} exposes a <head>`);
   check(!response.headers.get('set-cookie'), `${pathname} sets no cookie`, response.headers.get('set-cookie') || '');
   const cacheControl = response.headers.get('cache-control') || '';
-  check(!/no-store|private/i.test(cacheControl), `${pathname} is cacheable by a shared cache`, cacheControl || 'missing');
+  if (!expectations.dynamic) check(!/no-store|private/i.test(cacheControl), `${pathname} is cacheable by a shared cache`, cacheControl || 'missing');
   const prefixedLinks = (html.match(/href="\/en(?:\/|"|\?)/g) || []).length;
   check(prefixedLinks === 0, `${pathname} links to no /en-prefixed URL`, `${prefixedLinks} links`);
 
@@ -439,7 +439,7 @@ async function main() {
       ...pickSample(sitemapUrls, '/persons/', options.sampleSize).map((pathname) => ({ pathname, jsonLdTypes: ['Person', 'BreadcrumbList'] }))
     ];
     for (const sample of samples) {
-      await auditPage(options.base, sample.pathname, { locale: 'en', jsonLdTypes: sample.jsonLdTypes });
+      await auditPage(options.base, sample.pathname, { locale: 'en', jsonLdTypes: sample.jsonLdTypes, dynamic: true });
     }
   }
 

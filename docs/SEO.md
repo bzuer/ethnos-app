@@ -139,11 +139,10 @@ page — never hand-roll `dangerouslySetInnerHTML={{ __html: JSON.stringify(...)
 
 `/sitemap.xml` is a **sitemap index** over five sections. Each section lists **one `<url>` per
 resource, at its canonical default-locale URL**, with no `/pt`/`/es` twins and no `xhtml:link`
-alternates (decided 2026-09-28). hreflang is declared in every page's `<head>` — complete, including
-itself and `x-default`, and reciprocal — which Google and Bing accept as the sole hreflang source; the
-pt/es variants hold the same bibliographic record with translated chrome and are discovered through
-it. Listing the twins had tripled every resource and capped a file at 16,666 resources; a file now
-holds 50,000 at about a quarter of the bytes.
+alternates. hreflang is declared in every page's `<head>` — complete, including itself and
+`x-default`, and reciprocal — which Google and Bing accept as the sole hreflang source; the pt/es
+variants hold the same bibliographic record with translated chrome and are discovered through it. A
+file holds up to 50,000 resources.
 
 | Section | Contents | Source | `<lastmod>` |
 |---------|----------|--------|-------------|
@@ -169,8 +168,8 @@ holds 50,000 at about a quarter of the bytes.
   fallback and are never "now".
 - **Curated lists rot.** They are ids only, generated outside this repository (the data project's
   `xml_list` script: works by citations, venues by score, persons by h-index). Merged or deleted
-  records keep their id in the file and answer 404 — six top works did until 2026-09-28. After
-  regenerating a list, run the audit: its `sitemap targets` group requests a sample of every section.
+  records keep their id in the file and answer 404. After regenerating a list, run the audit: its
+  `sitemap targets` group requests a sample of every section.
 - **Documentation is listed only while it has content.** `listDocPages()` skips chapters whose source
   file is empty (they answer 404), so the sitemap never advertises a blank page, and the section being
   unlinked from the chrome means the sitemap is its only discovery path while it is published.
@@ -198,14 +197,12 @@ The layout links the manifest through `metadata.manifest`, not a hand-written `<
 
 ## Robots
 
-`public/robots.txt` is static, hand-maintained and deliberately minimal (the owner cut the earlier
-49-line version with content signals and AI-crawler blocks to this in September 2026). It:
+`public/robots.txt` is static, hand-maintained and deliberately minimal. It:
 
 - allows everything for the wildcard group;
 - disallows `/search/results` and `/search/global` under all three locale prefixes — the one
   exception to "never Disallow a noindex page": their query strings are an unbounded crawl space
-  (entity pages link `?author=…&subject=…` combinations, and 20 hours of 2026-09-28 traffic
-  produced 159k requests over 29k distinct result URLs), every rendered page fires a search server
+  (entity pages link `?author=…&subject=…` combinations), every rendered page fires a search server
   action, and they are noindex anyway. The links into them carry `rel="nofollow"`;
 - points at `https://ethnos.app/sitemap.xml`.
 
@@ -228,9 +225,9 @@ The audit requires the six search Disallow lines. There are no per-locale robots
   no cookie, answers **307** to the prefixed URL with `Cache-Control: private, no-store`. Unprefixed
   URLs therefore always render English, and Portuguese content always sits at a `/pt` URL whose
   canonical matches the address bar.
-- Entity detail pages are ISR (`s-maxage=86400`); `?page=N` on persons, venues, institutions and
-  subjects is rewritten to an internal `…/p/N` route, and a direct `…/p/N` request answers 308 back
-  to `?page=N`.
+- Entity detail pages render on request; `?page=N` on persons, venues, institutions and subjects is
+  read from the query string, and the canonical keeps `?page=N`. In production nginx answers the
+  `/en` 308 before the application.
 - Maintenance mode returns 503 with `Retry-After`, which Google treats as temporary.
 
 ## Response headers

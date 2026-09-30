@@ -16,7 +16,10 @@ import { formatContributorName, getWorkAbstractSnippet, groupContributorsByRole,
 import { buildIdentifierHref, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { notFound } from 'next/navigation';
-import { buildCoins, buildCitationMeta, loadWork, pickReferenceAuthors } from './work-detail';
+import { buildCoins, buildCitationMeta, pickReferenceAuthors } from './work-detail';
+import { loadWork } from '@/lib/endpoints';
+import { exportFilename } from '@/lib/entity-export';
+import { buildWorkAccessLinks, toListItem } from '@/lib/work-export';
 
 const openGraphLocaleMap: Record<string, string> = {
   en: 'en_US',
@@ -123,8 +126,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   };
 }
 
-export const dynamic = 'force-static';
-export const revalidate = 86400;
+export const dynamic = 'force-dynamic';
 
 export default async function WorkDetailPage(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
@@ -569,7 +571,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         impact={impactPanel}
         tools={(
           <div className="tools-actions">
-            <ClientActions work={work} />
+            <ClientActions workId={id} filename={exportFilename('work', work)} links={buildWorkAccessLinks(work)} listItem={toListItem(work)} />
           </div>
         )}
       />

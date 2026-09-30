@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
+import { exportFilename } from '@/lib/entity-export';
 import SubjectLinks from '@/components/common/SubjectLinks';
 import VenueWorksList from './VenueWorksList';
 import { getVenue } from '@/lib/api';
@@ -17,8 +18,7 @@ import { SITE_NAME, localeUrl, paginatedPath, resolvePageParam } from '@/lib/sit
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
-export const dynamic = 'force-static';
-export const revalidate = 86400;
+export const dynamic = 'force-dynamic';
 
 const pickText = (values: Array<string | null | undefined>) => {
   for (const value of values) {
@@ -164,10 +164,11 @@ const addIdentifierValues = (
 
 
 export async function generateMetadata(props: {
-  params: Promise<{ locale: string; id: string; page?: string }>;
+  params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const { id, locale, page: pageParam } = await props.params;
-  const page = resolvePageParam(pageParam);
+  const { id, locale } = await props.params;
+  const page = resolvePageParam((await props.searchParams).page);
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`, {
     query: page > 1 ? { page } : undefined
   });
@@ -229,11 +230,11 @@ export async function generateMetadata(props: {
   };
 }
 
-export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string; page?: string }> }) {
-  const { id, locale, page: pageParam } = await props.params;
+export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
+  const { id, locale } = await props.params;
   let venue = await getVenue(id);
   if (!venue) notFound();
-  const page = resolvePageParam(pageParam);
+  const page = resolvePageParam((await props.searchParams).page);
   const limit = 25;
   let worksPage: any = null;
   try { worksPage = await getVenueWorksPage(id, page, limit); } catch {}
@@ -643,7 +644,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
           {
             key: 'tools',
             label: t('venues.sections.tools'),
-            content: <EntityTools kind="venue" entity={venue} worksCount={Number((venue as any)?.works_count) || 0} entityExportLabel={t('venues.tools.exportVenue')} />
+            content: <EntityTools kind="venue" entityId={id} filename={exportFilename('venue', venue)} worksCount={Number((venue as any)?.works_count) || 0} entityExportLabel={t('venues.tools.exportVenue')} />
           }
         ].filter(Boolean) as SectionTabDescriptor[];
 

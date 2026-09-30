@@ -1,14 +1,16 @@
 import { Fragment, type ReactNode } from 'react';
 import LocaleLink from '@/components/common/LocaleLink';
-import WorkMetaBadges from '@/components/common/WorkMetaBadges';
+import ListToggleBadge from '@/components/common/ListToggleBadge';
 import {
   formatMetadataAuthors,
   formatMetadataType,
   formatMetadataVenue,
   getWorkAbstractSnippet,
+  getWorkOpenAccessDoiUrl,
   isWorkOpenAccess,
   truncateMetadataText
 } from '@/lib/works';
+import { toListItem } from '@/lib/work-export';
 
 export type WorkResultLabels = {
   titleUnavailable: string;
@@ -68,16 +70,7 @@ export function WorkResultItem({
   const relRaw = showRelevance ? (item?.relevance ?? item?.score ?? item?._score ?? item?.rank) : undefined;
   const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);
   const rel = relNum && isFinite(relNum) ? relNum.toFixed(2) : '';
-  const badgeProps = {
-    work: item,
-    openAccess,
-    openAccessLabel: labels.openAccess,
-    addToListLabel: labels.addToList,
-    inListLabel: labels.inList,
-    removeFromListLabel: labels.removeFromList,
-    addedMessage: labels.added,
-    removedMessage: labels.itemRemoved
-  };
+  const openAccessHref = openAccess ? getWorkOpenAccessDoiUrl(item) : '';
   const metaParts: ReactNode[] = [];
   if (showAuthors) metaParts.push(<span className="result-authors">{authorsDisplay}</span>);
   if (type) metaParts.push(<span className="result-type">{type}</span>);
@@ -98,7 +91,11 @@ export function WorkResultItem({
       <p className="result-meta">
         {openAccess ? (
           <>
-            <WorkMetaBadges {...badgeProps} showListBadge={false} />
+            {openAccessHref ? (
+              <a className="badge open-acess badge-link" href={openAccessHref} target="_blank" rel="noopener noreferrer">{labels.openAccess}</a>
+            ) : (
+              <span className="badge open-acess">{labels.openAccess}</span>
+            )}
             {metaParts.length ? <Separator /> : null}
           </>
         ) : null}
@@ -111,7 +108,10 @@ export function WorkResultItem({
       </p>
       {id ? (
         <p className="result-meta result-badges">
-          <WorkMetaBadges {...badgeProps} showOpenAccessBadge={false} />
+          <ListToggleBadge
+            item={{ ...toListItem(item), id }}
+            labels={{ add: labels.addToList, inList: labels.inList, remove: labels.removeFromList, added: labels.added, removed: labels.itemRemoved }}
+          />
         </p>
       ) : null}
       {abstract ? <p className="result-abstract">{abstract}</p> : null}

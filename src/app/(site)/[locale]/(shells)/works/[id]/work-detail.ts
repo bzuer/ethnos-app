@@ -1,20 +1,15 @@
 import 'server-only';
-import { cache } from 'react';
 import type { Locale } from '@/i18n/config';
 import { localeUrl } from '@/lib/site';
-import { fetchJson, isMissingEntityError } from '@/lib/api';
 import {
   formatContributorName,
   formatMetadataAuthors,
   groupContributorsByRole,
-  normalizeWorkDetail,
   pickContributorEntries,
   pickPrimaryContributors,
   sanitizeWorkAbstract,
   type ContributorRole
 } from '@/lib/works';
-
-const workDetailQuery = 'include_citations=true&include_references=true';
 
 function toStringList(raw: any): string[] {
   const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
@@ -275,23 +270,3 @@ export function pickReferenceAuthors(item: any) {
   return formatMetadataAuthors(item);
 }
 
-export const loadWork = cache(async (id: string) => {
-  const safeId = encodeURIComponent(id);
-  const [workResult, metricsResult] = await Promise.allSettled([
-    fetchJson<any>(`/works/${safeId}?${workDetailQuery}`),
-    fetchJson<any>(`/works/${safeId}/metrics`)
-  ]);
-  if (workResult.status === 'rejected') {
-    if (isMissingEntityError(workResult.reason)) return null;
-    throw workResult.reason;
-  }
-  const envelope: any = workResult.value;
-  const raw = envelope?.data || envelope?.work || envelope || null;
-  if (!raw) return null;
-  const work = normalizeWorkDetail(raw);
-  if (work && typeof work === 'object' && metricsResult.status === 'fulfilled') {
-    const md: any = metricsResult.value?.data || metricsResult.value || null;
-    if (md && typeof md === 'object') (work as any).authoritative_metrics = md;
-  }
-  return work;
-});

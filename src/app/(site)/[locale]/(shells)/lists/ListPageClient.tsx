@@ -7,35 +7,11 @@ import { actGetWorkFull } from '@/lib/actions';
 import { EXPORT_MIME, downloadBlob, downloadJson, downloadText } from '@/lib/download';
 import { buildWorksExport } from '@/lib/entity-export';
 import { showNotification } from '@/lib/notify';
+import { readList, writeList, type ReadingListItem } from '@/lib/reading-list';
 import { normWork, toBibTeX, toRIS } from '@/lib/work-export';
 
-type SavedItem = { id: number | string; title?: string; authors?: any; publication_year?: number | string; venue_name?: string; type?: string; added_at?: string };
+type SavedItem = ReadingListItem;
 type Work = any;
-
-const STORAGE_KEY = 'ethnos_app_personal_list';
-
-function readList(): SavedItem[] {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    return v ? normalizeList(JSON.parse(v)) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeList(items: SavedItem[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function updateHeaderCounter() {
-  const el = document.getElementById('reading-list-counter');
-  if (el) el.textContent = String(readList().length);
-}
 
 function formatAuthorsForDisplay(authors: any, fallback: string): string {
   if (Array.isArray(authors)) {
@@ -65,11 +41,6 @@ async function fetchWork(id: string | number): Promise<Work | null> {
   } catch {
     return null;
   }
-}
-
-function normalizeList(value: any): SavedItem[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item) => item && typeof item === 'object' && 'id' in item) as SavedItem[];
 }
 
 async function resolveWorksForExport(list: SavedItem[]) {
@@ -103,24 +74,18 @@ export default function ListPageClient() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    updateHeaderCounter();
-  }, [items.length]);
-
   const onRemove = (id: number | string) => {
     const list = readList().filter((x) => String(x.id) !== String(id));
     writeList(list);
     setItems(list);
-    updateHeaderCounter();
     showNotification(t('common.messages.itemRemoved'), 'error');
   };
 
   const onClear = () => {
     if (!hasItems) return;
     if (confirm(t('common.messages.confirmClear'))) {
-      localStorage.removeItem(STORAGE_KEY);
+      writeList([]);
       setItems([]);
-      updateHeaderCounter();
       showNotification(t('common.messages.listCleared'), 'success');
     }
   };

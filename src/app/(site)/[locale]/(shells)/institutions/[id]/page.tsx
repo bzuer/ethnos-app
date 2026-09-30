@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
+import { exportFilename } from '@/lib/entity-export';
 import WorkRelatedList from '../../works/[id]/WorkRelatedList';
 import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
 import { buildIdentifierHref } from '@/lib/identifiers';
@@ -15,14 +16,14 @@ import { localeUrl, paginatedPath, resolvePageParam } from '@/lib/site';
 import { buildBreadcrumbList, withSitePublisher } from '@/lib/structured-data';
 import type { Locale } from '@/i18n/config';
 
-export const dynamic = 'force-static';
-export const revalidate = 86400;
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(props: {
-  params: Promise<{ locale: string; id: string; page?: string }>;
+  params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const { id, locale, page: pageParam } = await props.params;
-  const page = resolvePageParam(pageParam);
+  const { id, locale } = await props.params;
+  const page = resolvePageParam((await props.searchParams).page);
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.institutionsDetail', `/institutions/${id}`, {
     query: page > 1 ? { page } : undefined
   });
@@ -53,11 +54,11 @@ export async function generateMetadata(props: {
   };
 }
 
-export default async function InstitutionDetailPage(props: { params: Promise<{ locale: string; id: string; page?: string }> }) {
-  const { id, locale, page: pageParam } = await props.params;
+export default async function InstitutionDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
+  const { id, locale } = await props.params;
   const institution = await getInstitution(id);
   if (!institution) notFound();
-  const page = resolvePageParam(pageParam);
+  const page = resolvePageParam((await props.searchParams).page);
   const limit = 25;
   const fundedCount = Number(institution?.funding_role?.funded_works_count) || 0;
 
@@ -199,7 +200,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
     {
       key: 'tools',
       label: t('institutions.sections.tools'),
-      content: <EntityTools kind="institution" entity={institution} worksCount={Number(worksCount) || 0} entityExportLabel={t('institutions.tools.exportInstitution')} />
+      content: <EntityTools kind="institution" entityId={id} filename={exportFilename('institution', institution)} worksCount={Number(worksCount) || 0} entityExportLabel={t('institutions.tools.exportInstitution')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 

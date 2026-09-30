@@ -3,7 +3,9 @@
 import { fetchJson } from './api';
 import {
   getEntityExportWorks,
+  getEntityRecord,
   getVenuesPage,
+  loadWork,
   searchWorks,
   type VenuesListFilters
 } from './endpoints';
@@ -83,13 +85,9 @@ export async function actSearchGlobal(query: string, limit = 10): Promise<Global
 }
 
 export async function actGetWorkFull(id: string | number, slim = false) {
-  const safeId = encodeURIComponent(String(id));
-  const query = slim ? '' : '?include_citations=true&include_references=true';
   try {
-    const envelope: any = await fetchJson<any>(
-      `/works/${safeId}${query}`,
-      { retries: 1, timeoutMs: 8000 }
-    );
+    if (!slim) return await loadWork(String(id));
+    const envelope: any = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}`, { retries: 1, timeoutMs: 8000 });
     return envelope?.data ?? envelope?.work ?? envelope ?? null;
   } catch {
     return null;
@@ -158,6 +156,14 @@ export async function actGetWorkReferences(id: string | number, page = 1) {
 
 export async function actGetEntityExportWorks(kind: EntityKind, id: string | number): Promise<EntityExportWorks> {
   return await getEntityExportWorks(kind, id);
+}
+
+export async function actGetEntityRecord(kind: EntityKind, id: string | number) {
+  try {
+    return await getEntityRecord(kind, id);
+  } catch {
+    return null;
+  }
 }
 
 export type VenuesPageActionOptions = VenuesListFilters;
