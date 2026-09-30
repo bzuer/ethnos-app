@@ -108,6 +108,28 @@ own request even when the prefetch finished first. `kind: 'full'` was worse (3 r
   walk tens of thousands of distinct work URLs per hour. The real hit ratio on .175 is unknown
   (§4), but it is unlikely to reach the break-even point under crawler load.
 
+### 2.5 The 16:45 deploy on .175 and an overload reproduction
+
+- The deploy did not hang. `check_app` logged `ethnos-app.service is active` at 16:45:48 and then
+  `wait_for_app` spent **6 minutes** (until 16:51:45) failing to get `GET /` from 127.0.0.1:1202
+  within its 5 s `--max-time`. `READY_TIMEOUT=60` counts *iterations*, not seconds, so 60 × (5 s +
+  1 s) = 6 min. The process that had just started could not answer a prerendered page for 6 minutes:
+  it restarts with an empty memory ISR cache (`isrFlushToDisk: false`) straight into live traffic,
+  plus whatever crawlers retry after the 502s of the build window. Validation then passed at 16:51:46.
+- Lab reproduction on .80, open-loop arrivals of unique `/works/{id}` with a 60 s client timeout
+  (nginx's `proxy_read_timeout`) and a `wait_for_app`-style probe of `/` every second:
+
+| Arrival rate | HEAD (ISR) | Baseline (dynamic) |
+|---|---|---|
+| 90 req/s × 40 s | kept up, probe 3–23 ms, 0/39 probe timeouts | kept up, probe 3–4 ms, 0/40 |
+| 180 req/s × 25 s | probe **timed out 4/6**, 358 requests abandoned at 60 s, drained 25 s after the load stopped | probe **timed out 2/11**, backlog of 2,613, drained 32 s after the load stopped |
+
+  Both builds collapse the same way once arrivals exceed what one Node thread can render. HEAD
+  degrades somewhat earlier, but the deciding variable is the **volume** reaching Node. Requests
+  abandoned by the client are still rendered, which wastes capacity and extends the collapse past
+  the peak. The capacity figures depend on page weight: heavy works with long citation lists render
+  at ~65–100/s (§2.4), recent light ones at 90+/s.
+
 ## 3. Causes, ranked
 
 ### 3.1 Saturated Next process on .175 (confirmed symptom, cause to confirm on the host)
@@ -228,6 +250,9 @@ Ordered by effect on what users feel. Nothing below has been applied.
   `gzip_proxied any`). Add **`text/x-component`** to `gzip_types` so RSC payloads stay compressed.
   Expected gain: +15–20% of main-thread throughput.
 - **`fetchJson`**: retry only 429/5xx/network errors, never a 4xx.
+- **`scripts/manage.sh#wait_for_app`**: bound the loop by elapsed time (`SECONDS`), not by
+  iteration count, so `READY_TIMEOUT=60` means 60 s and a saturated start no longer looks like a
+  6-minute hang.
 - **Stylesheet**: serve it under a content-hashed URL with `immutable`, or at least give it an edge
   TTL, so a first visit no longer waits on the origin for render-blocking CSS.
 
