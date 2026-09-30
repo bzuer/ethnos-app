@@ -294,14 +294,14 @@ remove_indexnow_timer() {
 }
 
 wait_for_app() {
-  local waited=0
-  while [ "$waited" -lt "$READY_TIMEOUT" ]; do
+  local started=$SECONDS
+  local deadline=$((SECONDS + READY_TIMEOUT))
+  while [ "$SECONDS" -lt "$deadline" ]; do
     if curl -s -o /dev/null --max-time 5 "http://${APP_UPSTREAM_HOST}:${APP_PORT}/" 2>/dev/null; then
-      log "App answering on ${APP_UPSTREAM_HOST}:${APP_PORT} after ${waited}s"
+      log "App answering on ${APP_UPSTREAM_HOST}:${APP_PORT} after $((SECONDS - started))s"
       return 0
     fi
     sleep 1
-    waited=$((waited + 1))
   done
   warn "App did not answer on ${APP_UPSTREAM_HOST}:${APP_PORT} within ${READY_TIMEOUT}s"
   return 1
