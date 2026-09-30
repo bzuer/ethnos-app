@@ -137,6 +137,7 @@ edge (Cloudflare) → nginx :1212 → next start -H localhost -p 1202
 ## Gotchas
 
 - Under `set -euo pipefail`, a command substitution whose `grep` may match nothing needs `|| true`, and an `a && b` list must not end a loop or function.
+- The hosts run uutils coreutils, whose `install` fails with `No such file or directory` when the source is `/dev/stdin` and the destination exists: install from a temporary file.
 - `Cannot find module './948.js'` on `next start` means a half-built `.next` or Node ≥ 25: run `deploy`.
 - Never recreate `src/app/sitemap.ts` or `public/site.webmanifest` (they shadow the live routes), nor per-locale `robots.txt`.
 - `loadWork()` and `getPersonsWorks()` are wrapped in React `cache()`: `generateMetadata` and the page share one fetch.

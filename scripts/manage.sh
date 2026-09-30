@@ -66,9 +66,17 @@ render_unit() {
       "$ROOT_DIR/scripts/systemd/$1"
 }
 
+install_as_root() {
+  local tmp
+  tmp="$(mktemp)"
+  printf '%s\n' "$1" > "$tmp"
+  as_root install -D -m 0644 -o root -g root "$tmp" "$2"
+  rm -f "$tmp"
+}
+
 install_if_changed() {
   if [ -f "$2" ] && [ "$(cat "$2")" = "$1" ]; then return 1; fi
-  printf '%s\n' "$1" | as_root install -m 0644 -o root -g root /dev/stdin "$2"
+  install_as_root "$1" "$2"
 }
 
 build_css() {
@@ -182,7 +190,7 @@ cmd_systemd() {
 cmd_maintenance() {
   case "${1:-status}" in
     on)
-      printf '[Service]\nEnvironment=MAINTENANCE_MODE=1\n' | as_root install -D -m 0644 /dev/stdin "$DROPIN"
+      install_as_root $'[Service]\nEnvironment=MAINTENANCE_MODE=1' "$DROPIN"
       as_root systemctl daemon-reload
       as_root systemctl restart "$SERVICE"
       log "maintenance on"

@@ -76,7 +76,10 @@ fi
 
 backup="$(mktemp)"
 [ -f "$DEST" ] && cp "$DEST" "$backup" || : > "$backup"
-printf '%s\n' "$content" | install -m 644 -o root -g root /dev/stdin "$DEST"
+rendered="$(mktemp)"
+printf '%s\n' "$content" > "$rendered"
+install -m 644 -o root -g root "$rendered" "$DEST"
+rm -f "$rendered"
 if ! nginx -t 2>/dev/null; then
   if [ -s "$backup" ]; then install -m 644 -o root -g root "$backup" "$DEST"; else rm -f "$DEST"; fi
   rm -f "$backup"
