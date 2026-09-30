@@ -116,7 +116,7 @@ export async function fetchJson<T>(path: string, init?: RequestInit & { timeoutM
       return (await res.json()) as T;
     } catch (error) {
       lastError = error;
-      if (attempt >= attempts - 1) throw error;
+      if (attempt >= attempts - 1 || error instanceof ApiError) throw error;
       await wait(150);
     } finally {
       clearTimeout(timeout);
