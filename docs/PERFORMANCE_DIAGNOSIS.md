@@ -130,6 +130,16 @@ own request even when the prefetch finished first. `kind: 'full'` was worse (3 r
   the peak. The capacity figures depend on page weight: heavy works with long citation lists render
   at ~65–100/s (§2.4), recent light ones at 90+/s.
 
+### 2.6 Traffic on .175 (host data, 2026-09-30)
+
+- Requests reaching nginx per minute, 16:49–17:00: **3,428–6,233** (57–104 req/s), with a peak of
+  6,233 at 16:57. This is at or above what a single Next process renders (§2.4, §2.5). When .80 was
+  the origin on 29 Sep it received ~400/min, so the load grew about **10×**.
+- From 17:01 the volume fell to 728, then 318, then 53, because less traffic reached nginx (an
+  upstream change, still to be identified). `ss -lntH 'sport = :1202'` showed `Recv-Q 0`, meaning
+  no accept backlog at that moment.
+- This confirms §3.1: the latency comes from request volume against single-threaded capacity.
+
 ## 3. Causes, ranked
 
 ### 3.1 Saturated Next process on .175 (confirmed symptom, cause to confirm on the host)
