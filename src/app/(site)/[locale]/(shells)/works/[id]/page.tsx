@@ -555,7 +555,6 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
         citationsLabel={t('works.detail.sections.citedBy')}
         referencesLabel={t('works.detail.sections.references')}
         impactLabel={t('works.detail.sections.impact')}
-        toolsLabel={t('works.detail.sections.tools')}
         abstract={(abstractText || workSubjects.length > 0) ? (
           <>
             {abstractText ? <p className="description">{abstractText}</p> : null}
@@ -569,12 +568,14 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
           <WorkCitationList workId={id} kind="references" initialItems={refs} total={referencesTabTotal} />
         ) : null}
         impact={impactPanel}
-        tools={(
-          <div className="tools-actions">
-            <ClientActions workId={id} filename={exportFilename('work', work)} links={buildWorkAccessLinks(work)} listItem={toListItem(work)} />
-          </div>
-        )}
       />
+
+      <section aria-labelledby="tools-block">
+        <h2 className="title-section" id="tools-block">{t('works.detail.sections.tools')}</h2>
+        <div className="tools-actions">
+          <ClientActions workId={id} filename={exportFilename('work', work)} links={buildWorkAccessLinks(work)} listItem={toListItem(work)} />
+        </div>
+      </section>
     </div>
   );
 }
