@@ -27,3 +27,4 @@ yarn-error.log*
 LOG.md
 .claude/
 .cache/
+public/[0-9].txt/
