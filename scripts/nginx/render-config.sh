@@ -20,7 +20,11 @@ LISTEN_ADDRESS="${NGINX_LISTEN_ADDRESS-127.0.0.1}"
 SERVER_NAME="${NGINX_SERVER_NAME:-_}"
 UPSTREAM_HOST="${APP_UPSTREAM_HOST:-127.0.0.1}"
 UPSTREAM_PORT="${APP_PORT:-1202}"
-IPV6="${NGINX_IPV6:-true}"
+if [ -z "${NGINX_IPV6:-}" ]; then
+  ip -6 addr show lo 2>/dev/null | grep -q inet6 && IPV6=true || IPV6=false
+else
+  IPV6="$NGINX_IPV6"
+fi
 TLS_PORT="${NGINX_TLS_PORT:-}"
 SSL_CERT="${NGINX_SSL_CERT:-}"
 SSL_KEY="${NGINX_SSL_KEY:-}"

@@ -343,6 +343,8 @@
         "peerReviewed": "Peer Reviewed",
         "openAccess": "Open Access",
         "type": "Tipo",
+        "reviewOf": "Resenha de",
+        "reviewedBy": "Resenhado por",
         "publisher": "Editora",
         "publisherIds": "IDs da editora",
         "language": "Idioma",

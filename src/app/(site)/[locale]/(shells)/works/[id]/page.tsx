@@ -176,6 +176,9 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const workType = work?.formatted_type || work?.work_type || work?.type;
   const isBookType = String(workType || '').toUpperCase().includes('BOOK');
   const language = work?.language;
+  const reviewRelations = work?.review_relations;
+  const reviewsOf: any[] = Array.isArray(reviewRelations?.reviews_of) ? reviewRelations.reviews_of : [];
+  const reviewedBy: any[] = Array.isArray(reviewRelations?.reviewed_by) ? reviewRelations.reviewed_by : [];
   const metrics = work?.metrics || {};
   const identifiers = work?.identifiers && typeof work.identifiers === 'object' ? work.identifiers : {};
   const workTitle = work?.title || t('works.detail.titleFallback');
@@ -468,6 +471,38 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
                 <td className="field-value">{workType}</td>
               </tr>
             ) : null}
+            {reviewsOf.map((rel: any) => {
+              const relTitle = rel?.subtitle ? `${rel.title || ''}: ${rel.subtitle}` : (rel?.title || '');
+              const relAuthor = (rel?.authors_preview?.[0]) || (rel?.contributors_preview?.[0]?.name) || '';
+              const relYear = rel?.publication_year || '';
+              const desc = [relTitle, relAuthor, relYear].filter(Boolean).join(', ');
+              return (
+                <tr key={`review-of-${rel.work_id}`}>
+                  <th scope="row">{t('works.detail.labels.reviewOf')}</th>
+                  <td className="field-value">
+                    {rel?.work_id ? (
+                      <LocaleLink className="action-link table-link" href={`/works/${rel.work_id}`}>{desc}</LocaleLink>
+                    ) : desc}
+                  </td>
+                </tr>
+              );
+            })}
+            {reviewedBy.map((rel: any) => {
+              const relTitle = rel?.subtitle ? `${rel.title || ''}: ${rel.subtitle}` : (rel?.title || '');
+              const relAuthor = (rel?.authors_preview?.[0]) || (rel?.contributors_preview?.[0]?.name) || '';
+              const relYear = rel?.publication_year || '';
+              const desc = [relTitle, relAuthor, relYear].filter(Boolean).join(', ');
+              return (
+                <tr key={`reviewed-by-${rel.work_id}`}>
+                  <th scope="row">{t('works.detail.labels.reviewedBy')}</th>
+                  <td className="field-value">
+                    {rel?.work_id ? (
+                      <LocaleLink className="action-link table-link" href={`/works/${rel.work_id}`}>{desc}</LocaleLink>
+                    ) : desc}
+                  </td>
+                </tr>
+              );
+            })}
             {venueName ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.venue')}</th>
