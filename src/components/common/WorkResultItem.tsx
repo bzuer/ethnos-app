@@ -52,11 +52,9 @@ export function WorkResultItem({
 }: WorkResultItemProps) {
   const id = item?.id ?? item?.work_id ?? null;
   const rawTitle = item?.title || item?.work_title || '';
-  const subtitle = item?.subtitle || '';
-  const fullTitle = subtitle ? `${rawTitle}: ${subtitle}` : rawTitle;
-  const displayTitle = titleMaxLength > 0 && fullTitle.length > titleMaxLength
-    ? `${fullTitle.slice(0, titleMaxLength)}…`
-    : (fullTitle || labels.titleUnavailable);
+  const displayTitle = titleMaxLength > 0 && rawTitle.length > titleMaxLength
+    ? `${rawTitle.slice(0, titleMaxLength)}…`
+    : (rawTitle || labels.titleUnavailable);
   const openAccess = isWorkOpenAccess(item);
   const roleText = useRoleFallback
     ? truncateMetadataText(String(item?.role || item?.authorship_role || item?.authorship?.role || labels.roleFallback || '').toUpperCase(), 48)
