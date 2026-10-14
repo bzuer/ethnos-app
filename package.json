@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "docx": "^9.5.1",
-    "next": "^16.0.7",
+    "next": "^16.3.8",
     "next-intl": "^4.5.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -27,7 +27,7 @@
     "typescript": "5.9.3"
   },
   "engines": {
-    "node": ">=18.18 <25"
+    "node": ">=20.9 <25"
   },
   "browserslist": [
     "chrome >= 100",
@@ -38,7 +38,7 @@
     "samsung >= 19"
   ],
   "allowScripts": {
-    "@parcel/watcher@2.5.1": true,
+    "@parcel/watcher@2.6.0": true,
     "@swc/core@1.16.2": true,
     "unrs-resolver@1.11.1": true
   }
