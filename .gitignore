@@ -1,10 +1,7 @@
 .env
 .env.*
-!.env.example
 config/env/next-frontend.env
 .next/
-.node/
-.tmp-sitemap/
 .turbo/
 .vercel/
 .vscode/
@@ -20,11 +17,7 @@ npm-debug.log*
 out/
 pnpm-debug.log*
 tsconfig.tsbuildinfo
-workspaces.json
 yarn-error.log*
 .idea/
-*.log
-LOG.md
 .claude/
 .cache/
-public/[0-9].txt/
