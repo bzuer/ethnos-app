@@ -32,10 +32,8 @@ load_env() {
     die "$ENV_FILE is missing or unreadable"
   fi
   APP_PORT="${APP_PORT:-1202}"
-  APP_BIND_HOST="${APP_BIND_HOST:-localhost}"
   PUBLIC_PORT="${NGINX_PUBLIC_PORT:-1212}"
   NGINX_CONF="${NGINX_APP_CONF:-/etc/nginx/conf.d/ethnos-app.conf}"
-  [ "$APP_BIND_HOST" = localhost ] || die "APP_BIND_HOST must be localhost"
 }
 
 use_node() {
@@ -61,7 +59,7 @@ render_unit() {
   sed -e "s|__NODE_BIN__|$node_bin|g" -e "s|__NODE_DIR__|$(dirname "$node_bin")|g" \
       -e "s|__NEXT_BIN__|$NEXT_BIN|g" -e "s|__WORKDIR__|$ROOT_DIR|g" \
       -e "s|__RUN_USER__|$RUN_USER|g" -e "s|__RUN_GROUP__|$RUN_GROUP|g" \
-      -e "s|__ENV_FILE__|$ENV_FILE|g" -e "s|__BIND_HOST__|$APP_BIND_HOST|g" \
+      -e "s|__ENV_FILE__|$ENV_FILE|g" \
       -e "s|__APP_PORT__|$APP_PORT|g" -e "s|__PUBLIC_PORT__|$PUBLIC_PORT|g" \
       "$ROOT_DIR/scripts/systemd/$1"
 }
