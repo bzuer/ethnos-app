@@ -5,6 +5,7 @@ export const SITE_ORIGIN = 'https://ethnos.app';
 export const SITE_NAME = 'Ethnos Bibliography';
 export const SITE_PUBLISHER = 'Ethnos Research Lab';
 export const SITE_REPOSITORY = 'https://github.com/bzuer/ethnos-app';
+export const API_REPOSITORY = 'https://github.com/bzuer/ethnos-api';
 export const SITE_OG_IMAGE_PATH = '/og-default.png';
 export const SITE_OG_IMAGE_WIDTH = 1200;
 export const SITE_OG_IMAGE_HEIGHT = 630;

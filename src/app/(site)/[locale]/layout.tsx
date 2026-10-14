@@ -23,9 +23,11 @@ import {
 } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
 import {
+  API_REPOSITORY,
   SITE_NAME,
   SITE_ORIGIN,
   SITE_PUBLISHER,
+  SITE_REPOSITORY,
   SITE_THEME_COLOR,
   SITE_THEME_COLOR_DARK,
   localeUrl
@@ -211,7 +213,7 @@ function Footer({ label, strings }: { label: string; strings: FooterStrings }) {
   return (
     <footer className="footer" aria-label={label}>
       <div className="footer-sources">
-        <a href={SITE_ORIGIN} target="_blank" rel="noopener noreferrer">{strings.project}</a> • {strings.openSource} • <LocaleLink href="/license">{strings.license}</LocaleLink> • {strings.frontendVersion} • <LocaleLink href="/privacy">{strings.privacy}</LocaleLink> • {strings.apiDocs}: <a href="https://api.ethnos.app/docs" target="_blank" rel="noopener noreferrer">api.ethnos.app/docs</a> • {strings.apiSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17049435 • {strings.frontendSource}: <a href="https://github.com/bzuer/ethnos-app" target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17050053 • <a href="https://cruz.rio.br" target="_blank" rel="noopener noreferrer">cruz.rio.br</a> • {strings.tagline}
+        <a href={SITE_ORIGIN} target="_blank" rel="noopener noreferrer">{strings.project}</a> • {strings.openSource} • <LocaleLink href="/license">{strings.license}</LocaleLink> • {strings.frontendVersion} • <LocaleLink href="/privacy">{strings.privacy}</LocaleLink> • {strings.apiDocs}: <a href="https://api.ethnos.app/docs" target="_blank" rel="noopener noreferrer">api.ethnos.app/docs</a> • {strings.apiSource}: <a href={API_REPOSITORY} target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17049435 • {strings.frontendSource}: <a href={SITE_REPOSITORY} target="_blank" rel="noopener noreferrer">GitHub</a> • {strings.doi}: 10.5281/zenodo.17050053 • <a href="https://cruz.rio.br" target="_blank" rel="noopener noreferrer">cruz.rio.br</a> • {strings.tagline}
       </div>
     </footer>
   );

@@ -10,7 +10,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self' https://api.ethnos.app",
+  "connect-src 'self'",
   "frame-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
