@@ -17,7 +17,7 @@ export type { EntityKind };
 
 type Props = {
   kind: EntityKind;
-  entityId: string | number;
+  entityId: string;
   filename: string;
   worksCount: number;
   entityExportLabel: string;

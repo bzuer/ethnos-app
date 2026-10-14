@@ -1,36 +1,5 @@
-function resolveBoolean(value: any) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) return undefined;
-    if (['true', '1', 'yes', 'y', 'open', 'oa', 'available', 'gratis', 'libre', 'gold', 'green', 'bronze', 'hybrid', 'diamond', 'platinum'].includes(normalized)) return true;
-    if (['false', '0', 'no', 'n', 'closed', 'none', 'unknown', 'restricted', 'subscription', 'paywalled'].includes(normalized)) return false;
-  }
-  return undefined;
-}
-
-function pickDoiRaw(item: any) {
-  if (!item) return '';
-  const direct = item?.doi ?? item?.DOI;
-  if (direct) return direct;
-  const publication = item?.publication?.doi;
-  if (publication) return publication;
-  const identifiers = item?.identifiers?.doi ?? item?.ids?.doi;
-  if (identifiers) return identifiers;
-  return '';
-}
-
-function pickDoiValue(raw: any): string {
-  if (!raw) return '';
-  if (Array.isArray(raw)) {
-    const first = raw.find((entry) => entry !== null && entry !== undefined && String(entry).trim() !== '');
-    return pickDoiValue(first);
-  }
-  if (typeof raw === 'object') {
-    return pickDoiValue(raw?.doi ?? raw?.id ?? raw?.value ?? raw?.identifier ?? '');
-  }
-  return String(raw).trim();
+export function normalizeDoi(value: any) {
+  return String(value ?? '').trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
 }
 
 const stripAbstractNoise = (text: string) => {
@@ -63,63 +32,18 @@ export function sanitizeWorkAbstract(raw: any) {
 }
 
 export function getWorkAbstractSnippet(item: any, limit = 450) {
-  const raw = item?.abstract || item?.abstract_text || item?.summary || item?.description || '';
-  const text = sanitizeWorkAbstract(raw);
-  if (!text) return '';
-  if (!limit || limit <= 0) return text;
-  if (text.length <= limit) return text;
+  const text = sanitizeWorkAbstract(item?.abstract);
+  if (!text || !limit || text.length <= limit) return text;
   return `${text.slice(0, limit)}…`;
 }
 
 export function isWorkOpenAccess(item: any) {
-  const direct = resolveBoolean(
-    item?.is_open_access ??
-    item?.open_access ??
-    item?.openaccess ??
-    item?.openacess ??
-    item?.open_acess ??
-    item?.openAcess ??
-    item?.oa ??
-    item?.oa_status ??
-    item?.open_access_status ??
-    item?.openAccess
-  );
-  if (typeof direct === 'boolean') return direct;
-  const nested = item?.open_access;
-  if (nested && typeof nested === 'object') {
-    const nestedFlag = resolveBoolean(nested?.is_open_access ?? nested?.available ?? nested?.status);
-    if (typeof nestedFlag === 'boolean') return nestedFlag;
-    if (nested?.oa_url || nested?.url || nested?.link) return true;
-  }
-  const best = item?.best_oa_location || item?.open_access_location || item?.oa_location;
-  if (best && (best.url || best.oa_url || best.host_type)) return true;
-  if (item?.open_access_url || item?.oa_url || item?.free_pdf_url) return true;
-  const license = item?.license || item?.primary_location?.license;
-  if (typeof license === 'string') {
-    const normalized = license.trim().toLowerCase();
-    if (normalized && !['', 'closed', 'all-rights-reserved', 'unknown'].includes(normalized)) return true;
-  }
-  if (Array.isArray(item?.publications) && item.publications.some((pub: any) => pub?.open_access === true)) return true;
-  return false;
-}
-
-export function getWorkDoi(item: any) {
-  let raw = pickDoiRaw(item);
-  if (!raw && Array.isArray(item?.publications)) {
-    for (const pub of item.publications) {
-      const candidate = pub?.identifiers?.doi ?? pub?.doi;
-      if (candidate) { raw = candidate; break; }
-    }
-  }
-  const doi = pickDoiValue(raw);
-  if (!doi) return '';
-  return doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '').trim();
+  return item?.open_access === true;
 }
 
 export function getWorkOpenAccessDoiUrl(item: any) {
-  const doi = getWorkDoi(item);
-  if (!doi) return '';
-  return `https://oadoi.org/${encodeURIComponent(doi)}`;
+  const doi = normalizeDoi(item?.doi);
+  return doi ? `https://oadoi.org/${encodeURIComponent(doi)}` : '';
 }
 
 export const METADATA_TEXT_LIMITS = {
@@ -132,21 +56,6 @@ export const METADATA_TEXT_LIMITS = {
 function normalizeText(value: any) {
   if (value === null || value === undefined) return '';
   return String(value).replace(/\s+/g, ' ').trim();
-}
-
-export function pickVenueDisplayName(item: any) {
-  if (!item) return '';
-  return normalizeText(
-    item?.abbreviated_name
-    || item?.abbreviatedName
-    || item?.summary_snapshot?.abbreviated_name
-    || item?.journal_abbreviated_name
-    || item?.journal_abbreviation
-    || item?.short_name
-    || item?.name
-    || item?.summary_snapshot?.name
-    || ''
-  );
 }
 
 export function truncateMetadataText(value: any, maxChars: number = METADATA_TEXT_LIMITS.default) {
@@ -282,10 +191,6 @@ export function pickPrimaryContributors(raw: any) {
   return preferred.contributors;
 }
 
-function pickAuthorName(entry: any) {
-  return formatContributorName(entry);
-}
-
 function pickAuthorList(item: any) {
   const entries = pickContributorEntries(item);
   if (entries.length) return pickPrimaryContributors(entries);
@@ -306,13 +211,8 @@ function pickContributorTotal(item: any) {
 }
 
 function pickAuthorString(item: any) {
-  const fromAuthors = typeof item?.authors === 'string' ? item.authors : '';
-  const fromPreview = typeof item?.authors_preview === 'string' ? item.authors_preview : '';
-  const fromObjectAuthors = (item?.authors && typeof item.authors === 'object' && !Array.isArray(item.authors))
-    ? (item.authors.author_string || '')
-    : '';
-  const fromFormatted = item?.formatted_authors || item?.author_string || '';
-  return normalizeText(fromAuthors || fromPreview || fromObjectAuthors || fromFormatted);
+  if (typeof item?.authors === 'string') return normalizeText(item.authors);
+  return normalizeText(item?.author_string || item?.authors?.author_string || '');
 }
 
 function splitAuthorString(value: string) {
@@ -322,11 +222,13 @@ function splitAuthorString(value: string) {
   return [value];
 }
 
+export function pickAuthorNames(item: any): string[] {
+  const names = pickAuthorList(item).map(formatContributorName).filter(Boolean);
+  return names.length ? names : splitAuthorString(pickAuthorString(item));
+}
+
 export function formatMetadataAuthors(item: any, fallback = '', maxChars: number = METADATA_TEXT_LIMITS.authors) {
-  const arr = pickAuthorList(item);
-  let names: string[] = [];
-  if (arr.length) names = arr.map((entry: any) => pickAuthorName(entry)).filter(Boolean);
-  if (!names.length) names = splitAuthorString(pickAuthorString(item));
+  const names = pickAuthorNames(item);
   if (!names.length) {
     const fb = normalizeText(fallback);
     return fb ? truncateMetadataText(fb, maxChars) : '';
@@ -334,34 +236,11 @@ export function formatMetadataAuthors(item: any, fallback = '', maxChars: number
   const two = names.slice(0, 2).join(', ');
   const { total, exact } = pickContributorTotal(item);
   const hasMore = !exact && total !== null && total > 2 ? true : names.length > 2;
-  const text = hasMore ? `${two} et al.` : two;
-  return truncateMetadataText(text, maxChars);
+  return truncateMetadataText(hasMore ? `${two} et al.` : two, maxChars);
 }
 
 export function pickWorkVenue(item: any) {
-  const publication = item?.publication || {};
-  return normalizeText(
-    item?.venue_name
-    || item?.journal
-    || item?.journal_name
-    || item?.journal_title
-    || item?.source
-    || publication?.journal
-    || publication?.source
-    || item?.venue?.name
-    || item?.publication?.venue?.name
-    || item?.publication?.journal?.name
-    || item?.venue_abbreviated_name
-    || item?.venue_abbreviation
-    || item?.journal_abbreviated_name
-    || item?.journal_abbreviation
-    || pickVenueDisplayName(item?.venue)
-    || pickVenueDisplayName(item?.publication?.venue)
-    || pickVenueDisplayName(item?.publication?.journal)
-    || publication?.journal_abbreviated_name
-    || publication?.journal_abbreviation
-    || ''
-  );
+  return normalizeText(item?.venue_name || item?.venue?.name || item?.venue?.abbreviated_name || '');
 }
 
 export function formatMetadataVenue(item: any, maxChars: number = METADATA_TEXT_LIMITS.venue) {
@@ -520,22 +399,15 @@ export function normalizePersonDetail(raw: any) {
 
 export function normalizePersonWorkItem(raw: any) {
   if (!raw || typeof raw !== 'object') return raw;
-  const publication = raw?.publication && typeof raw.publication === 'object' ? raw.publication : {};
-  const authorsObj = raw?.authors && typeof raw.authors === 'object' && !Array.isArray(raw.authors) ? raw.authors : null;
-  const authorString = authorsObj?.author_string ?? raw?.author_string ?? null;
-  const authorsPreview = Array.isArray(raw?.authors_preview) && raw.authors_preview.length
-    ? raw.authors_preview
-    : (authorString
-      ? String(authorString).split(/[;|]/).map((part: string) => part.trim()).filter(Boolean).slice(0, 3)
-      : []);
+  const publication = raw.publication || {};
+  const authorString = raw.authors?.author_string ?? null;
   return {
     ...raw,
-    publication_year: publication?.year ?? null,
-    year: publication?.year ?? null,
-    venue: publication?.journal ? { name: publication.journal } : (raw?.venue ?? null),
-    venue_name: publication?.journal ?? raw?.venue_name ?? null,
+    publication_year: raw.publication_year ?? publication.year ?? null,
+    venue: publication.journal ? { name: publication.journal } : (raw.venue ?? null),
+    venue_name: publication.journal ?? raw.venue_name ?? null,
     author_string: authorString,
-    author_count: authorsObj?.total_count ?? raw?.author_count ?? null,
-    authors_preview: authorsPreview
+    author_count: raw.authors?.total_count ?? raw.author_count ?? null,
+    authors_preview: authorString ? splitAuthorString(String(authorString)).slice(0, 3) : []
   };
 }

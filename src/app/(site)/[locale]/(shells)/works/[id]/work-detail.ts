@@ -1,9 +1,9 @@
 import 'server-only';
 import type { Locale } from '@/i18n/config';
 import { localeUrl } from '@/lib/site';
+import { buildFileOpenAccessUrl, pickOpenAccessFile } from '@/lib/work-export';
 import {
   formatContributorName,
-  formatMetadataAuthors,
   groupContributorsByRole,
   pickContributorEntries,
   pickPrimaryContributors,
@@ -44,53 +44,8 @@ function pickIssueValue(...values: any[]) {
   return values.find((value) => value !== undefined && value !== null && value !== '' && typeof value !== 'boolean') ?? null;
 }
 
-function getFilesList(work: any) {
-  const files = work?.files;
-  if (Array.isArray(files)) return files;
-  if (files && typeof files === 'object') {
-    if (Array.isArray(files.data)) return files.data;
-    if (Array.isArray(files.items)) return files.items;
-    if (Array.isArray(files.results)) return files.results;
-  }
-  return [];
-}
-
-function fileOaUrl(file: any): string {
-  if (!file) return '';
-  if (file.best_oa_url) return String(file.best_oa_url);
-  if (file?.best_oa?.url) return String(file.best_oa.url);
-  if (file.url) return String(file.url);
-  const oid = file.openacess_id || file.openaccess_id;
-  if (oid && typeof oid === 'string') {
-    const match = oid.trim().match(/^doi:\s*(.+)$/i);
-    if (match && match[1]) return `https://doi.org/${match[1].trim()}`;
-  }
-  return '';
-}
-
 function pickBestOaUrl(work: any) {
-  const files = getFilesList(work);
-  const best = files.find((file: any) => fileOaUrl(file));
-  return best ? fileOaUrl(best) : '';
-}
-
-function looksLikePdf(url: string, file: any) {
-  const suffix = url.toLowerCase();
-  const mime = String(file?.mime_type || file?.content_type || '').toLowerCase();
-  const type = String(file?.file_type || file?.type || '').toLowerCase();
-  if (mime.includes('pdf') || type.includes('pdf')) return true;
-  return suffix.endsWith('.pdf') || suffix.includes('.pdf?') || suffix.includes('.pdf#');
-}
-
-function pickFulltextUrls(work: any) {
-  const files = getFilesList(work);
-  const urls = files.map((file: any) => ({
-    url: fileOaUrl(file) || file?.pdf_url || file?.file_url || file?.download_url || file?.link || '',
-    file
-  })).filter((entry: any) => entry.url && typeof entry.url === 'string');
-  const pdf = urls.find((entry: any) => looksLikePdf(entry.url, entry.file))?.url || '';
-  const fulltext = urls[0]?.url || '';
-  return { pdf, fulltext };
+  return buildFileOpenAccessUrl(pickOpenAccessFile(Array.isArray(work?.files) ? work.files : []));
 }
 
 function normalizeAuthorKey(name: string) {
@@ -132,7 +87,7 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   const publication = work?.publication || {};
   const venue = work?.venue || {};
   const publisher = work?.publisher || {};
-  const workType = work?.formatted_type || work?.work_type || work?.type;
+  const workType = work?.type;
   const isBookType = String(workType || '').toUpperCase().includes('BOOK');
   const title = work?.title || '';
   const subtitle = work?.subtitle ? String(work.subtitle) : '';
@@ -164,7 +119,6 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
   ]);
   const publicationDateFormatted = formatPublicationDate(publicationDate, year);
   const publicUrl = localeUrl(locale as Locale, `/works/${id}`);
-  const { pdf, fulltext } = pickFulltextUrls(work);
   const bestOaUrl = pickBestOaUrl(work);
   const other: Record<string, string | string[]> = {};
   if (fullTitle) other.citation_title = fullTitle;
@@ -191,9 +145,9 @@ export function buildCitationMeta(work: any, locale: string, id: string) {
     other.citation_public_url = publicUrl;
     if (cleanedAbstract) other.citation_abstract_html_url = publicUrl;
   }
-  if (bestOaUrl || pdf) {
-    other.citation_pdf_url = bestOaUrl || pdf;
-    other.citation_fulltext_html_url = bestOaUrl || pdf;
+  if (bestOaUrl) {
+    other.citation_pdf_url = bestOaUrl;
+    other.citation_fulltext_html_url = bestOaUrl;
   }
   if (fullTitle) other['dc.title'] = fullTitle;
   if (authors.length) other['dc.creator'] = authors;
@@ -265,8 +219,3 @@ export function buildCoins(work: any, locale: string, id: string) {
   issnValues.forEach((issn) => params.append('rft.issn', issn));
   return params.toString();
 }
-
-export function pickReferenceAuthors(item: any) {
-  return formatMetadataAuthors(item);
-}
-

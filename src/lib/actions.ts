@@ -1,94 +1,76 @@
 'use server';
 
-import { fetchJson } from './api';
+import { fetchJson, unwrapData } from './api';
 import {
   getEntityExportWorks,
   getEntityRecord,
   getVenuesPage,
   loadWork,
   searchWorks,
-  type VenuesListFilters
+  type VenuesListSort,
+  type VenuesListSortOrder
 } from './endpoints';
 import type { EntityExportWorks, EntityKind } from './entity-export';
+import { toVenueListPage } from './venues';
 
-export type Primitive = string | number | boolean;
-export type ParamRecord = Record<string, Primitive | undefined | null>;
-
-export async function actSearchWorks(params: ParamRecord) {
-  return await searchWorks(params as Record<string, string | number | boolean | undefined>);
+export async function actSearchWorks(params: Record<string, string>) {
+  return await searchWorks(params);
 }
 
 export type AutocompleteSuggestion = {
   text: string;
   type: 'title' | 'author' | 'venue';
-  preview?: string;
   workCount?: number;
 };
 
 export async function actAutocompleteSuggest(query: string): Promise<AutocompleteSuggestion[]> {
   const q = String(query || '').trim();
   if (q.length < 2) return [];
-  const enc = encodeURIComponent(q);
   try {
-    const res = await fetchJson<any>(`/search/autocomplete?q=${enc}&limit=8`, { retries: 1, timeoutMs: 4000 });
-    const suggestions = res?.data?.suggestions ?? res?.suggestions ?? [];
-    if (!Array.isArray(suggestions)) return [];
-    const mapped: AutocompleteSuggestion[] = [];
-    for (const s of suggestions) {
-      const text = String(s?.text ?? s?.name ?? '').trim();
-      if (!text) continue;
-      const type: AutocompleteSuggestion['type'] = s?.type === 'author' ? 'author' : s?.type === 'venue' ? 'venue' : 'title';
-      const rawCount = Number(s?.work_count ?? s?.works_count);
-      mapped.push({
-        text,
-        type,
-        preview: s?.preview ? String(s.preview) : undefined,
-        workCount: Number.isFinite(rawCount) && rawCount > 0 ? rawCount : undefined
-      });
-      if (mapped.length >= 8) break;
-    }
-    return mapped;
+    const res = await fetchJson<any>(`/search/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { retries: 1, timeoutMs: 4000 });
+    const suggestions: any[] = Array.isArray(res?.data?.suggestions) ? res.data.suggestions : [];
+    return suggestions
+      .map((s) => {
+        const count = Number(s?.work_count);
+        return {
+          text: String(s?.text ?? '').trim(),
+          type: s?.type === 'author' || s?.type === 'venue' ? s.type : 'title',
+          workCount: Number.isFinite(count) && count > 0 ? count : undefined
+        } as AutocompleteSuggestion;
+      })
+      .filter((s) => s.text)
+      .slice(0, 8);
   } catch {
     return [];
   }
 }
 
-export type GlobalSearchBucket = { total: number; results: any[] };
 export type GlobalSearchResult = {
-  works: GlobalSearchBucket;
-  persons: GlobalSearchBucket;
-  institutions: GlobalSearchBucket;
+  works: { total: number; results: any[] };
+  persons: { total: number; results: any[] };
 };
 
-export async function actSearchGlobal(query: string, limit = 10): Promise<GlobalSearchResult> {
+const EMPTY_GLOBAL: GlobalSearchResult = { works: { total: 0, results: [] }, persons: { total: 0, results: [] } };
+
+export async function actSearchGlobal(query: string): Promise<GlobalSearchResult> {
   const q = String(query || '').trim();
-  const empty: GlobalSearchResult = {
-    works: { total: 0, results: [] },
-    persons: { total: 0, results: [] },
-    institutions: { total: 0, results: [] }
-  };
-  if (q.length < 2) return empty;
+  if (q.length < 2) return EMPTY_GLOBAL;
   try {
-    const res = await fetchJson<any>(
-      `/search/global?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(String(limit))}`,
-      { retries: 1, timeoutMs: 8000 }
-    );
-    const data = res?.data ?? res ?? {};
-    const bucket = (b: any): GlobalSearchBucket => ({
+    const data = unwrapData(await fetchJson<any>(`/search/global?q=${encodeURIComponent(q)}&limit=10`, { retries: 1 }));
+    const bucket = (b: any) => ({
       total: Number(b?.total) || 0,
-      results: Array.isArray(b?.results) ? b.results : (Array.isArray(b) ? b : [])
+      results: Array.isArray(b?.results) ? b.results : []
     });
-    return { works: bucket(data.works), persons: bucket(data.persons), institutions: bucket(data.institutions) };
+    return { works: bucket(data?.works), persons: bucket(data?.persons) };
   } catch {
-    return empty;
+    return EMPTY_GLOBAL;
   }
 }
 
-export async function actGetWorkFull(id: string | number, slim = false) {
+export async function actGetWorkFull(id: string, slim = false) {
   try {
-    if (!slim) return await loadWork(String(id));
-    const envelope: any = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}`, { retries: 1, timeoutMs: 8000 });
-    return envelope?.data ?? envelope?.work ?? envelope ?? null;
+    if (!slim) return await loadWork(id);
+    return unwrapData(await fetchJson<any>(`/works/${encodeURIComponent(id)}`, { retries: 1 }));
   } catch {
     return null;
   }
@@ -101,74 +83,53 @@ type RelatedWorkRow = {
   type: string | null;
   doi: string | null;
   venue_name: string | null;
-  venue: { name: string } | null;
   authors_count: number | null;
-  citation_type: string | null;
 };
 
 function mapRelatedRow(raw: any): RelatedWorkRow {
   return {
-    id: raw?.citing_work_id ?? raw?.cited_work_id ?? raw?.work_id ?? raw?.id ?? null,
+    id: raw?.citing_work_id ?? raw?.cited_work_id ?? null,
     title: raw?.title ?? null,
     publication_year: raw?.publication_year ?? null,
     type: raw?.type ?? null,
     doi: raw?.doi ?? null,
     venue_name: raw?.venue_name ?? raw?.venue_abbreviated_name ?? null,
-    venue: raw?.venue_name ? { name: raw.venue_name } : null,
-    authors_count: typeof raw?.authors_count === 'number' ? raw.authors_count : null,
-    citation_type: raw?.citation?.type ?? raw?.citation_type ?? null
+    authors_count: typeof raw?.authors_count === 'number' ? raw.authors_count : null
   };
 }
 
-export async function actGetWorkCitations(id: string | number, page = 1, type?: string) {
-  const qs = new URLSearchParams();
-  qs.set('page', String(Math.max(1, Number(page) || 1)));
-  qs.set('limit', '100');
-  if (type && type !== 'all') qs.set('type', type);
-  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}/citations?${qs.toString()}`, { retries: 1, timeoutMs: 10000 });
-  const data = env?.data || {};
-  const rows = Array.isArray(data.citing_works) ? data.citing_works : [];
-  const pagination = env?.pagination || {};
-  return {
-    items: rows.map(mapRelatedRow),
-    total: Number(pagination.total) || rows.length,
-    page: Number(pagination.page) || 1,
-    hasNext: !!pagination.hasNext
-  };
+function relatedQuery(page: number) {
+  return `page=${Math.max(1, Math.floor(Number(page)) || 1)}&limit=100`;
 }
 
-export async function actGetWorkReferences(id: string | number, page = 1) {
-  const qs = new URLSearchParams();
-  qs.set('page', String(Math.max(1, Number(page) || 1)));
-  qs.set('limit', '100');
-  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(String(id))}/references?${qs.toString()}`, { retries: 1, timeoutMs: 10000 });
-  const data = env?.data || {};
-  const resolved = Array.isArray(data.referenced_works) ? data.referenced_works : [];
-  const counts = data.counts || {};
-  const pagination = env?.pagination || {};
-  return {
-    items: resolved.map(mapRelatedRow),
-    total: Number(counts.total ?? pagination.total) || resolved.length,
-    page: Number(pagination.page) || 1,
-    hasNext: !!pagination.hasNext
-  };
+export async function actGetWorkCitations(id: string, page = 1) {
+  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/citations?${relatedQuery(page)}`, { retries: 1, timeoutMs: 10000 });
+  const rows = Array.isArray(env?.data?.citing_works) ? env.data.citing_works : [];
+  return { items: rows.map(mapRelatedRow), hasNext: env?.pagination?.hasNext === true };
 }
 
-export async function actGetEntityExportWorks(kind: EntityKind, id: string | number): Promise<EntityExportWorks> {
-  return await getEntityExportWorks(kind, id);
+export async function actGetWorkReferences(id: string, page = 1) {
+  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/references?${relatedQuery(page)}`, { retries: 1, timeoutMs: 10000 });
+  const rows = Array.isArray(env?.data?.referenced_works) ? env.data.referenced_works : [];
+  return { items: rows.map(mapRelatedRow), hasNext: env?.pagination?.hasNext === true };
 }
 
-export async function actGetEntityRecord(kind: EntityKind, id: string | number) {
+const ENTITY_KINDS: EntityKind[] = ['person', 'venue', 'institution', 'subject'];
+
+export async function actGetEntityExportWorks(kind: EntityKind, id: string): Promise<EntityExportWorks> {
+  if (!ENTITY_KINDS.includes(kind)) throw new Error('Unknown entity kind');
+  return await getEntityExportWorks(kind, String(id));
+}
+
+export async function actGetEntityRecord(kind: EntityKind, id: string) {
+  if (!ENTITY_KINDS.includes(kind)) return null;
   try {
-    return await getEntityRecord(kind, id);
+    return await getEntityRecord(kind, String(id));
   } catch {
     return null;
   }
 }
 
-export type VenuesPageActionOptions = VenuesListFilters;
-
-export async function actGetVenuesPage(page: number, limit: number, opts?: VenuesPageActionOptions) {
-  const filters: VenuesListFilters | undefined = opts ? { ...opts } : undefined;
-  return await getVenuesPage(page, limit, filters);
+export async function actGetVenuesPage(page: number, limit: number, sortBy?: VenuesListSort, sortOrder?: VenuesListSortOrder) {
+  return toVenueListPage(await getVenuesPage(page, limit, { sortBy, sortOrder }));
 }

@@ -4,10 +4,9 @@ import LocaleLink from '@/components/common/LocaleLink';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
 import EntityTools from '@/components/common/EntityTools';
 import { exportFilename } from '@/lib/entity-export';
-import WorkRelatedList from '../../works/[id]/WorkRelatedList';
+import { WorkResultList } from '@/components/common/WorkResultItem';
 import { getInstitution, getInstitutionWorks } from '@/lib/endpoints';
 import { buildIdentifierHref } from '@/lib/identifiers';
-import { formatMetadataAuthors } from '@/lib/works';
 import { formatNumber } from '@/lib/format';
 import JsonLd from '@/components/common/JsonLd';
 import { buildPageMetadata, fitPageTitle } from '@/i18n/metadata';
@@ -109,7 +108,6 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
     citedBy: t('common.meta.citedBy'),
     references: t('common.meta.references')
   };
-  const pickAuthors = (item: any) => formatMetadataAuthors(item);
 
   const canonical = localeUrl(locale as Locale, `/institutions/${id}`);
   const jsonLd: Record<string, any> = withSitePublisher({
@@ -145,7 +143,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
       label: t('institutions.sections.recent'),
       content: (
         <>
-          <WorkRelatedList items={works} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.recent') }} />
+          <WorkResultList items={works} labels={{ ...relatedLabels, emptyState: t('institutions.empty.recent') }} />
           {works.length > 0 ? paginationNav : null}
         </>
       )
@@ -153,17 +151,17 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
     {
       key: 'prominent',
       label: t('institutions.sections.prominent'),
-      content: <WorkRelatedList items={prominentWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.prominent') }} />
+      content: <WorkResultList items={prominentWorks} labels={{ ...relatedLabels, emptyState: t('institutions.empty.prominent') }} />
     },
     {
       key: 'first',
       label: t('institutions.sections.first'),
-      content: <WorkRelatedList items={firstWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.first') }} />
+      content: <WorkResultList items={firstWorks} labels={{ ...relatedLabels, emptyState: t('institutions.empty.first') }} />
     },
     fundedCount > 0 ? {
       key: 'funded',
       label: t('institutions.sections.funded'),
-      content: <WorkRelatedList items={fundedWorks} pickAuthors={pickAuthors} labels={{ ...relatedLabels, emptyState: t('institutions.empty.funded') }} />
+      content: <WorkResultList items={fundedWorks} labels={{ ...relatedLabels, emptyState: t('institutions.empty.funded') }} />
     } : null,
     (byType.length > 0 || trend.length > 0) ? {
       key: 'production',
@@ -176,7 +174,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
                 {byType.map((row: any, idx: number) => (
                   <tr key={`type-${idx}`}>
                     <th scope="row">{String(row?.type || '').toUpperCase()}</th>
-                    <td className="field-value">{formatNumber(Number(row?.works_count) || 0)}</td>
+                    <td className="field-value">{formatNumber(Number(row?.works_count) || 0, locale)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -188,7 +186,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
                 {trend.slice(0, 15).map((row: any, idx: number) => (
                   <tr key={`trend-${idx}`}>
                     <th scope="row">{row?.year}</th>
-                    <td className="field-value">{formatNumber(Number(row?.works_count) || 0)}</td>
+                    <td className="field-value">{formatNumber(Number(row?.works_count) || 0, locale)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -232,19 +230,19 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
             {typeof worksCount === 'number' ? (
               <tr>
                 <th scope="row">{t('institutions.detail.works')}</th>
-                <td className="field-value">{formatNumber(worksCount)}</td>
+                <td className="field-value">{formatNumber(worksCount, locale)}</td>
               </tr>
             ) : null}
             {typeof researchers === 'number' && researchers > 0 ? (
               <tr>
                 <th scope="row">{t('institutions.detail.researchers')}</th>
-                <td className="field-value">{formatNumber(researchers)}</td>
+                <td className="field-value">{formatNumber(researchers, locale)}</td>
               </tr>
             ) : null}
             {typeof citations === 'number' && citations > 0 ? (
               <tr>
                 <th scope="row">{t('institutions.detail.citations')}</th>
-                <td className="field-value">{formatNumber(citations)}</td>
+                <td className="field-value">{formatNumber(citations, locale)}</td>
               </tr>
             ) : null}
             {typeof hIndex === 'number' && hIndex > 0 ? (
@@ -268,7 +266,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
             {fundedCount > 0 ? (
               <tr>
                 <th scope="row">{t('institutions.detail.fundedWorks')}</th>
-                <td className="field-value">{formatNumber(fundedCount)}{grants > 0 ? ` (${t('institutions.detail.grants')}: ${formatNumber(grants)})` : ''}</td>
+                <td className="field-value">{formatNumber(fundedCount, locale)}{grants > 0 ? ` (${t('institutions.detail.grants')}: ${formatNumber(grants, locale)})` : ''}</td>
               </tr>
             ) : null}
             {rorId ? (

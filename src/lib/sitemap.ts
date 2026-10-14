@@ -49,12 +49,6 @@ const docSource = (file: string): SourceFile => ({
   absolute: path.join(process.cwd(), 'docs', file)
 });
 
-const MINIMUM_ENTRIES: Record<CuratedSection, number> = {
-  works: 500,
-  venues: 250,
-  persons: 100
-};
-
 const ENTITY_META: Record<CuratedSection | 'recent', { changeFrequency: ChangeFrequency; priority: number }> = {
   recent: { changeFrequency: 'weekly', priority: 0.6 },
   works: { changeFrequency: 'monthly', priority: 0.6 },
@@ -84,10 +78,6 @@ export function sitemapSectionPath(section: SitemapSection) {
 export function parseSitemapSection(value: string): SitemapSection | null {
   const normalized = value.toLowerCase().replace(/\.xml$/, '');
   return (SITEMAP_SECTIONS as string[]).includes(normalized) ? (normalized as SitemapSection) : null;
-}
-
-export function maxEntriesPerSection() {
-  return SITEMAP_URL_LIMIT;
 }
 
 export async function buildSitemapSection(section: SitemapSection): Promise<SitemapSectionData> {
@@ -165,7 +155,7 @@ async function buildRecentSection(): Promise<SitemapSectionData> {
   if (recentCache && Date.now() - recentCache.at < RECENT_CACHE_MS) return recentCache.data;
   try {
     const works = await listRecentlyAddedWorks({
-      limit: maxEntriesPerSection(),
+      limit: SITEMAP_URL_LIMIT,
       since: new Date(Date.now() - RECENT_WORKS_WINDOW_DAYS * DAY_MS)
     });
     const entries: SitemapEntry[] = works.map((work) => ({
@@ -201,13 +191,9 @@ async function buildCuratedSection(section: CuratedSection): Promise<SitemapSect
     seen.add(normalized);
     entries.push({ path: normalized, ...ENTITY_META[section] });
   }
-  if (entries.length < MINIMUM_ENTRIES[section]) {
-    console.warn(`Sitemap ${section} entries below expectation: ${entries.length}`);
-  }
-  const maxEntries = maxEntriesPerSection();
-  if (entries.length > maxEntries) {
-    console.warn(`Sitemap ${section} truncated to ${maxEntries} entries to stay within the ${SITEMAP_URL_LIMIT} URL limit`);
-    entries.length = maxEntries;
+  if (entries.length > SITEMAP_URL_LIMIT) {
+    console.warn(`Sitemap ${section} truncated to the ${SITEMAP_URL_LIMIT} URL limit`);
+    entries.length = SITEMAP_URL_LIMIT;
   }
   return { entries, lastModified: await resolveSourceDate(source) };
 }

@@ -32,10 +32,10 @@ type WorkResultItemProps = {
   labels: WorkResultLabels;
   showVenue?: boolean;
   showType?: boolean;
-  showRelevance?: boolean;
   showAuthors?: boolean;
   useRoleFallback?: boolean;
   titleMaxLength?: number;
+  pickAuthors?: (item: any) => string;
 };
 
 const Separator = () => <span className="meta-separator" aria-hidden="true">•</span>;
@@ -45,31 +45,28 @@ export function WorkResultItem({
   labels,
   showVenue = true,
   showType = true,
-  showRelevance = false,
   showAuthors = true,
   useRoleFallback = false,
-  titleMaxLength = 0
+  titleMaxLength = 0,
+  pickAuthors
 }: WorkResultItemProps) {
   const id = item?.id ?? item?.work_id ?? null;
-  const rawTitle = item?.title || item?.work_title || '';
+  const rawTitle = item?.title || '';
   const displayTitle = titleMaxLength > 0 && rawTitle.length > titleMaxLength
     ? `${rawTitle.slice(0, titleMaxLength)}…`
     : (rawTitle || labels.titleUnavailable);
   const openAccess = isWorkOpenAccess(item);
   const roleText = useRoleFallback
-    ? truncateMetadataText(String(item?.role || item?.authorship_role || item?.authorship?.role || labels.roleFallback || '').toUpperCase(), 48)
+    ? truncateMetadataText(String(item?.authorship?.role || labels.roleFallback || '').toUpperCase(), 48)
     : '';
-  const authors = formatMetadataAuthors(item, useRoleFallback ? '' : labels.authorUnknown);
+  const authors = pickAuthors ? pickAuthors(item) : formatMetadataAuthors(item, useRoleFallback ? '' : labels.authorUnknown);
   const authorsDisplay = authors || roleText || labels.authorUnknown;
-  const type = showType ? formatMetadataType(item?.work_type || item?.type || '') : '';
+  const type = showType ? formatMetadataType(item?.type || '') : '';
   const venue = showVenue ? formatMetadataVenue(item, 35) : '';
-  const year = item?.publication_year || item?.publication?.year || item?.year || '';
+  const year = item?.publication_year || item?.year || '';
   const abstract = getWorkAbstractSnippet(item);
   const citedByCount = Number(item?.cited_by_count);
   const referencesCount = Number(item?.references_count);
-  const relRaw = showRelevance ? (item?.relevance ?? item?.score ?? item?._score ?? item?.rank) : undefined;
-  const relNum = typeof relRaw === 'number' ? relRaw : (relRaw ? Number(relRaw) : undefined);
-  const rel = relNum && isFinite(relNum) ? relNum.toFixed(2) : '';
   const openAccessHref = openAccess ? getWorkOpenAccessDoiUrl(item) : '';
   const metaParts: ReactNode[] = [];
   if (showAuthors) metaParts.push(<span className="result-authors">{authorsDisplay}</span>);
@@ -78,7 +75,6 @@ export function WorkResultItem({
   if (year) metaParts.push(<span className="result-year">{year}</span>);
   if (Number.isFinite(citedByCount) && citedByCount > 0) metaParts.push(<span className="result-cited">{labels.citedBy}: {citedByCount}</span>);
   if (Number.isFinite(referencesCount) && referencesCount > 0) metaParts.push(<span className="result-refs">{labels.references}: {referencesCount}</span>);
-  if (rel) metaParts.push(<span className="relevance-score">{rel}</span>);
   return (
     <li className="result-item">
       <h3 className="result-title">

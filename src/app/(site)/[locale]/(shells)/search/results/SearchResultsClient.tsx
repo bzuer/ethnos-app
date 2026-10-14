@@ -23,11 +23,10 @@ type Props = {
   formAction: string;
 };
 
-const FILTER_KEYS = ['work_type', 'type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'] as const;
+const FILTER_KEYS = ['work_type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'] as const;
 type FilterKey = typeof FILTER_KEYS[number];
 const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
   work_type: 'common.labels.type',
-  type: 'common.labels.type',
   author: 'common.labels.author',
   venue: 'common.labels.venue',
   subject: 'common.labels.subject',
@@ -77,13 +76,12 @@ export default function SearchResultsClient({ formAction }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    const controller = new AbortController();
     const load = async () => {
       setLoading(true);
       setLoadError(false);
       try {
-        const response = await fetchResults(params, page, limit);
-        if (controller.signal.aborted || cancelled) return;
+        const response = await actSearchWorks({ ...params, page, limit });
+        if (cancelled) return;
         setState(parseSearchState(response, page, limit));
       } catch {
         if (cancelled) return;
@@ -97,7 +95,6 @@ export default function SearchResultsClient({ formAction }: Props) {
     load();
     return () => {
       cancelled = true;
-      controller.abort();
     };
   }, [params, page, limit]);
 
@@ -235,7 +232,7 @@ export default function SearchResultsClient({ formAction }: Props) {
         ) : null}
         <ul className="results-list">
           {state.items.map((it: any) => (
-            <WorkResultItem key={it.id} item={it} labels={resultLabels} showRelevance />
+            <WorkResultItem key={it.id} item={it} labels={resultLabels} />
           ))}
         </ul>
         <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
@@ -259,17 +256,7 @@ export default function SearchResultsClient({ formAction }: Props) {
 }
 
 function readActiveFilters(params: Record<string, string>) {
-  const seen = new Set<FilterKey>();
-  const list: Array<{ key: FilterKey; value: string }> = [];
-  for (const key of FILTER_KEYS) {
-    const value = params[key];
-    if (!value) continue;
-    const canonical: FilterKey = key === 'work_type' ? 'work_type' : (key === 'type' ? 'work_type' : key);
-    if (seen.has(canonical)) continue;
-    seen.add(canonical);
-    list.push({ key: canonical, value });
-  }
-  return list;
+  return FILTER_KEYS.filter((key) => params[key]).map((key) => ({ key, value: params[key] }));
 }
 
 function formatTotal(total: number, exact: boolean, t: ReturnType<typeof useTranslations>) {
@@ -285,40 +272,26 @@ function formatFilterValue(key: FilterKey, value: string, t: ReturnType<typeof u
   return value;
 }
 
-async function fetchResults(params: Record<string, string>, page: string, limit: string) {
-  const payload: Record<string, string> = { ...params };
-  payload.page = payload.page || page;
-  payload.limit = payload.limit || limit;
-  delete payload.scope;
-  return await actSearchWorks(payload);
-}
-
 function parseSearchState(data: any, page: string, limit: string): SearchState {
-  let items: any[] = [];
-  if (Array.isArray(data)) items = data as any[];
-  else if (Array.isArray(data?.results)) items = data.results as any[];
-  else if (Array.isArray(data?.data?.results)) items = data.data.results as any[];
-  else if (Array.isArray(data?.data)) items = data.data as any[];
-  else if (Array.isArray(data?.items)) items = data.items as any[];
-  else if (Array.isArray(data?.results?.items)) items = data.results.items as any[];
-  const uniqueItems: any[] = [];
   const seen = new Set<string>();
-  items.forEach((item) => {
-    const keySource = item?.id ?? item?.work_id;
-    const key = keySource === null || keySource === undefined ? null : String(keySource);
-    if (key) {
-      if (seen.has(key)) return;
-      seen.add(key);
-    }
-    uniqueItems.push(item);
+  const items = (Array.isArray(data?.data) ? data.data : []).filter((item: any) => {
+    const key = item?.id == null ? '' : String(item.id);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
-  const psrc: any = data?.pagination || data?.meta?.pagination || data?.data?.pagination || data?.results?.pagination || {};
-  const totalCount = Number(data?.total ?? data?.data?.total ?? data?.meta?.total ?? psrc?.total ?? 0) || 0;
-  const pageNum = Number((psrc?.page ?? psrc?.current_page ?? page) || 1);
-  const totalPages = Number(psrc?.totalPages ?? psrc?.total_pages ?? (totalCount && limit ? Math.ceil(Number(totalCount) / Number(limit)) : 0)) || undefined;
-  const hasPrev = Boolean(psrc?.hasPrev) || pageNum > 1;
-  const hasNext = Boolean(psrc?.hasNext) || (totalPages ? pageNum < totalPages : (totalCount ? pageNum * Number(limit) < totalCount : uniqueItems.length === Number(limit)));
-  const exactFlag = data?.meta?.pagination_total_exact ?? data?.pagination_total_exact ?? data?.data?.meta?.pagination_total_exact;
-  const totalIsExact = exactFlag !== false;
-  return { items: uniqueItems, pageNum, totalPages, hasPrev, hasNext, totalCount, totalIsExact };
+  const pagination = data?.pagination || {};
+  const totalCount = Number(pagination.total) || 0;
+  const pageNum = Number(pagination.page) || Number(page) || 1;
+  const totalPages = Number(pagination.totalPages) || (totalCount ? Math.ceil(totalCount / Number(limit)) : 0) || undefined;
+  return {
+    items,
+    pageNum,
+    totalPages,
+    hasPrev: pageNum > 1,
+    hasNext: pagination.hasNext === true,
+    totalCount,
+    totalIsExact: data?.meta?.pagination_total_exact !== false
+  };
 }

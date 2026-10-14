@@ -104,12 +104,6 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
   });
   if (vocabulary) jsonLd.inDefinedTermSet = vocabulary;
 
-  const toYear = (value: any): number => {
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  };
-  const recentItems = [...works].sort((a: any, b: any) => toYear(b?.publication_year || b?.year) - toYear(a?.publication_year || a?.year));
-
   const pageHref = (target: number) => `/subjects/${id}${target > 1 ? `?page=${target}` : ''}`;
   const paginationNav = (
     <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
@@ -132,7 +126,7 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
       label: t('subjects.sections.recent'),
       content: (
         <>
-          <WorkResultList items={recentItems} labels={{ ...listLabels, emptyState: t('subjects.empty.recent') }} showAuthors={false} showVenue={false} />
+          <WorkResultList items={works} labels={{ ...listLabels, emptyState: t('subjects.empty.recent') }} showAuthors={false} showVenue={false} />
           {works.length > 0 ? paginationNav : null}
         </>
       )
@@ -176,19 +170,19 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
             {typeof worksCount === 'number' ? (
               <tr>
                 <th scope="row">{t('subjects.detail.works')}</th>
-                <td className="field-value">{formatNumber(worksCount)}</td>
+                <td className="field-value">{formatNumber(worksCount, locale)}</td>
               </tr>
             ) : null}
             {typeof coursesCount === 'number' && coursesCount > 0 ? (
               <tr>
                 <th scope="row">{t('subjects.detail.courses')}</th>
-                <td className="field-value">{formatNumber(coursesCount)}</td>
+                <td className="field-value">{formatNumber(coursesCount, locale)}</td>
               </tr>
             ) : null}
             {typeof childrenCount === 'number' && childrenCount > 0 ? (
               <tr>
                 <th scope="row">{t('subjects.detail.children')}</th>
-                <td className="field-value">{formatNumber(childrenCount)}</td>
+                <td className="field-value">{formatNumber(childrenCount, locale)}</td>
               </tr>
             ) : null}
             {parentId && parentTerm ? (

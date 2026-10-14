@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import WorkRelatedList from './WorkRelatedList';
+import { WorkResultList } from '@/components/common/WorkResultItem';
 import { actGetWorkCitations, actGetWorkReferences } from '@/lib/actions';
 import { formatMetadataAuthors } from '@/lib/works';
 
@@ -21,13 +21,13 @@ const idOf = (item: any) => {
 export default function WorkCitationList({ workId, kind, initialItems, total }: Props) {
   const t = useTranslations();
   const [items, setItems] = useState<any[]>(initialItems);
-  const [nextPage, setNextPage] = useState(2);
+  const [nextPage, setNextPage] = useState(kind === 'citations' ? 2 : 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [exhausted, setExhausted] = useState(false);
   const seenRef = useRef<Set<string>>(new Set(initialItems.map(idOf).filter(Boolean)));
 
-  const relatedLabels = {
+  const labels = {
     titleUnavailable: t('common.entities.titleUnavailable'),
     authorUnknown: t('common.entities.authorUnknown'),
     openAccess: t('common.meta.openAccess'),
@@ -44,8 +44,7 @@ export default function WorkCitationList({ workId, kind, initialItems, total }: 
     const names = formatMetadataAuthors(item);
     if (names) return names;
     const count = Number(item?.authors_count);
-    if (Number.isFinite(count) && count > 0) return t('common.meta.authorsCount', { count });
-    return '';
+    return Number.isFinite(count) && count > 0 ? t('common.meta.authorsCount', { count }) : '';
   };
 
   const hasMore = !exhausted && items.length < total;
@@ -54,20 +53,24 @@ export default function WorkCitationList({ workId, kind, initialItems, total }: 
     setLoading(true);
     setError(false);
     try {
-      const res: any = kind === 'citations'
-        ? await actGetWorkCitations(workId, nextPage)
-        : await actGetWorkReferences(workId, nextPage);
-      const incoming: any[] = Array.isArray(res?.items) ? res.items : [];
-      const fresh = incoming.filter((item) => {
-        const key = idOf(item);
-        if (!key) return true;
-        if (seenRef.current.has(key)) return false;
-        seenRef.current.add(key);
-        return true;
-      });
+      const load = kind === 'citations' ? actGetWorkCitations : actGetWorkReferences;
+      const fresh: any[] = [];
+      let page = nextPage;
+      let hasNext = true;
+      while (hasNext && fresh.length < 25) {
+        const res = await load(workId, page);
+        page += 1;
+        hasNext = res.hasNext && res.items.length > 0;
+        res.items.forEach((item: any) => {
+          const key = idOf(item);
+          if (key && seenRef.current.has(key)) return;
+          if (key) seenRef.current.add(key);
+          fresh.push(item);
+        });
+      }
       setItems((prev) => [...prev, ...fresh]);
-      setNextPage((prev) => prev + 1);
-      if (!res?.hasNext || incoming.length === 0) setExhausted(true);
+      setNextPage(page);
+      if (!hasNext) setExhausted(true);
     } catch {
       setError(true);
     } finally {
@@ -77,7 +80,7 @@ export default function WorkCitationList({ workId, kind, initialItems, total }: 
 
   return (
     <>
-      <WorkRelatedList items={items} labels={relatedLabels} pickAuthors={pickAuthors} />
+      <WorkResultList items={items} labels={labels} pickAuthors={pickAuthors} />
       {error ? (
         <p className="temporary-message temporary-message-error" role="status" aria-live="polite">{t('common.states.unableToLoadWorks')}</p>
       ) : null}

@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { fetchJson, getVenue, isMissingEntityError, unwrapData } from './api';
+import { fetchJson, isMissingEntityError, unwrapData } from './api';
 import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
@@ -9,36 +9,19 @@ import { mergeWorkLists, type EntityExportWorks, type EntityKind } from './entit
 function normalizeLimit(limit: number, max: number, min = 1) {
   const parsed = Number(limit);
   if (!Number.isFinite(parsed)) return min;
-  return Math.min(Math.max(parsed, min), max);
+  return Math.min(Math.max(Math.floor(parsed), min), max);
+}
+
+function listOf(envelope: any): any[] {
+  return Array.isArray(envelope?.data) ? envelope.data : [];
 }
 
 export async function getHomeRecentWorks(limit = 20) {
-  const safeLimit = normalizeLimit(limit, 20);
-  const init = { cache: 'force-cache' as RequestCache };
-  try {
-    const r: any = await fetchJson(`/works/showcase?limit=${encodeURIComponent(String(safeLimit))}`, init);
-    const data = r?.data || r?.results || r || [];
-    if (Array.isArray(data) && data.length > 0) return data;
-  } catch {}
-  try {
-    const r: any = await fetchJson(`/works?limit=${encodeURIComponent(String(safeLimit))}`, init);
-    return r?.data || r?.results || r || [];
-  } catch {
-    return [];
-  }
+  return listOf(await fetchJson(`/works/showcase?limit=${normalizeLimit(limit, 20)}`));
 }
 
-export async function getHomeTopVenues(limit = 25, page = 1) {
-  const safeLimit = normalizeLimit(limit, 100);
-  const safePage = Math.max(1, Number(page) || 1);
-  const init = { cache: 'force-cache' as RequestCache };
-  try {
-    const r: any = await fetchJson(`/venues?limit=${encodeURIComponent(String(safeLimit))}&page=${encodeURIComponent(String(safePage))}`, init);
-    const data = r?.data || r?.results || r?.items || [];
-    return Array.isArray(data) ? data.map(normalizeVenue) : [];
-  } catch {
-    return [];
-  }
+export async function getHomeTopVenues(limit = 15) {
+  return listOf(await fetchJson(`/venues?limit=${normalizeLimit(limit, 100)}`)).map(normalizeVenue);
 }
 
 export type RecentlyAddedWork = { id: number; addedAt: Date | null };
@@ -68,7 +51,7 @@ export async function listRecentlyAddedWorks(options: { limit: number; since?: D
       )
     );
     for (const envelope of envelopes) {
-      const rows: any[] = Array.isArray(envelope?.data) ? envelope.data : [];
+      const rows = listOf(envelope);
       for (const row of rows) {
         const id = Number(row?.id);
         if (!Number.isInteger(id) || id <= 0 || seen.has(id)) continue;
@@ -91,49 +74,40 @@ export async function listRecentlyAddedWorks(options: { limit: number; since?: D
   return works;
 }
 
-const SEARCH_FILTER_KEYS =['type', 'work_type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
+const SEARCH_FILTER_KEYS = ['type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
 
-export async function searchWorks(params: Record<string, string | number | boolean | undefined>) {
-  const base = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') base.set(k, String(v)); });
-  const qv = base.get('q') || '';
-  const page = base.get('page') || '1';
-  const limit = String(normalizeLimit(Number(base.get('limit') || '25'), 100));
-
-  const qs = new URLSearchParams(base);
+export async function searchWorks(params: Record<string, string | number | boolean | undefined | null>) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') qs.set(k, String(v)); });
+  const query = qs.get('q') || '';
+  const page = qs.get('page') || '1';
+  const limit = String(normalizeLimit(Number(qs.get('limit') || '25'), 100));
   qs.set('limit', limit);
-  if (qs.has('work_type') && !qs.has('type')) {
-    qs.set('type', String(qs.get('work_type')));
-    qs.delete('work_type');
-  }
+  const workType = qs.get('work_type');
+  qs.delete('work_type');
+  if (workType && !qs.has('type')) qs.set('type', workType);
   qs.delete('scope');
 
   const hasFilters = SEARCH_FILTER_KEYS.some((k) => qs.get(k));
+  const init = { retries: 1 };
 
-  if (!qv || qv === '*') {
-    if (!hasFilters) {
-      const showcaseParams = [`page=${encodeURIComponent(page)}`, `limit=${encodeURIComponent(limit)}`];
-      const sortBy = qs.get('sort_by');
-      const sortOrder = qs.get('sort_order');
-      if (sortBy) showcaseParams.push(`sort_by=${encodeURIComponent(sortBy)}`);
-      if (sortOrder) showcaseParams.push(`sort_order=${encodeURIComponent(sortOrder)}`);
-      return await fetchJson(
-        `/works/showcase?${showcaseParams.join('&')}`,
-        { retries: 1, timeoutMs: 8000 }
-      );
-    }
+  if (!query || query === '*') {
     qs.delete('q');
-    return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
+    if (hasFilters) return await fetchJson(`/search/works?${qs.toString()}`, init);
+    const showcase = new URLSearchParams({ page, limit });
+    const sortBy = qs.get('sort_by');
+    const sortOrder = qs.get('sort_order');
+    if (sortBy) showcase.set('sort_by', sortBy);
+    if (sortOrder) showcase.set('sort_order', sortOrder);
+    return await fetchJson(`/works/showcase?${showcase.toString()}`, init);
   }
 
   try {
-    return await fetchJson(`/search/works?${qs.toString()}`, { retries: 1, timeoutMs: 8000 });
+    return await fetchJson(`/search/works?${qs.toString()}`, init);
   } catch (error) {
     if (hasFilters) throw error;
-    return await fetchJson(
-      `/works?search=${encodeURIComponent(qv)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`,
-      { retries: 1, timeoutMs: 8000 }
-    );
+    const fallback = new URLSearchParams({ search: query, page, limit });
+    return await fetchJson(`/works?${fallback.toString()}`, init);
   }
 }
 
@@ -180,6 +154,8 @@ export type VenuesListFilters = {
 };
 
 const VENUES_FILTER_PARAMS: Array<[keyof VenuesListFilters, string]> = [
+  ['sortBy', 'sort_by'],
+  ['sortOrder', 'sort_order'],
   ['type', 'type'],
   ['country', 'country'],
   ['language', 'language'],
@@ -208,180 +184,142 @@ const VENUES_FILTER_PARAMS: Array<[keyof VenuesListFilters, string]> = [
   ['hasSummary', 'has_summary']
 ];
 
-export async function getVenuesPage(page = 1, limit = 50, opts?: VenuesListFilters) {
-  const params = [
-    `page=${encodeURIComponent(String(page))}`,
-    `limit=${encodeURIComponent(String(limit))}`
-  ];
-  if (opts?.sortBy) params.push(`sortBy=${encodeURIComponent(opts.sortBy)}`);
-  if (opts?.sortOrder) params.push(`sortOrder=${encodeURIComponent(opts.sortOrder)}`);
+export async function getVenuesPage(page = 1, limit = 25, opts?: VenuesListFilters) {
+  const params = new URLSearchParams({
+    page: String(normalizeLimit(page, Number.MAX_SAFE_INTEGER)),
+    limit: String(normalizeLimit(limit, 100))
+  });
   VENUES_FILTER_PARAMS.forEach(([key, param]) => {
     const value = opts?.[key];
     if (value === undefined || value === null || value === '') return;
     if (typeof value === 'number' && !Number.isFinite(value)) return;
-    params.push(`${param}=${encodeURIComponent(String(value))}`);
+    params.set(param, String(value));
   });
-  const r: any = await fetchJson(
-    `/venues?${params.join('&')}`,
-    { cache: 'force-cache' as RequestCache }
-  );
-  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeVenue);
-  return r;
+  const r: any = await fetchJson(`/venues?${params.toString()}`);
+  return { ...r, data: listOf(r).map(normalizeVenue) };
 }
 
+export const getVenue = cache(async (id: string) => {
+  try {
+    const venue = unwrapData(await fetchJson(`/venues/${encodeURIComponent(id)}`));
+    return venue ? normalizeVenue(venue) : null;
+  } catch (error) {
+    if (isMissingEntityError(error)) return null;
+    throw error;
+  }
+});
+
 export type WorksListOptions = {
-  sortBy?: 'cited_by_count' | string;
+  sortBy?: 'cited_by_count' | 'publication_year';
   sortOrder?: 'asc' | 'desc';
   citedByMin?: number;
-  citedByMax?: number;
 };
 
 function worksListQuery(opts?: WorksListOptions): string {
   if (!opts) return '';
-  const params: string[] = [];
-  if (opts.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
-  if (opts.sortOrder) params.push(`sort_order=${encodeURIComponent(opts.sortOrder)}`);
-  if (typeof opts.citedByMin === 'number' && Number.isFinite(opts.citedByMin)) params.push(`cited_by_min=${encodeURIComponent(String(opts.citedByMin))}`);
-  if (typeof opts.citedByMax === 'number' && Number.isFinite(opts.citedByMax)) params.push(`cited_by_max=${encodeURIComponent(String(opts.citedByMax))}`);
-  return params.length ? `&${params.join('&')}` : '';
+  const params = new URLSearchParams();
+  if (opts.sortBy) params.set('sort_by', opts.sortBy);
+  if (opts.sortOrder) params.set('sort_order', opts.sortOrder);
+  if (typeof opts.citedByMin === 'number' && Number.isFinite(opts.citedByMin)) params.set('cited_by_min', String(opts.citedByMin));
+  const serialized = params.toString();
+  return serialized ? `&${serialized}` : '';
 }
 
-export async function getVenueWorksPage(id: string | number, page = 1, limit = 25, opts?: WorksListOptions) {
-  const r: any = await fetchJson(`/venues/${encodeURIComponent(String(id))}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`);
-  return r;
-}
-
-export async function getVenueWorksByOffset(id: string | number, offset: number, limit = 25, opts?: WorksListOptions) {
-  const safeOffset = Math.max(0, Math.floor(offset));
-  const r: any = await fetchJson(`/venues/${encodeURIComponent(String(id))}/works?offset=${encodeURIComponent(String(safeOffset))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`);
-  return r;
-}
-
-export const getPersonsWorks = cache(async (personId: string | number, page = 1, limit = 25, opts?: WorksListOptions) => {
-  const id = encodeURIComponent(String(personId));
-  const [personResult, worksResult] = await Promise.allSettled([
-    fetchJson<any>(`/persons/${id}`),
-    fetchJson<any>(`/persons/${id}/works?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}${worksListQuery(opts)}`)
-  ]);
-  if (personResult.status === 'rejected' && !isMissingEntityError(personResult.reason)) throw personResult.reason;
-  const p: any = personResult.status === 'fulfilled' ? personResult.value : null;
-  const personRaw = p?.data || p?.person || p || null;
-  const person = personRaw ? normalizePersonDetail(personRaw) : null;
-  const worksRaw: any = worksResult.status === 'fulfilled' ? worksResult.value : null;
-  let works: any = worksRaw;
-  if (worksRaw && typeof worksRaw === 'object') {
-    const items = Array.isArray(worksRaw.data)
-      ? worksRaw.data
-      : (Array.isArray(worksRaw.results) ? worksRaw.results : (Array.isArray(worksRaw.items) ? worksRaw.items : null));
-    if (items) {
-      const normalized = dedupeByWorkId(items.map((entry: any) => normalizePersonWorkItem(entry)));
-      works = { ...worksRaw };
-      if (Array.isArray(worksRaw.data)) works.data = normalized;
-      else if (Array.isArray(worksRaw.results)) works.results = normalized;
-      else if (Array.isArray(worksRaw.items)) works.items = normalized;
-    }
-  }
-  return { person, works };
+export const getVenueWorksPage = cache(async (id: string, page = 1, limit = 25, opts?: WorksListOptions) => {
+  return await fetchJson<any>(`/venues/${encodeURIComponent(id)}/works?page=${page}&limit=${normalizeLimit(limit, 100)}${worksListQuery(opts)}`);
 });
 
 function dedupeByWorkId(items: any[]): any[] {
   const seen = new Set<string>();
-  const out: any[] = [];
-  for (const item of items) {
-    const id = item?.id ?? item?.work_id;
-    const key = id != null ? String(id) : '';
-    if (!key) { out.push(item); continue; }
-    if (seen.has(key)) continue;
+  return items.filter((item) => {
+    const key = item?.id != null ? String(item.id) : '';
+    if (!key) return true;
+    if (seen.has(key)) return false;
     seen.add(key);
-    out.push(item);
-  }
-  return out;
+    return true;
+  });
 }
 
-async function getPersonsWorksSorted(personId: string | number, limit: number, opts: WorksListOptions) {
-  const id = encodeURIComponent(String(personId));
-  const fetchLimit = normalizeLimit(limit, 100);
-  const qs = `limit=${encodeURIComponent(String(fetchLimit))}${worksListQuery(opts)}`;
+export const getPersonsWorks = cache(async (personId: string, page = 1, limit = 25) => {
+  const id = encodeURIComponent(personId);
+  const [personResult, worksResult] = await Promise.allSettled([
+    fetchJson<any>(`/persons/${id}`),
+    fetchJson<any>(`/persons/${id}/works?page=${page}&limit=${normalizeLimit(limit, 100)}`)
+  ]);
+  if (personResult.status === 'rejected' && !isMissingEntityError(personResult.reason)) throw personResult.reason;
+  const raw = personResult.status === 'fulfilled' ? unwrapData(personResult.value) : null;
+  const person = raw ? normalizePersonDetail(raw) : null;
+  const envelope: any = worksResult.status === 'fulfilled' ? worksResult.value : null;
+  return {
+    person,
+    works: dedupeByWorkId(listOf(envelope).map(normalizePersonWorkItem)),
+    pagination: envelope?.pagination ?? null
+  };
+});
+
+async function getPersonsWorksSorted(personId: string, limit: number, opts: WorksListOptions) {
+  const id = encodeURIComponent(personId);
   try {
-    const raw: any = await fetchJson<any>(`/persons/${id}/works?${qs}`);
-    const items = Array.isArray(raw?.data)
-      ? raw.data
-      : (Array.isArray(raw?.results) ? raw.results : (Array.isArray(raw?.items) ? raw.items : []));
-    const normalized = items.map((entry: any) => normalizePersonWorkItem(entry));
-    return dedupeByWorkId(normalized).slice(0, limit);
+    const envelope = await fetchJson<any>(`/persons/${id}/works?limit=${normalizeLimit(limit, 100)}${worksListQuery(opts)}`);
+    return dedupeByWorkId(listOf(envelope).map(normalizePersonWorkItem));
   } catch {
     return [];
   }
 }
 
-export async function getPersonsWorksProminent(personId: string | number, limit = 25) {
+export async function getPersonsWorksProminent(personId: string, limit = 25) {
   return getPersonsWorksSorted(personId, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 });
 }
 
-export async function getPersonsWorksFirst(personId: string | number, limit = 25) {
+export async function getPersonsWorksFirst(personId: string, limit = 25) {
   return getPersonsWorksSorted(personId, limit, { sortBy: 'publication_year', sortOrder: 'asc' });
 }
 
-export const getInstitution = cache(async (id: string | number) => {
-  let envelope: any = null;
+export const getInstitution = cache(async (id: string) => {
   try {
-    envelope = await fetchJson<any>(`/institutions/${encodeURIComponent(String(id))}`);
+    const raw = unwrapData(await fetchJson<any>(`/institutions/${encodeURIComponent(id)}`));
+    return raw ? normalizeInstitution(raw) : null;
   } catch (error) {
     if (isMissingEntityError(error)) return null;
     throw error;
   }
-  const raw = unwrapData(envelope);
-  return raw ? normalizeInstitution(raw) : null;
 });
 
-export async function getInstitutionWorks(id: string | number, page = 1, limit = 25, opts?: { funded?: boolean; sortBy?: string; sortOrder?: 'ASC' | 'DESC' }) {
+export async function getInstitutionWorks(id: string, page = 1, limit = 25, opts?: { funded?: boolean; sortBy?: string; sortOrder?: 'ASC' | 'DESC' }) {
   const segment = opts?.funded ? 'funded-works' : 'works';
-  const params = [
-    `page=${encodeURIComponent(String(page))}`,
-    `limit=${encodeURIComponent(String(normalizeLimit(limit, 100)))}`
-  ];
-  if (opts?.sortBy) params.push(`sort_by=${encodeURIComponent(opts.sortBy)}`);
-  if (opts?.sortOrder) params.push(`sort_order=${encodeURIComponent(opts.sortOrder)}`);
-  const r: any = await fetchJson(`/institutions/${encodeURIComponent(String(id))}/${segment}?${params.join('&')}`);
-  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeInstitutionWorkItem);
-  return r;
+  const params = new URLSearchParams({ page: String(page), limit: String(normalizeLimit(limit, 100)) });
+  if (opts?.sortBy) params.set('sort_by', opts.sortBy);
+  if (opts?.sortOrder) params.set('sort_order', opts.sortOrder);
+  const r: any = await fetchJson(`/institutions/${encodeURIComponent(id)}/${segment}?${params.toString()}`);
+  return { ...r, data: listOf(r).map(normalizeInstitutionWorkItem) };
 }
 
-export const getSubject = cache(async (id: string | number) => {
-  let envelope: any = null;
+export const getSubject = cache(async (id: string) => {
   try {
-    envelope = await fetchJson<any>(`/subjects/${encodeURIComponent(String(id))}`);
+    const raw = unwrapData(await fetchJson<any>(`/subjects/${encodeURIComponent(id)}`));
+    return raw ? normalizeSubject(raw) : null;
   } catch (error) {
     if (isMissingEntityError(error)) return null;
     throw error;
   }
-  const raw = unwrapData(envelope);
-  return raw ? normalizeSubject(raw) : null;
 });
 
-export async function getSubjectWorksPage(id: string | number, page = 1, limit = 25) {
-  const params = [
-    `page=${encodeURIComponent(String(page))}`,
-    `limit=${encodeURIComponent(String(normalizeLimit(limit, 100)))}`
-  ];
-  const r: any = await fetchJson(`/subjects/${encodeURIComponent(String(id))}/works?${params.join('&')}`);
-  if (r && Array.isArray(r.data)) r.data = r.data.map(normalizeSubjectWorkItem);
-  return r;
+export async function getSubjectWorksPage(id: string, page = 1, limit = 25) {
+  const r: any = await fetchJson(`/subjects/${encodeURIComponent(id)}/works?page=${page}&limit=${normalizeLimit(limit, 100)}`);
+  return { ...r, data: listOf(r).map(normalizeSubjectWorkItem) };
 }
 
 export async function getSubjectWorksByTerm(term: string, limit = 25, opts?: WorksListOptions) {
   const clean = String(term || '').trim();
   if (!clean) return [];
   try {
-    const r: any = await searchWorks({
+    return listOf(await searchWorks({
       subject: clean,
       limit: normalizeLimit(limit, 100),
       sort_by: opts?.sortBy,
       sort_order: opts?.sortOrder,
       cited_by_min: opts?.citedByMin
-    });
-    const items = r?.data || r?.results || r?.items || [];
-    return Array.isArray(items) ? items.slice(0, limit) : [];
+    }));
   } catch {
     return [];
   }
@@ -393,25 +331,16 @@ export async function resolveDoi(doi: string) {
     .replace(/^doi:\s*/i, '');
   if (!clean || !clean.includes('/')) return null;
   const encoded = clean.split('/').map((segment) => encodeURIComponent(segment)).join('/');
-  let envelope: any = null;
   try {
-    envelope = await fetchJson<any>(`/${encoded}`);
+    return unwrapData(await fetchJson<any>(`/${encoded}`));
   } catch (error) {
     if (isMissingEntityError(error)) return null;
     throw error;
   }
-  return unwrapData(envelope) || null;
 }
 
 const EXPORT_PAGE_SIZE = 100;
 const EXPORT_MAX_PAGES = 50;
-
-function pickItems(raw: any): any[] {
-  if (Array.isArray(raw?.data)) return raw.data;
-  if (Array.isArray(raw?.results)) return raw.results;
-  if (Array.isArray(raw?.items)) return raw.items;
-  return [];
-}
 
 async function collectAllPages(loadPage: (page: number) => Promise<any>) {
   const pages: any[][] = [];
@@ -419,7 +348,7 @@ async function collectAllPages(loadPage: (page: number) => Promise<any>) {
   let truncated = false;
   for (let page = 1; page <= EXPORT_MAX_PAGES; page += 1) {
     const raw = await loadPage(page);
-    const items = pickItems(raw);
+    const items = listOf(raw);
     const pagination = raw?.pagination || {};
     const reported = Number(pagination.total);
     if (Number.isFinite(reported) && reported > 0) total = reported;
@@ -433,9 +362,9 @@ async function collectAllPages(loadPage: (page: number) => Promise<any>) {
   return { works, total: total || works.length, truncated };
 }
 
-export async function getEntityExportWorks(kind: EntityKind, id: string | number): Promise<EntityExportWorks> {
+export async function getEntityExportWorks(kind: EntityKind, id: string): Promise<EntityExportWorks> {
+  const safeId = encodeURIComponent(id);
   if (kind === 'person') {
-    const safeId = encodeURIComponent(String(id));
     const collected = await collectAllPages((page) => fetchJson<any>(
       `/persons/${safeId}/works?page=${page}&limit=${EXPORT_PAGE_SIZE}`
     ));
@@ -447,7 +376,6 @@ export async function getEntityExportWorks(kind: EntityKind, id: string | number
   }
 
   if (kind === 'venue') {
-    const safeId = encodeURIComponent(String(id));
     const year = new Date().getFullYear();
     const collected = await collectAllPages((page) => fetchJson<any>(
       `/venues/${safeId}/works?page=${page}&limit=${EXPORT_PAGE_SIZE}&year=${year}`
@@ -462,21 +390,21 @@ export async function getEntityExportWorks(kind: EntityKind, id: string | number
   const raw = kind === 'institution'
     ? await getInstitutionWorks(id, 1, EXPORT_PAGE_SIZE)
     : await getSubjectWorksPage(id, 1, EXPORT_PAGE_SIZE);
-  const items = pickItems(raw);
+  const items = listOf(raw);
   const reported = Number(raw?.pagination?.total);
+  const total = Number.isFinite(reported) && reported > 0 ? reported : items.length;
   return {
     works: items,
-    total: Number.isFinite(reported) && reported > 0 ? reported : items.length,
-    scope: { works: 'first_page', year: null, limit: EXPORT_PAGE_SIZE, truncated: items.length < (Number.isFinite(reported) ? reported : items.length) }
+    total,
+    scope: { works: 'first_page', year: null, limit: EXPORT_PAGE_SIZE, truncated: items.length < total }
   };
 }
 
-export async function getEntityRecord(kind: EntityKind, id: string | number) {
+export async function getEntityRecord(kind: EntityKind, id: string) {
   if (kind === 'venue') return getVenue(id);
   if (kind === 'institution') return getInstitution(id);
   if (kind === 'subject') return getSubject(id);
-  const envelope: any = await fetchJson<any>(`/persons/${encodeURIComponent(String(id))}`);
-  const raw = envelope?.data || envelope?.person || envelope || null;
+  const raw = unwrapData(await fetchJson<any>(`/persons/${encodeURIComponent(id)}`));
   return raw ? normalizePersonDetail(raw) : null;
 }
 
@@ -490,13 +418,10 @@ export const loadWork = cache(async (id: string) => {
     if (isMissingEntityError(workResult.reason)) return null;
     throw workResult.reason;
   }
-  const envelope: any = workResult.value;
-  const raw = envelope?.data || envelope?.work || envelope || null;
+  const raw = unwrapData(workResult.value);
   if (!raw) return null;
   const work = normalizeWorkDetail(raw);
-  if (work && typeof work === 'object' && metricsResult.status === 'fulfilled') {
-    const md: any = metricsResult.value?.data || metricsResult.value || null;
-    if (md && typeof md === 'object') (work as any).authoritative_metrics = md;
-  }
+  const metrics = metricsResult.status === 'fulfilled' ? unwrapData(metricsResult.value) : null;
+  if (metrics && typeof metrics === 'object') work.authoritative_metrics = metrics;
   return work;
 });

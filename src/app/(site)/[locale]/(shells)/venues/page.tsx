@@ -1,13 +1,18 @@
 import { getTranslations } from 'next-intl/server';
 import VenuesList from './VenuesList';
 import SectionTabs, { type SectionTabDescriptor } from '@/components/common/SectionTabs';
-import { getVenuesPage } from '@/lib/endpoints';
+import { getVenuesPage, type VenuesListFilters } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
+import { toVenueListPage, type VenueListPage } from '@/lib/venues';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
 
-const DEFAULT_LIMIT = 25;
+const LIMIT = 25;
+const EMPTY: VenueListPage = { items: [], page: 1, hasPrev: false, hasNext: false };
+
+const loadPage = (filters: VenuesListFilters) =>
+  getVenuesPage(1, LIMIT, filters).then(toVenueListPage).catch(() => EMPTY);
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
   return buildPageMetadata(props.params, 'metadata.venues', '/venues');
@@ -15,11 +20,11 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 
 export default async function VenuesPage(props: { params: Promise<{ locale: string }> }) {
   const { locale } = await props.params;
-  const [bestData, prominentData, recentData, firstData] = await Promise.all([
-    getVenuesPage(1, DEFAULT_LIMIT, { sortBy: 'score', sortOrder: 'DESC' }).catch(() => null),
-    getVenuesPage(1, DEFAULT_LIMIT, { sortBy: 'cited_by_count', sortOrder: 'DESC' }).catch(() => null),
-    getVenuesPage(1, DEFAULT_LIMIT, { sortBy: 'newest', type: 'JOURNAL' }).catch(() => null),
-    getVenuesPage(1, DEFAULT_LIMIT, { sortBy: 'oldest', type: 'JOURNAL' }).catch(() => null)
+  const [best, prominent, recent, first] = await Promise.all([
+    loadPage({ sortBy: 'score', sortOrder: 'DESC' }),
+    loadPage({ sortBy: 'cited_by_count', sortOrder: 'DESC' }),
+    loadPage({ sortBy: 'newest', type: 'JOURNAL' }),
+    loadPage({ sortBy: 'oldest', type: 'JOURNAL' })
   ]);
   const t = await getTranslations({ locale });
 
@@ -27,22 +32,22 @@ export default async function VenuesPage(props: { params: Promise<{ locale: stri
     {
       key: 'best',
       label: t('venues.listSections.best'),
-      content: <VenuesList initialData={bestData} initialPage={1} initialLimit={DEFAULT_LIMIT} sortBy="score" sortOrder="DESC" />
+      content: <VenuesList initial={best} limit={LIMIT} sortBy="score" sortOrder="DESC" paginated />
     },
     {
       key: 'prominent',
       label: t('venues.listSections.prominent'),
-      content: <VenuesList initialData={prominentData} initialPage={1} initialLimit={DEFAULT_LIMIT} paginated={false} />
+      content: <VenuesList initial={prominent} limit={LIMIT} />
     },
     {
       key: 'recent',
       label: t('venues.listSections.recent'),
-      content: <VenuesList initialData={recentData} initialPage={1} initialLimit={DEFAULT_LIMIT} paginated={false} />
+      content: <VenuesList initial={recent} limit={LIMIT} />
     },
     {
       key: 'first',
       label: t('venues.listSections.first'),
-      content: <VenuesList initialData={firstData} initialPage={1} initialLimit={DEFAULT_LIMIT} paginated={false} />
+      content: <VenuesList initial={first} limit={LIMIT} />
     }
   ];
 

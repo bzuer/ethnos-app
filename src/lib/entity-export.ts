@@ -1,11 +1,6 @@
 import { normalizeWorkDetail } from './works';
-import {
-  SITE_ORIGIN,
-  buildDoiUrl,
-  buildFileOpenAccessUrl,
-  getFilesList,
-  pickOpenAccessFile
-} from './work-export';
+import { SITE_ORIGIN } from './site';
+import { buildDoiUrl, buildFileOpenAccessUrl, pickOpenAccessFile } from './work-export';
 
 export type ExportKind = 'work' | 'person' | 'venue' | 'institution' | 'subject';
 export type EntityKind = Exclude<ExportKind, 'work'>;
@@ -102,8 +97,8 @@ function fillMissing(base: any, extra: any) {
 export function buildWorkRecord(source: any) {
   if (!source || typeof source !== 'object') return null;
   const work = normalizeWorkDetail(source);
-  const id = work?.id ?? work?.work_id ?? null;
-  const openAccessFile = pickOpenAccessFile(getFilesList(work));
+  const id = work?.id ?? null;
+  const openAccessFile = pickOpenAccessFile(Array.isArray(work?.files) ? work.files : []);
   return withLinks(work, {
     html: buildEntityUrl('work', id),
     doi: buildDoiUrl(work?.doi ?? work?.publication?.doi),

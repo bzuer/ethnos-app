@@ -17,7 +17,10 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 export default async function HomePage(props: { params: Promise<{ locale: string }> }) {
   const { locale } = await props.params;
   const searchAction = localizedPath(locale as Locale, '/search/results');
-  const [recent, venues] = await loadHomeData();
+  const [recent, venues] = await Promise.all([
+    getHomeRecentWorks(20).catch(() => []),
+    getHomeTopVenues(15).catch(() => [])
+  ]);
   const t = await getTranslations({ locale });
   return (
     <div className="page-header" aria-labelledby="page-title">
@@ -45,9 +48,9 @@ export default async function HomePage(props: { params: Promise<{ locale: string
               </tr>
             </thead>
             <tbody>
-              {recent.slice(0, 20).map((w: any) => {
+              {recent.map((w: any) => {
                 const authors = formatMetadataAuthors(w);
-                const year = w.publication_year || (w.publication && w.publication.year) || w.year || '';
+                const year = w.publication_year || '';
                 return (
                   <tr key={w.id}>
                     <td className="field-value"><LocaleLink className="action-link table-link" href={`/works/${w.id}`}>{w.title || t('common.entities.titleUnavailable')}</LocaleLink></td>
@@ -77,10 +80,10 @@ export default async function HomePage(props: { params: Promise<{ locale: string
               </tr>
             </thead>
             <tbody>
-              {venues.slice(0, 25).map((v: any) => (
+              {venues.map((v: any) => (
                 <tr key={v.id}>
                   <td className="field-value"><LocaleLink className="action-link table-link" href={`/venues/${v.id}`}>{v.name || t('common.entities.nameUnavailable')}</LocaleLink></td>
-                  <td className="field-value">{(v.publisher && v.publisher.name) || t('common.entities.publisherUnknown')}</td>
+                  <td className="field-value">{v.publisher?.name || t('common.entities.publisherUnknown')}</td>
                   <td className="field-value">{v.coverage_start_year && v.coverage_end_year ? `${v.coverage_start_year}-${v.coverage_end_year}` : '-'}</td>
                 </tr>
               ))}
@@ -93,15 +96,4 @@ export default async function HomePage(props: { params: Promise<{ locale: string
       </section>
     </div>
   );
-}
-
-async function loadHomeData(): Promise<[any[], any[]]> {
-  const [recent, venues] = await Promise.all([
-    getHomeRecentWorks(20).catch(() => []),
-    getHomeTopVenues(15, 1).catch(() => [])
-  ]);
-  return [
-    Array.isArray(recent) ? recent : [],
-    Array.isArray(venues) ? venues : []
-  ];
 }

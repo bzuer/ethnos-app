@@ -37,7 +37,7 @@ function formatAuthorsForDisplay(authors: any, fallback: string): string {
 
 async function fetchWork(id: string | number): Promise<Work | null> {
   try {
-    return await actGetWorkFull(id, true);
+    return await actGetWorkFull(String(id), true);
   } catch {
     return null;
   }

@@ -7,25 +7,19 @@ import WorkCitationList from './WorkCitationList';
 import WorkContributorRows from './WorkContributorRows';
 import WorkSectionTabs from './WorkSectionTabs';
 import JsonLd from '@/components/common/JsonLd';
-import { buildPageMetadata, fitPageTitle, siteOpenGraphImage } from '@/i18n/metadata';
+import { alternateOpenGraphLocales, buildPageMetadata, fitPageTitle, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
 import { composeDescription } from '@/lib/meta-text';
-import { localeUrl } from '@/lib/site';
+import { SITE_NAME, localeUrl } from '@/lib/site';
 import { buildBreadcrumbList, buildDoiIdentifier, withSitePublisher } from '@/lib/structured-data';
-import { locales, type Locale } from '@/i18n/config';
-import { formatContributorName, getWorkAbstractSnippet, groupContributorsByRole, groupContributorsByRoleSet, pickContributorEntries, pickContributorsByRole, sanitizeWorkAbstract } from '@/lib/works';
+import type { Locale } from '@/i18n/config';
+import { formatContributorName, formatMetadataAuthors, getWorkAbstractSnippet, groupContributorsByRole, groupContributorsByRoleSet, normalizeDoi, pickContributorEntries, pickContributorsByRole, sanitizeWorkAbstract } from '@/lib/works';
 import { buildIdentifierHref, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
 import { notFound } from 'next/navigation';
-import { buildCoins, buildCitationMeta, pickReferenceAuthors } from './work-detail';
+import { buildCoins, buildCitationMeta } from './work-detail';
 import { loadWork } from '@/lib/endpoints';
 import { exportFilename } from '@/lib/entity-export';
 import { buildWorkAccessLinks, toListItem } from '@/lib/work-export';
-
-const openGraphLocaleMap: Record<string, string> = {
-  en: 'en_US',
-  pt: 'pt_BR',
-  es: 'es_ES'
-};
 
 export async function generateMetadata(props: { params: Promise<{ locale: string; id: string }> }) {
   const { id, locale } = await props.params;
@@ -40,7 +34,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
   const publication = work?.publication || {};
   const venue = work?.venue || {};
   const publisher = work?.publisher || {};
-  const workType = work?.formatted_type || work?.work_type || work?.type;
+  const workType = work?.type;
   const isBookType = String(workType || '').toUpperCase().includes('BOOK');
   const subtitle = work?.subtitle ? String(work.subtitle) : '';
   const titleBase = work?.title || (typeof base.title === 'string' ? base.title : '');
@@ -54,7 +48,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
     { text: titleBase || fullTitle, tail: yearTag }
   );
   const authorNames = pickContributorsByRole(pickContributorEntries(work), 'AUTHOR').map(formatContributorName).filter(Boolean);
-  const authorSummary = pickReferenceAuthors(work);
+  const authorSummary = formatMetadataAuthors(work);
   const venueName = venue?.name || work?.venue_name || '';
   const comparable = (value: unknown) => String(value || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
   const venueLine = venueName && ![titleBase, fullTitle].some((title) => comparable(title) === comparable(venueName)) ? venueName : '';
@@ -70,19 +64,16 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
         descriptors('workRecordMedium'),
         descriptors('workRecordShort')
       ]);
-  const canonicalUrl = localeUrl(locale as Locale, `/works/${id}`);
-  const ogLocale = openGraphLocaleMap[locale] || 'en_US';
-  const alternateLocale = locales.filter((code) => code !== locale).map((code) => openGraphLocaleMap[code] || 'en_US');
-  const ogTitle = titleWithYear ? `${titleWithYear} - Ethnos Bibliography` : 'Ethnos Bibliography';
+  const safeLocale = locale as Locale;
+  const canonicalUrl = localeUrl(safeLocale, `/works/${id}`);
+  const ogLocale = openGraphLocales[safeLocale];
+  const alternateLocale = alternateOpenGraphLocales(safeLocale);
+  const ogTitle = titleWithYear ? `${titleWithYear} - ${SITE_NAME}` : SITE_NAME;
   const ogImage = siteOpenGraphImage();
   const articleAuthors = Array.from(new Set((authorNames.length ? authorNames : (authorSummary ? [authorSummary] : [])).map((a: any) => String(a))));
-  const keywords = [
-    fullTitle || '',
-    venue?.name || work?.venue_name || '',
-    workType || '',
-    publisher?.name || work?.publisher_name || '',
-    ...(Array.isArray(authorSummary) ? authorSummary : authorSummary ? [authorSummary] : [])
-  ].map((k) => (k ? String(k) : '')).filter(Boolean);
+  const keywords = [fullTitle, venueName, workType, publisher?.name, authorSummary]
+    .map((k) => (k ? String(k) : ''))
+    .filter(Boolean);
   const other = buildCitationMeta(work, locale, id);
   const openGraph = isBookType
     ? {
@@ -94,7 +85,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
         locale: ogLocale,
         alternateLocale,
         url: canonicalUrl,
-        siteName: 'Ethnos Bibliography',
+        siteName: SITE_NAME,
         images: [ogImage]
       }
     : {
@@ -103,11 +94,11 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
         type: 'article' as const,
         publishedTime: publication?.publication_date || work?.publication_date || (year ? String(year) : undefined),
         authors: articleAuthors,
-        section: venue?.name || work?.venue_name || undefined,
+        section: venueName || undefined,
         locale: ogLocale,
         alternateLocale,
         url: canonicalUrl,
-        siteName: 'Ethnos Bibliography',
+        siteName: SITE_NAME,
         images: [ogImage]
       };
   return {
@@ -173,7 +164,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   const publisherName = work?.publisher?.name || work?.publisher_name;
   const publisherType = work?.publisher?.type;
   const publisherCountry = work?.publisher?.country;
-  const workType = work?.formatted_type || work?.work_type || work?.type;
+  const workType = work?.type;
   const isBookType = String(workType || '').toUpperCase().includes('BOOK');
   const language = work?.language;
   const reviewRelations = work?.review_relations;
@@ -310,19 +301,19 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
           {Number.isFinite(uniqueCitingWorks) && uniqueCitingWorks > 0 ? (
             <tr>
               <th scope="row">{t('works.detail.impact.uniqueCiting')}</th>
-              <td className="field-value">{formatNumber(uniqueCitingWorks)}</td>
+              <td className="field-value">{formatNumber(uniqueCitingWorks, locale)}</td>
             </tr>
           ) : null}
           {Number.isFinite(perYear) && perYear > 0 ? (
             <tr>
               <th scope="row">{t('works.detail.impact.citationsPerYear')}</th>
-              <td className="field-value">{formatNumber(perYear)}</td>
+              <td className="field-value">{formatNumber(perYear, locale)}</td>
             </tr>
           ) : null}
           {firstYear && latestYear ? (
             <tr>
               <th scope="row">{t('works.detail.impact.citationSpan')}</th>
-              <td className="field-value">{firstYear} - {latestYear}{Number.isFinite(spanYears) && spanYears > 0 ? ` (${formatNumber(spanYears)})` : ''}</td>
+              <td className="field-value">{firstYear} - {latestYear}{Number.isFinite(spanYears) && spanYears > 0 ? ` (${formatNumber(spanYears, locale)})` : ''}</td>
             </tr>
           ) : null}
           {velocity ? (
@@ -342,10 +333,10 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
               <th scope="row">{t('works.detail.impact.citationTypes')}</th>
               <td className="field-value">
                 {[
-                  typePos > 0 ? `${t('works.detail.impact.positive')}: ${formatNumber(typePos)}` : '',
-                  typeNeu > 0 ? `${t('works.detail.impact.neutral')}: ${formatNumber(typeNeu)}` : '',
-                  typeNeg > 0 ? `${t('works.detail.impact.negative')}: ${formatNumber(typeNeg)}` : '',
-                  typeSelf > 0 ? `${t('works.detail.impact.selfCitations')}: ${formatNumber(typeSelf)}` : ''
+                  typePos > 0 ? `${t('works.detail.impact.positive')}: ${formatNumber(typePos, locale)}` : '',
+                  typeNeu > 0 ? `${t('works.detail.impact.neutral')}: ${formatNumber(typeNeu, locale)}` : '',
+                  typeNeg > 0 ? `${t('works.detail.impact.negative')}: ${formatNumber(typeNeg, locale)}` : '',
+                  typeSelf > 0 ? `${t('works.detail.impact.selfCitations')}: ${formatNumber(typeSelf, locale)}` : ''
                 ].filter(Boolean).join(' • ')}
               </td>
             </tr>
@@ -375,7 +366,7 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
   if (publisherName) jsonLd.publisher = { '@type': 'Organization', name: publisherName };
   if (doi) {
     jsonLd.identifier = buildDoiIdentifier(String(doi));
-    jsonLd.sameAs = `https://doi.org/${String(doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')}`;
+    jsonLd.sameAs = `https://doi.org/${normalizeDoi(doi)}`;
   }
   if (workSubjects.length) jsonLd.keywords = workSubjects.map((subject) => subject.term);
   if (typeof openAccess === 'boolean') jsonLd.isAccessibleForFree = openAccess;
@@ -559,25 +550,25 @@ export default async function WorkDetailPage(props: { params: Promise<{ locale: 
             {citationsCountDisplay > 0 ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.citations')}</th>
-                <td className="field-value">{formatNumber(citationsCountDisplay)}</td>
+                <td className="field-value">{formatNumber(citationsCountDisplay, locale)}</td>
               </tr>
             ) : null}
             {referencesCountDisplay > 0 ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.references')}</th>
-                <td className="field-value">{formatNumber(referencesCountDisplay)}</td>
+                <td className="field-value">{formatNumber(referencesCountDisplay, locale)}</td>
               </tr>
             ) : null}
             {typeof metrics?.download_count === 'number' && metrics.download_count > 0 ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.downloads')}</th>
-                <td className="field-value">{formatNumber(metrics.download_count)}</td>
+                <td className="field-value">{formatNumber(metrics.download_count, locale)}</td>
               </tr>
             ) : null}
             {typeof metrics?.view_count === 'number' && metrics.view_count > 0 ? (
               <tr>
                 <th scope="row">{t('works.detail.labels.views')}</th>
-                <td className="field-value">{formatNumber(metrics.view_count)}</td>
+                <td className="field-value">{formatNumber(metrics.view_count, locale)}</td>
               </tr>
             ) : null}
           </tbody>

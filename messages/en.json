@@ -1,7 +1,6 @@
 {
   "layout": {
     "skipLink": "Skip to main content",
-    "brand": "ETHNOS_APP",
     "nav": {
       "home": "Home",
       "search": "Search",
@@ -40,7 +39,6 @@
       "seeJournals": "See all journals",
       "previous": "Previous",
       "next": "Next",
-      "goHome": "Go to homepage",
       "loadMore": "Load more",
       "addToList": "Add to list",
       "inList": "In the list",
@@ -59,15 +57,12 @@
       "removeItem": "X"
     },
     "labels": {
-      "searchInput": "Search term",
       "term": "Term",
       "itemsPerPage": "Items per page",
       "sortBy": "Sort by",
       "sortOrder": "Order",
       "citedByMin": "Min. citations",
       "citedByMax": "Max. citations",
-      "query": "Query",
-      "parameters": "Parameters",
       "type": "Type",
       "work": "Work",
       "author": "Author",
@@ -79,13 +74,11 @@
       "peerReviewed": "Peer reviewed",
       "openAccess": "Open Access",
       "list": "List",
-      "items": "Items",
       "pagination": "Pagination"
     },
     "placeholders": {
       "homeSearch": "Search works by title, author, or keyword...",
       "quickTerm": "Title, author, journal...",
-      "advancedTerm": "Title, keywords...",
       "person": "Person name or ID",
       "venue": "Journal name or ID",
       "subject": "Topic or keyword",
@@ -107,12 +100,7 @@
       "loadingJournals": "Loading journals...",
       "unableToLoadWorks": "Unable to load works.",
       "unableToLoadJournals": "Unable to load journals.",
-      "noJournals": "No journals available.",
-      "noPersonWorks": "No works found for this person.",
-      "noVenueWorks": "No publications found for this journal.",
-      "emptyList": "Your personal list is empty.",
-      "addFromDetails": "",
-      "exportUnavailable": "Export options require items in the list."
+      "noJournals": "No journals available."
     },
     "messages": {
       "itemExists": "Item already in your list",
@@ -132,7 +120,6 @@
       "authorUnknown": "Unknown author",
       "publisherUnknown": "Unknown publisher",
       "titleUnavailable": "Title unavailable",
-      "yearUnavailable": "Year unavailable",
       "nameUnavailable": "Name unavailable",
       "journalNotFound": "Journal not found",
       "institutionNotFound": "Institution not found",
@@ -149,15 +136,12 @@
       "actions": ""
     },
     "meta": {
-      "peerReviewed": "Peer Reviewed",
       "openAccess": "Open Access",
       "citedBy": "Cited by",
       "references": "References",
-      "worksCount": "{count} works",
-      "authorsCount": "{count} authors",
-      "termEmpty": "(empty)",
+      "worksCount": "{count, plural, one {# work} other {# works}}",
+      "authorsCount": "{count, plural, one {# author} other {# authors}}",
       "ariaSearchForm": "Search form",
-      "ariaAdvancedSearchForm": "Advanced search form",
       "ariaPersonalList": "Personal reading list",
       "openWork": "Open details for {title}"
     },
@@ -204,15 +188,11 @@
     "searchSection": "Search",
     "updatesSection": "Updates",
     "venuesSection": "Journals",
-    "searchButton": "Search",
     "updatesCaption": "Most recent works added to the collection",
     "venuesCaption": "Journals with the highest number of indexed works"
   },
   "search": {
     "title": "Search",
-    "quick": "Quick Search",
-    "advanced": "Advanced Search",
-    "queryLegend": "Query",
     "parametersLegend": "Parameters",
     "filtersLegend": "Filters",
     "textLegend": "Text Search",
@@ -243,7 +223,6 @@
   },
   "venues": {
     "title": "Journals",
-    "listHeading": "List",
     "detail": {
       "data": "Journal Data",
       "type": "Type",
@@ -263,7 +242,6 @@
       "sjrQuartile": "SJR quartile",
       "snip": "SNIP",
       "citescore": "CiteScore",
-      "cited": "Cited works",
       "hIndexLabel": "h-index",
       "i10IndexLabel": "i10-index",
       "meanCitedness": "2-year mean citedness",
@@ -273,8 +251,7 @@
       "impactFactor": "Impact factor",
       "openAccess": "Open Access",
       "indexedScopus": "Scopus indexed",
-      "doaj": "DOAJ indexed",
-      "publications": "Publications in this journal"
+      "doaj": "DOAJ indexed"
     },
     "sections": {
       "navLabel": "Venue sections",
@@ -346,19 +323,12 @@
         "reviewOf": "Review of",
         "reviewedBy": "Reviewed by",
         "publisher": "Publisher",
-        "publisherIds": "Publisher identifiers",
         "language": "Language",
         "citations": "Citations received",
         "references": "References cited",
         "downloads": "Downloads",
         "views": "Views",
-        "addedAt": "Added on",
-        "md5": "MD5",
-        "openLibraryId": "Open Library",
         "isbn": "ISBN",
-        "openAlex": "OpenAlex ID",
-        "licenses": "Licenses",
-        "publicationId": "Publication ID",
         "scopus": "Scopus ID",
         "wikidata": "Wikidata ID",
         "mag": "MAG ID",
@@ -368,7 +338,6 @@
     }
   },
   "persons": {
-    "detailTitle": "Person Details",
     "dataSection": "Biographic Data",
     "fields": {
       "id": "ID",
@@ -394,7 +363,6 @@
       "latestYear": "Latest publication year",
       "hIndex": "h-index"
     },
-    "worksHeading": "Works by this person",
     "roleFallback": "Author",
     "sections": {
       "navLabel": "Author sections",
@@ -417,9 +385,6 @@
     "title": "My List",
     "savedItems": "Saved items",
     "export": "Export",
-    "itemsInListOne": "{count} item in list",
-    "itemsInListOther": "{count} items in list",
-    "itemsChronological": "",
     "emptyStateTitle": "Your personal list is empty.",
     "emptyStateDescription": "",
     "exportUnavailable": "Export options available after adding items."
@@ -444,7 +409,6 @@
       "data": "Institution data",
       "type": "Type",
       "country": "Country",
-      "city": "City",
       "works": "Works",
       "researchers": "Researchers",
       "citations": "Citations",
@@ -459,8 +423,7 @@
       "openAlex": "OpenAlex",
       "website": "Website",
       "alternativeNames": "Also known as",
-      "production": "Production by type",
-      "trend": "Publication trend"
+      "production": "Production by type"
     },
     "sections": {
       "navLabel": "Institution sections",
@@ -475,9 +438,7 @@
       "recent": "No affiliated works found for this institution.",
       "prominent": "No prominent works on this page.",
       "first": "No early works on this page.",
-      "funded": "No funded works recorded for this institution.",
-      "authors": "No author data available.",
-      "related": "No related institutions recorded."
+      "funded": "No funded works recorded for this institution."
     },
     "tools": {
       "exportInstitution": "Export institution data (JSON)"
@@ -572,8 +533,7 @@
       "persons": "Researchers",
       "institutions": "Institutions",
       "subjects": "Subjects",
-      "docs": "Documentation",
-      "docsCorpus": "The Ethnos Corpus"
+      "docs": "Documentation"
     },
     "descriptors": {
       "personProfile": "Researcher profile for {name} in the Ethnos anthropology and sociology bibliography.",
@@ -626,7 +586,6 @@
     "intro": "Search works across the catalog and jump to related authors and institutions.",
     "worksHeading": "Works",
     "authorsHeading": "Related authors",
-    "institutionsHeading": "Related institutions",
     "seeAllWorks": "See all {count} works",
     "startPrompt": "Enter a term to search works and discover related authors and institutions.",
     "noResults": "No works found for this term.",
@@ -661,7 +620,6 @@
   "docs": {
     "title": "Documentation",
     "lead": "How the Ethnos corpus is assembled, repaired, scored and published — written at once for the reader who knows the machinery and the reader who knows the literature.",
-    "collectionsLabel": "Collections",
     "contentsLabel": "Contents",
     "chapterNavLabel": "Chapter navigation",
     "previous": "Previous",

@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import { WorkResultItem, type WorkResultLabels } from '@/components/common/WorkResultItem';
 import { actSearchGlobal, type GlobalSearchResult } from '@/lib/actions';
-import { formatNumber } from '@/lib/format';
 
 type Props = {
   formAction: string;
@@ -14,8 +13,7 @@ type Props = {
 
 const EMPTY: GlobalSearchResult = {
   works: { total: 0, results: [] },
-  persons: { total: 0, results: [] },
-  institutions: { total: 0, results: [] }
+  persons: { total: 0, results: [] }
 };
 
 const subscribeNever = () => () => {};
@@ -31,7 +29,7 @@ export default function SearchGlobalClient({ formAction }: Props) {
   useEffect(() => {
     if (!hasQuery) return undefined;
     let cancelled = false;
-    actSearchGlobal(query, 10)
+    actSearchGlobal(query)
       .then((res) => { if (!cancelled) setResult({ query, data: res }); })
       .catch(() => { if (!cancelled) setResult({ query, data: EMPTY }); });
     return () => { cancelled = true; };
@@ -55,7 +53,6 @@ export default function SearchGlobalClient({ formAction }: Props) {
 
   const works = data.works.results;
   const persons = data.persons.results;
-  const institutions = data.institutions.results;
   const showNoResults = mounted && hasQuery && !loading && works.length === 0;
   const showStartPrompt = mounted && !hasQuery;
 
@@ -98,7 +95,7 @@ export default function SearchGlobalClient({ formAction }: Props) {
           <h2 className="title-section" id="global-works-heading">{t('searchGlobal.worksHeading')}</h2>
           <ul className="results-list">
             {works.map((it: any) => (
-              <WorkResultItem key={it.id ?? it.work_id} item={it} labels={resultLabels} showRelevance />
+              <WorkResultItem key={it.id} item={it} labels={resultLabels} />
             ))}
           </ul>
           {data.works.total > works.length ? (
@@ -130,33 +127,6 @@ export default function SearchGlobalClient({ formAction }: Props) {
                   </h3>
                   {worksCount > 0 ? (
                     <p className="result-meta"><span className="result-total">{t('common.meta.worksCount', { count: worksCount })}</span></p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-
-      {hasQuery && institutions.length > 0 ? (
-        <section aria-labelledby="global-institutions-heading">
-          <h2 className="title-section" id="global-institutions-heading">{t('searchGlobal.institutionsHeading')}</h2>
-          <ul className="results-list">
-            {institutions.map((inst: any, idx: number) => {
-              const iid = inst?.id;
-              const name = inst?.name || t('common.entities.nameUnavailable');
-              const worksCount = Number(inst?.works_count) || 0;
-              return (
-                <li className="result-item" key={iid || idx}>
-                  <h3 className="result-title">
-                    {iid ? (
-                      <LocaleLink className="result-link" href={`/institutions/${iid}`}>{name}</LocaleLink>
-                    ) : (
-                      <span className="field-value">{name}</span>
-                    )}
-                  </h3>
-                  {worksCount > 0 ? (
-                    <p className="result-meta"><span className="result-total">{formatNumber(worksCount)}</span></p>
                   ) : null}
                 </li>
               );

@@ -6,11 +6,11 @@ import EntityTools from '@/components/common/EntityTools';
 import { exportFilename } from '@/lib/entity-export';
 import SubjectLinks from '@/components/common/SubjectLinks';
 import VenueWorksList from './VenueWorksList';
-import { getVenue } from '@/lib/api';
-import type { Venue } from '@/lib/api';
-import { getVenueWorksPage, getVenueWorksByOffset } from '@/lib/endpoints';
+import { getVenue, getVenueWorksPage, type WorksListOptions } from '@/lib/endpoints';
+import { venueSubjectTerms } from '@/lib/venues';
 import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
 import { formatNumber } from '@/lib/format';
+import { formatContributorName } from '@/lib/works';
 import JsonLd from '@/components/common/JsonLd';
 import { alternateOpenGraphLocales, buildPageMetadata, fitPageTitle, openGraphLocales, siteOpenGraphImage } from '@/i18n/metadata';
 import { composeDescription } from '@/lib/meta-text';
@@ -20,148 +20,39 @@ import type { Locale } from '@/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
-const pickText = (values: Array<string | null | undefined>) => {
-  for (const value of values) {
-    if (typeof value === 'string') {
-      const trimmed = value.trim();
-      if (trimmed) return trimmed;
-    }
-  }
-  return '';
-};
-
-const formatSubjectList = (value: unknown) => {
-  if (!value) return '';
-  if (Array.isArray(value)) {
-    const labels = value
-      .map((entry) => {
-        if (!entry) return '';
-        if (typeof entry === 'string') return entry;
-        if (typeof entry === 'object') {
-          const obj = entry as { term?: string; display_name?: string; name?: string; label?: string; value?: string };
-          return obj.term || obj.display_name || obj.name || obj.label || obj.value || '';
-        }
-        return '';
-      })
-      .map((entry) => entry.trim())
-      .filter(Boolean);
-    return labels.join(', ');
-  }
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') {
-    const obj = value as { term?: string; display_name?: string; name?: string; label?: string; value?: string };
-    return obj.term || obj.display_name || obj.name || obj.label || obj.value || '';
-  }
-  return '';
-};
-
-const getVenueDescription = (venue?: Venue | null) => {
-  if (!venue) return '';
-  return pickText([
-    venue.summary,
-    venue.summary_snapshot?.summary,
-    venue.summary_snapshot?.description,
-    venue.summary_snapshot?.focus,
-    venue.description
-  ]);
-};
-
-const getVenueSubjectsText = (venue?: Venue | null) => {
-  if (!venue) return '';
-  return pickText([
-    formatSubjectList(venue.summary_snapshot?.subjects),
-    venue.summary_snapshot?.subjects_string,
-    venue.subjects_string,
-    formatSubjectList(venue.subjects)
-  ]);
-};
-
-const toStringList = (raw: any) => {
-  const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
-  return list.map((value: any) => {
-    if (value && typeof value === 'object') {
-      const picked = value?.id || value?.identifier || value?.value || value?.code;
-      return picked ? String(picked).trim() : '';
-    }
-    return value === 0 ? '0' : (value ? String(value).trim() : '');
-  }).filter((value: string) => value);
-};
+const LIMIT = 25;
+const RECENT: WorksListOptions = { sortBy: 'publication_year', sortOrder: 'desc' };
+const PROMINENT: WorksListOptions = { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 };
+const FIRST: WorksListOptions = { sortBy: 'publication_year', sortOrder: 'asc' };
+const SEPARATELY_SHOWN = new Set(['issn', 'eissn', 'scopus']);
 
 const uniqueList = (items: Array<string | null | undefined>) => Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
 
-const pickAuthorName = (author: any) => {
-  if (!author) return '';
-  if (typeof author === 'string') return author.trim();
-  return author?.preferred_name || author?.name || [author?.given_names, author?.family_name].filter(Boolean).join(' ');
+const issnList = (venue: any) => uniqueList([venue?.issn, venue?.eissn]);
+
+const loadWorks = async (id: string, page: number, opts: WorksListOptions): Promise<any[]> => {
+  try {
+    const envelope = await getVenueWorksPage(id, page, LIMIT, opts);
+    return Array.isArray(envelope?.data) ? envelope.data : [];
+  } catch {
+    return [];
+  }
 };
 
-const buildVenueMeta = (venue: Venue | null, locale: string, id: string, workTitles: string[]) => {
-  if (!venue) return {};
-  const name = venue?.name || '';
-  const publisherName = venue?.publisher?.name || '';
-  const issnValues = uniqueList([
-    ...toStringList(venue?.issn),
-    ...toStringList(venue?.eissn),
-    ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
-  ]);
-  const isbnValues = uniqueList([
-    ...toStringList((venue as any)?.isbn13),
-    ...toStringList((venue as any)?.identifiers?.isbn13)
-  ]);
-  const publicUrl = localeUrl(locale as Locale, `/venues/${id}`);
-  const subjectsText = getVenueSubjectsText(venue);
+const buildVenueMeta = (venue: any, locale: string, id: string, workTitles: string[]) => {
   const titles = uniqueList(workTitles);
-  const identifiers = uniqueList([
-    publicUrl,
-    ...issnValues,
-    ...isbnValues
-  ]);
+  const identifiers = uniqueList([localeUrl(locale as Locale, `/venues/${id}`), ...issnList(venue), venue?.isbn13]);
+  const subjects = venueSubjectTerms(venue).join(', ');
   const other: Record<string, string | string[]> = {};
-  if (titles.length === 1) other['dc.relation'] = titles[0];
-  if (titles.length > 1) other['dc.relation'] = titles;
+  if (titles.length) other['dc.relation'] = titles.length === 1 ? titles[0] : titles;
   if (venue?.language) other['dc.language'] = String(venue.language);
-  if (name) other['dc.title'] = name;
-  if (publisherName) other['dc.publisher'] = publisherName;
-  if (subjectsText) other['dc.subject'] = subjectsText;
+  if (venue?.name) other['dc.title'] = String(venue.name);
+  if (venue?.publisher?.name) other['dc.publisher'] = String(venue.publisher.name);
+  if (subjects) other['dc.subject'] = subjects;
   if (venue?.type) other['dc.type'] = String(venue.type);
-  if (identifiers.length === 1) other['dc.identifier'] = identifiers[0];
-  if (identifiers.length > 1) other['dc.identifier'] = identifiers;
+  other['dc.identifier'] = identifiers.length === 1 ? identifiers[0] : identifiers;
   return other;
 };
-
-import { type IdentifierEntry } from '@/components/common/GroupedIdentifiers';
-
-const addIdentifierValues = (
-  target: IdentifierEntry[],
-  label: string,
-  raw?: any,
-  hrefBuilder?: (value: string) => string | null
-) => {
-  const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
-  const values = list
-    .map((value: any) => {
-      if (value && typeof value === 'object') {
-        const picked = value?.id || value?.identifier || value?.value;
-        if (!picked) return null;
-        const text = String(picked);
-        const href = hrefBuilder ? hrefBuilder(text) : null;
-        return href ? { text, href } : { text };
-      }
-      const text = String(value);
-      const href = hrefBuilder ? hrefBuilder(text) : null;
-      return href ? { text, href } : { text };
-    })
-    .filter(Boolean) as Array<{ text: string; href?: string }>;
-  if (!values.length) return;
-  const existing = target.find((entry) => entry.label === label);
-  const targetValues = existing ? existing.values : [];
-  values.forEach((entry) => {
-    if (targetValues.some((item) => item.text === entry.text && item.href === entry.href)) return;
-    targetValues.push(entry);
-  });
-  if (!existing) target.push({ label, values: targetValues });
-};
-
 
 export async function generateMetadata(props: {
   params: Promise<{ locale: string; id: string }>;
@@ -172,49 +63,36 @@ export async function generateMetadata(props: {
   const base = await buildPageMetadata(Promise.resolve({ locale }), 'metadata.venuesDetail', `/venues/${id}`, {
     query: page > 1 ? { page } : undefined
   });
-  let venue: Venue | null = null;
+  let venue: any = null;
   try { venue = await getVenue(id); } catch {}
   if (!venue) return base;
-  let worksPage: any = null;
-  try { worksPage = await getVenueWorksPage(id, 1, 25); } catch {}
-  const works: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
+  const works = await loadWorks(id, page, RECENT);
   const workTitles = works.map((work) => (work?.title ? String(work.title) : '')).filter(Boolean);
-  const workAuthors = works.flatMap((work) => (Array.isArray(work?.authors) ? work.authors : []).map(pickAuthorName)).filter(Boolean);
-  const other = buildVenueMeta(venue, locale, id, workTitles);
-  const name = venue?.name ? String(venue.name) : '';
+  const workAuthors = works.flatMap((work) => (Array.isArray(work?.authors) ? work.authors : []).map(formatContributorName)).filter(Boolean);
+  const name = venue.name ? String(venue.name) : '';
   const descriptors = await getTranslations({ locale, namespace: 'metadata.descriptors' });
-  const summary = getVenueDescription(venue);
-  const publisherName = venue?.publisher?.name ? String(venue.publisher.name) : '';
-  const worksCount = Number(venue?.works_count) || 0;
-  const description = composeDescription(summary || (name ? descriptors('venueProfile', { name }) : base.description), [
+  const publisherName = venue.publisher?.name ? String(venue.publisher.name) : '';
+  const worksCount = Number(venue.works_count) || 0;
+  const description = composeDescription(venue.summary || (name ? descriptors('venueProfile', { name }) : base.description), [
     publisherName ? descriptors('venuePublisher', { publisher: publisherName }) : '',
     worksCount > 0 ? descriptors('worksIndexed', { count: worksCount }) : '',
     descriptors('entityRecord'),
     descriptors('entityRecordShort')
   ], { suffix: page > 1 ? descriptors('pageSuffix', { page }) : '' });
   const pageTitle = await fitPageTitle(locale, [name]);
-  const canonicalUrl = localeUrl(locale as Locale, paginatedPath(`/venues/${id}`, page));
-  const ogLocale = openGraphLocales[locale as Locale] || openGraphLocales.en;
-  const alternateLocale = alternateOpenGraphLocales(locale as Locale);
+  const safeLocale = locale as Locale;
   const ogImage = siteOpenGraphImage();
-  const keywords = Array.from(new Set([
-    name || '',
-    venue?.publisher?.name || '',
-    getVenueSubjectsText(venue),
-    ...(workTitles.slice(0, 3)),
-    ...(workAuthors.slice(0, 3))
-  ].map((k) => (k ? String(k) : '')).filter(Boolean)));
+  const keywords = uniqueList([name, publisherName, venueSubjectTerms(venue).join(', '), ...workTitles.slice(0, 3), ...workAuthors.slice(0, 3)]);
   return {
     ...base,
     title: pageTitle || base.title,
     description: description || base.description,
     keywords: keywords.length ? keywords : base.keywords,
-    alternates: base.alternates,
     openGraph: {
       type: 'website',
-      locale: ogLocale,
-      alternateLocale,
-      url: canonicalUrl,
+      locale: openGraphLocales[safeLocale],
+      alternateLocale: alternateOpenGraphLocales(safeLocale),
+      url: localeUrl(safeLocale, paginatedPath(`/venues/${id}`, page)),
       siteName: SITE_NAME,
       title: name || base.title || '',
       description: description || base.description || '',
@@ -226,150 +104,143 @@ export async function generateMetadata(props: {
       description: description || base.description || '',
       images: [ogImage.url]
     },
-    other: { ...(base.other || {}), ...other }
+    other: { ...(base.other || {}), ...buildVenueMeta(venue, locale, id, workTitles) }
   };
 }
 
 export default async function VenueDetailPage(props: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
   const { id, locale } = await props.params;
-  let venue = await getVenue(id);
+  const venue = await getVenue(id);
   if (!venue) notFound();
   const page = resolvePageParam((await props.searchParams).page);
-  const limit = 25;
-  let worksPage: any = null;
-  try { worksPage = await getVenueWorksPage(id, page, limit); } catch {}
-  const works: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
-  const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
-  const total = Number(pagination?.total) || works.length;
-  const oldestOffset = Math.max(0, total - limit);
-  let oldestWorks: any[] = [];
-  if (total > limit) {
-    try {
-      const oldestPage = await getVenueWorksByOffset(id, oldestOffset, limit);
-      oldestWorks = oldestPage?.data || oldestPage?.results || oldestPage?.items || [];
-    } catch {}
-  } else {
-    oldestWorks = works;
-  }
-  let prominentWorks: any[] = [];
-  try {
-    const prominentPage = await getVenueWorksPage(id, 1, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 });
-    prominentWorks = prominentPage?.data || prominentPage?.results || prominentPage?.items || [];
-  } catch {}
+  const [recentEnvelope, prominentItems, firstItems] = await Promise.all([
+    getVenueWorksPage(id, page, LIMIT, RECENT).catch(() => null),
+    loadWorks(id, 1, PROMINENT),
+    loadWorks(id, 1, FIRST)
+  ]);
+  const recentItems: any[] = Array.isArray(recentEnvelope?.data) ? recentEnvelope.data : [];
+  const hasNext = recentEnvelope?.pagination?.hasNext === true;
   const t = await getTranslations({ locale });
 
-  const hasVenue = !!venue;
-  const name = venue?.name ?? t('common.entities.journalNotFound');
-  const descriptionText = getVenueDescription(venue);
-  const subjectsText = getVenueSubjectsText(venue);
-  const venueSubjectsRaw: any[] = Array.isArray((venue as any)?.subjects)
-    ? (venue as any).subjects
-    : (Array.isArray((venue as any)?.summary_snapshot?.subjects) ? (venue as any).summary_snapshot.subjects : []);
-  const venueSubjectItems = (() => {
-    const seen = new Set<string>();
-    const out: Array<{ term: string }> = [];
-    for (const s of venueSubjectsRaw) {
-      if (!s || typeof s !== 'object') continue;
-      const term = s.term || s.display_name || s.name || s.label || '';
-      if (!term) continue;
-      const key = String(term).toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push({ term: String(term) });
-    }
-    return out;
-  })();
-  const issnValues = uniqueList([
-    ...toStringList(venue?.issn),
-    ...toStringList(venue?.eissn),
-    ...toStringList((venue as any)?.issn_l || (venue as any)?.issnl)
-  ]);
+  const name = venue.name || t('common.entities.journalNotFound');
+  const descriptionText = venue.summary ? String(venue.summary) : '';
+  const subjectItems = venueSubjectTerms(venue).map((term) => ({ term }));
+  const issnValues = issnList(venue);
   const canonical = localeUrl(locale as Locale, `/venues/${id}`);
-  const venueIsbn13 = pickText([(venue as any)?.isbn13, (venue as any)?.identifiers?.isbn13]);
   const jsonLd = withSitePublisher({
     '@context': 'https://schema.org',
     '@type': 'Periodical',
     '@id': `${canonical}#periodical`,
     name,
-    alternateName: venue?.abbreviated_name && venue.abbreviated_name !== name ? venue.abbreviated_name : undefined,
+    alternateName: venue.abbreviated_name && venue.abbreviated_name !== name ? venue.abbreviated_name : undefined,
     issn: issnValues.length ? issnValues : undefined,
-    isbn: venueIsbn13 || undefined,
-    publisher: venue?.publisher?.name ? { '@type': 'Organization', name: venue.publisher.name } : undefined,
+    isbn: venue.isbn13 || undefined,
+    publisher: venue.publisher?.name ? { '@type': 'Organization', name: venue.publisher.name } : undefined,
     url: canonical,
     mainEntityOfPage: canonical,
-    inLanguage: venue?.language || locale,
+    inLanguage: venue.language || locale,
     description: descriptionText || undefined
   });
 
-  const metrics = venue?.metrics || venue?.legacy_metrics || null;
-  const metricValue = (key: string) => {
-    const fromRoot = (venue as any)?.[key];
-    if (fromRoot !== undefined && fromRoot !== null) return fromRoot;
-    const fromBlock = metrics ? (metrics as any)[key] : null;
-    return fromBlock === undefined ? null : fromBlock;
+  const idLabel = (key: string) => {
+    const labelKey = identifierLabelKey(key);
+    return labelKey ? t(labelKey) : key.toUpperCase();
   };
-  const sjr = metricValue('sjr');
-  const snip = metricValue('snip');
-  const citescore = metricValue('citescore');
-  const impactFactor = metricValue('impact_factor');
-  const sjrQuartile = metricValue('sjr_best_quartile');
-  const hIndex = metricValue('h_index');
-  const i10Index = metricValue('i10_index');
-  const meanCitedness = metricValue('two_yr_mean_citedness');
-  const overton = metricValue('overton');
-  const femaleShare = metricValue('female_share');
+  const identifierRows = Object.entries(venue.identifiers || {})
+    .filter(([key, value]) => value && getIdentifierSpec(key) && !SEPARATELY_SHOWN.has(normalizeIdentifierKey(key)))
+    .map(([key, value]) => ({ key, label: idLabel(key), text: String(value), href: buildIdentifierHref(key, String(value), 'venue') }));
   const accessLabels = [
-    venue?.open_access ? t('common.meta.openAccess') : '',
-    venue?.is_oa_diamond ? t('venues.detail.oaDiamond') : ''
+    venue.open_access ? t('common.meta.openAccess') : '',
+    venue.is_oa_diamond ? t('venues.detail.oaDiamond') : ''
   ].filter(Boolean);
   const indexingLabels = [
-    venue?.is_in_doaj ? t('venues.detail.doaj') : '',
-    venue?.is_in_scielo ? 'SciELO' : '',
-    venue?.is_indexed_in_scopus ? t('venues.detail.indexedScopus') : ''
+    venue.is_in_doaj ? t('venues.detail.doaj') : '',
+    venue.is_in_scielo ? 'SciELO' : '',
+    venue.is_indexed_in_scopus ? t('venues.detail.indexedScopus') : ''
   ].filter(Boolean);
-  const citedByCount = Number(venue?.cited_by_count);
-  const publisherId = venue?.publisher?.id;
-  const identifierEntries: IdentifierEntry[] = [];
-  const venueIdentifiers = (venue as any)?.identifiers;
-  let venueIssn = venue?.issn;
-  let venueEissn = venue?.eissn;
-  const venueIssnL = (venue as any)?.issn_l || (venue as any)?.issnl;
-  let venueScopus = (venue as any)?.scopus_id || (venue as any)?.scopus;
-  const venueWikidata = (venue as any)?.wikidata_id || (venue as any)?.wikidata;
-  const venueOpenalex = (venue as any)?.openalex_id || (venue as any)?.openalex;
-  const venueMag = (venue as any)?.mag_id || (venue as any)?.mag;
-  const venueHomepage = pickText([(venue as any)?.homepage_url, (venue as any)?.homepage, (venue as any)?.url]);
-  const vIdLabel = (rawKey: string, fallback?: string) => {
-    const labelKey = identifierLabelKey(rawKey);
-    return labelKey ? t(labelKey) : (fallback || rawKey.toUpperCase());
+  const citedByCount = Number(venue.cited_by_count);
+  const publisherId = venue.publisher?.id;
+  const issnText = issnValues.join(' / ');
+
+  const listLabels = {
+    titleUnavailable: t('common.entities.titleUnavailable'),
+    authorUnknown: t('common.entities.authorUnknown'),
+    openAccess: t('common.meta.openAccess'),
+    addToList: t('common.actions.addToList'),
+    inList: t('common.actions.inList'),
+    removeFromList: t('common.actions.removeFromList'),
+    added: t('common.messages.added'),
+    itemRemoved: t('common.messages.itemRemoved'),
+    citedBy: t('common.meta.citedBy'),
+    references: t('common.meta.references'),
+    emptyState: ''
   };
-  const buildScopusHref = (value: string) => buildIdentifierHref('scopus', value, 'venue') || '';
-  addIdentifierValues(identifierEntries, vIdLabel('issnl'), venueIssnL);
-  addIdentifierValues(identifierEntries, vIdLabel('wikidata'), venueWikidata, (value) => buildIdentifierHref('wikidata', value, 'venue'));
-  addIdentifierValues(identifierEntries, vIdLabel('openalex'), venueOpenalex, (value) => buildIdentifierHref('openalex', value, 'venue'));
-  addIdentifierValues(identifierEntries, vIdLabel('mag'), venueMag);
-  if (venueIdentifiers && typeof venueIdentifiers === 'object') {
-    Object.entries(venueIdentifiers as Record<string, any>).forEach(([rawKey, rawValue]) => {
-      const normalized = normalizeIdentifierKey(String(rawKey || ''));
-      if (normalized === 'issn' || normalized === 'eissn') {
-        const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
-        if (normalized === 'issn' && first && !venueIssn) venueIssn = String(first);
-        if (normalized === 'eissn' && first && !venueEissn) venueEissn = String(first);
-        return;
-      }
-      if (normalized === 'scopus') {
-        if (!venueScopus) {
-          const first = Array.isArray(rawValue) ? rawValue.find((v) => v) : rawValue;
-          if (first) venueScopus = String(first);
-        }
-        return;
-      }
-      if (!getIdentifierSpec(normalized)) return;
-      addIdentifierValues(identifierEntries, vIdLabel(normalized), rawValue, (value) => buildIdentifierHref(normalized, value, 'venue'));
-    });
-  }
-  const issnParts = [venueIssn, venueEissn && venueEissn !== venueIssn ? venueEissn : null].filter(Boolean).map((value) => String(value));
-  const issnText = issnParts.join(' / ');
+  const pageHref = (target: number) => `/venues/${id}${target > 1 ? `?page=${target}` : ''}`;
+  const paginationNav = (
+    <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
+      {page > 1 ? (
+        <LocaleLink className="pagination-btn btn-negative" href={pageHref(page - 1)}>{t('common.actions.previous')}</LocaleLink>
+      ) : (
+        <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
+      )}
+      {hasNext ? (
+        <LocaleLink className="pagination-btn btn-positive" href={pageHref(page + 1)}>{t('common.actions.next')}</LocaleLink>
+      ) : (
+        <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
+      )}
+    </nav>
+  );
+
+  const tabs: SectionTabDescriptor[] = [
+    descriptionText || subjectItems.length > 0 ? {
+      key: 'summary',
+      label: t('venues.sections.summary'),
+      content: (
+        <>
+          {descriptionText ? <p className="description">{descriptionText}</p> : null}
+          <SubjectLinks subjects={subjectItems} filters={{ venue: name }} />
+        </>
+      )
+    } : null,
+    {
+      key: 'recent',
+      label: t('venues.sections.recent'),
+      content: (
+        <>
+          <VenueWorksList items={recentItems} labels={{ ...listLabels, emptyState: t('venues.empty.recent') }} />
+          {paginationNav}
+        </>
+      )
+    },
+    {
+      key: 'prominent',
+      label: t('venues.sections.prominent'),
+      content: <VenueWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('venues.empty.prominent') }} />
+    },
+    {
+      key: 'first',
+      label: t('venues.sections.first'),
+      content: <VenueWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} />
+    },
+    {
+      key: 'tools',
+      label: t('venues.sections.tools'),
+      content: <EntityTools kind="venue" entityId={id} filename={exportFilename('venue', venue)} worksCount={Number(venue.works_count) || 0} entityExportLabel={t('venues.tools.exportVenue')} />
+    }
+  ].filter(Boolean) as SectionTabDescriptor[];
+
+  const metricRows: Array<{ key: string; label: string; value: string }> = [
+    { key: 'impact_factor', label: t('venues.detail.impactFactor'), value: venue.impact_factor ? String(venue.impact_factor) : '' },
+    { key: 'sjr', label: t('venues.detail.sjr'), value: venue.sjr ? `${venue.sjr}${venue.sjr_best_quartile ? ` (${venue.sjr_best_quartile})` : ''}` : '' },
+    { key: 'sjr_best_quartile', label: t('venues.detail.sjrQuartile'), value: !venue.sjr && venue.sjr_best_quartile ? String(venue.sjr_best_quartile) : '' },
+    { key: 'snip', label: t('venues.detail.snip'), value: venue.snip ? String(venue.snip) : '' },
+    { key: 'citescore', label: t('venues.detail.citescore'), value: venue.citescore ? String(venue.citescore) : '' },
+    { key: 'h_index', label: t('venues.detail.hIndexLabel'), value: venue.h_index ? formatNumber(Number(venue.h_index), locale) : '' },
+    { key: 'i10_index', label: t('venues.detail.i10IndexLabel'), value: venue.i10_index ? formatNumber(Number(venue.i10_index), locale) : '' },
+    { key: 'two_yr_mean_citedness', label: t('venues.detail.meanCitedness'), value: venue.two_yr_mean_citedness ? String(venue.two_yr_mean_citedness) : '' },
+    { key: 'overton', label: t('venues.detail.overton'), value: venue.overton ? formatNumber(Number(venue.overton), locale) : '' },
+    { key: 'female_share', label: t('venues.detail.femaleShare'), value: venue.female_share ? `${Number(venue.female_share).toFixed(1)}%` : '' }
+  ].filter((row) => row.value);
 
   return (
     <div className="page-header" aria-labelledby="page-title">
@@ -381,275 +252,114 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
       ])} />
       <h1 className="page-title" id="page-title">{name}</h1>
 
-      {hasVenue && (
-        <section aria-labelledby="venue-info">
-          <h2 className="title-section" id="venue-info">{t('venues.detail.data')}</h2>
-          <table className="data-table item-detail-table" id="venue-details">
-            <tbody>
-              {venue?.type ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.type')}</th>
-                  <td className="field-value">{venue.type}</td>
-                </tr>
-              ) : null}
-              {venue?.publisher?.name ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.publisher')}</th>
-                  <td className="field-value">
-                    {publisherId ? (
-                      <LocaleLink className="action-link table-link" href={`/institutions/${publisherId}`}>{venue.publisher.name}</LocaleLink>
-                    ) : (
-                      venue.publisher.name
-                    )}
-                    {venue.publisher.country_code ? ` (${venue.publisher.country_code})` : ''}
-                  </td>
-                </tr>
-              ) : null}
-              {issnText ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.issn')}</th>
-                  <td className="field-value">{issnText}</td>
-                </tr>
-              ) : null}
-              {venueScopus ? (
-                <tr>
-                  <th scope="row">{vIdLabel('scopus')}</th>
-                  <td className="field-value">
-                    <a className="action-link table-link" href={buildScopusHref(String(venueScopus))} target="_blank" rel="noopener noreferrer">{venueScopus}</a>
-                  </td>
-                </tr>
-              ) : null}
-              {identifierEntries.map((entry, idx) => (
-                <tr key={`venue-identifier-${entry.label}-${idx}`}>
-                  <th scope="row">{entry.label}</th>
-                  <td className="field-value">
-                    {entry.values.map((value, vIdx) => (
-                      <span key={`venue-identifier-${entry.label}-${value.text}-${vIdx}`}>
-                        {value.href ? (
-                          <a className="action-link table-link" href={value.href} target="_blank" rel="noopener noreferrer">{value.text}</a>
-                        ) : (
-                          <span>{value.text}</span>
-                        )}
-                        {vIdx < entry.values.length - 1 ? ', ' : ''}
-                      </span>
-                    ))}
-                  </td>
-                </tr>
-              ))}
-              {venueHomepage ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.website')}</th>
-                  <td className="field-value">
-                    <a className="action-link table-link" href={venueHomepage} target="_blank" rel="noopener noreferrer">{venueHomepage}</a>
-                  </td>
-                </tr>
-              ) : null}
+      <section aria-labelledby="venue-info">
+        <h2 className="title-section" id="venue-info">{t('venues.detail.data')}</h2>
+        <table className="data-table item-detail-table" id="venue-details">
+          <tbody>
+            {venue.type ? (
               <tr>
-                <th scope="row">{t('venues.detail.total')}</th>
-                <td className="field-value">{formatNumber(venue?.works_count || 0)}</td>
+                <th scope="row">{t('venues.detail.type')}</th>
+                <td className="field-value">{venue.type}</td>
               </tr>
-              {venue?.coverage_start_year && venue?.coverage_end_year ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.coverage')}</th>
-                  <td className="field-value">{venue.coverage_start_year} - {venue.coverage_end_year}</td>
-                </tr>
-              ) : null}
-              {venue?.country_code ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.country')}</th>
-                  <td className="field-value">{venue.country_code}</td>
-                </tr>
-              ) : null}
-              {venue?.language ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.language')}</th>
-                  <td className="field-value">{String(venue.language).toUpperCase()}</td>
-                </tr>
-              ) : null}
-              {accessLabels.length ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.access')}</th>
-                  <td className="field-value">{accessLabels.join(' • ')}</td>
-                </tr>
-              ) : null}
-              {indexingLabels.length ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.indexing')}</th>
-                  <td className="field-value">{indexingLabels.join(' • ')}</td>
-                </tr>
-              ) : null}
-              {Number.isFinite(citedByCount) && citedByCount > 0 ? (
-                <tr>
-                  <th scope="row">{t('common.meta.citedBy')}</th>
-                  <td className="field-value">{formatNumber(citedByCount)}</td>
-                </tr>
-              ) : null}
-              {impactFactor ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.impactFactor')}</th>
-                  <td className="field-value">{String(impactFactor)}</td>
-                </tr>
-              ) : null}
-              {sjr ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.sjr')}</th>
-                  <td className="field-value">{String(sjr)}{sjrQuartile ? ` (${sjrQuartile})` : ''}</td>
-                </tr>
-              ) : null}
-              {!sjr && sjrQuartile ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.sjrQuartile')}</th>
-                  <td className="field-value">{String(sjrQuartile)}</td>
-                </tr>
-              ) : null}
-              {snip ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.snip')}</th>
-                  <td className="field-value">{String(snip)}</td>
-                </tr>
-              ) : null}
-              {citescore ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.citescore')}</th>
-                  <td className="field-value">{String(citescore)}</td>
-                </tr>
-              ) : null}
-              {hIndex ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.hIndexLabel')}</th>
-                  <td className="field-value">{formatNumber(Number(hIndex))}</td>
-                </tr>
-              ) : null}
-              {i10Index ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.i10IndexLabel')}</th>
-                  <td className="field-value">{formatNumber(Number(i10Index))}</td>
-                </tr>
-              ) : null}
-              {meanCitedness ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.meanCitedness')}</th>
-                  <td className="field-value">{String(meanCitedness)}</td>
-                </tr>
-              ) : null}
-              {overton ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.overton')}</th>
-                  <td className="field-value">{formatNumber(Number(overton))}</td>
-                </tr>
-              ) : null}
-              {femaleShare ? (
-                <tr>
-                  <th scope="row">{t('venues.detail.femaleShare')}</th>
-                  <td className="field-value">{`${Number(femaleShare).toFixed(1)}%`}</td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </section>
-      )}
+            ) : null}
+            {venue.publisher?.name ? (
+              <tr>
+                <th scope="row">{t('venues.detail.publisher')}</th>
+                <td className="field-value">
+                  {publisherId ? (
+                    <LocaleLink className="action-link table-link" href={`/institutions/${publisherId}`}>{venue.publisher.name}</LocaleLink>
+                  ) : (
+                    venue.publisher.name
+                  )}
+                  {venue.publisher.country_code ? ` (${venue.publisher.country_code})` : ''}
+                </td>
+              </tr>
+            ) : null}
+            {issnText ? (
+              <tr>
+                <th scope="row">{t('venues.detail.issn')}</th>
+                <td className="field-value">{issnText}</td>
+              </tr>
+            ) : null}
+            {venue.scopus_id ? (
+              <tr>
+                <th scope="row">{idLabel('scopus')}</th>
+                <td className="field-value">
+                  <a className="action-link table-link" href={buildIdentifierHref('scopus', venue.scopus_id, 'venue') || undefined} target="_blank" rel="noopener noreferrer">{venue.scopus_id}</a>
+                </td>
+              </tr>
+            ) : null}
+            {identifierRows.map((row) => (
+              <tr key={`venue-identifier-${row.key}`}>
+                <th scope="row">{row.label}</th>
+                <td className="field-value">
+                  {row.href ? (
+                    <a className="action-link table-link" href={row.href} target="_blank" rel="noopener noreferrer">{row.text}</a>
+                  ) : (
+                    <span>{row.text}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {venue.homepage_url ? (
+              <tr>
+                <th scope="row">{t('venues.detail.website')}</th>
+                <td className="field-value">
+                  <a className="action-link table-link" href={venue.homepage_url} target="_blank" rel="noopener noreferrer">{venue.homepage_url}</a>
+                </td>
+              </tr>
+            ) : null}
+            <tr>
+              <th scope="row">{t('venues.detail.total')}</th>
+              <td className="field-value">{formatNumber(Number(venue.works_count) || 0, locale)}</td>
+            </tr>
+            {venue.coverage_start_year && venue.coverage_end_year ? (
+              <tr>
+                <th scope="row">{t('venues.detail.coverage')}</th>
+                <td className="field-value">{venue.coverage_start_year} - {venue.coverage_end_year}</td>
+              </tr>
+            ) : null}
+            {venue.country_code ? (
+              <tr>
+                <th scope="row">{t('venues.detail.country')}</th>
+                <td className="field-value">{venue.country_code}</td>
+              </tr>
+            ) : null}
+            {venue.language ? (
+              <tr>
+                <th scope="row">{t('venues.detail.language')}</th>
+                <td className="field-value">{String(venue.language).toUpperCase()}</td>
+              </tr>
+            ) : null}
+            {accessLabels.length ? (
+              <tr>
+                <th scope="row">{t('venues.detail.access')}</th>
+                <td className="field-value">{accessLabels.join(' • ')}</td>
+              </tr>
+            ) : null}
+            {indexingLabels.length ? (
+              <tr>
+                <th scope="row">{t('venues.detail.indexing')}</th>
+                <td className="field-value">{indexingLabels.join(' • ')}</td>
+              </tr>
+            ) : null}
+            {Number.isFinite(citedByCount) && citedByCount > 0 ? (
+              <tr>
+                <th scope="row">{t('common.meta.citedBy')}</th>
+                <td className="field-value">{formatNumber(citedByCount, locale)}</td>
+              </tr>
+            ) : null}
+            {metricRows.map((row) => (
+              <tr key={row.key}>
+                <th scope="row">{row.label}</th>
+                <td className="field-value">{row.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
-      {(() => {
-        const listLabels = {
-          titleUnavailable: t('common.entities.titleUnavailable'),
-          authorUnknown: t('common.entities.authorUnknown'),
-          openAccess: t('common.meta.openAccess'),
-          addToList: t('common.actions.addToList'),
-          inList: t('common.actions.inList'),
-          removeFromList: t('common.actions.removeFromList'),
-          added: t('common.messages.added'),
-          itemRemoved: t('common.messages.itemRemoved'),
-          citedBy: t('common.meta.citedBy'),
-          references: t('common.meta.references'),
-          emptyState: ''
-        };
-        const toYear = (v: any): number => {
-          const n = Number(v);
-          return Number.isFinite(n) ? n : 0;
-        };
-        const toTs = (v: any): number => {
-          if (!v) return 0;
-          const ts = Date.parse(String(v));
-          return Number.isFinite(ts) ? ts : 0;
-        };
-        const byRecency = (a: any, b: any) => {
-          const ya = toYear(a?.publication_year || a?.publication?.year || a?.year);
-          const yb = toYear(b?.publication_year || b?.publication?.year || b?.year);
-          if (yb !== ya) return yb - ya;
-          return toTs(b?.publication_date) - toTs(a?.publication_date);
-        };
-        const byOldest = (a: any, b: any) => {
-          const ya = toYear(a?.publication_year || a?.publication?.year || a?.year) || Number.POSITIVE_INFINITY;
-          const yb = toYear(b?.publication_year || b?.publication?.year || b?.year) || Number.POSITIVE_INFINITY;
-          if (ya !== yb) return ya - yb;
-          return toTs(a?.publication_date) - toTs(b?.publication_date);
-        };
-        const recentItems = [...works].sort(byRecency);
-        const firstItems = [...oldestWorks].sort(byOldest);
-        const prominentItems = prominentWorks;
-
-        const pageHref = (target: number) => `/venues/${id}${target > 1 ? `?page=${target}` : ''}`;
-        const paginationNav = (
-          <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-            {pagination?.hasPrev || page > 1 ? (
-              <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
-            ) : (
-              <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
-            )}
-            {pagination?.hasNext ? (
-              <LocaleLink className="pagination-btn btn-positive" href={pageHref(page + 1)}>{t('common.actions.next')}</LocaleLink>
-            ) : (
-              <button type="button" className="pagination-btn btn-positive" disabled>{t('common.actions.next')}</button>
-            )}
-          </nav>
-        );
-
-        const summaryPanel = (descriptionText || venueSubjectItems.length > 0 || subjectsText) ? (
-          <>
-            {descriptionText ? <p className="description">{descriptionText}</p> : null}
-            {venueSubjectItems.length > 0
-              ? <SubjectLinks subjects={venueSubjectItems} filters={{ venue: name }} />
-              : (subjectsText ? <p className="description subject-list">{subjectsText}</p> : null)}
-          </>
-        ) : null;
-
-        const tabs: SectionTabDescriptor[] = [
-          summaryPanel ? {
-            key: 'summary',
-            label: t('venues.sections.summary'),
-            content: summaryPanel
-          } : null,
-          {
-            key: 'recent',
-            label: t('venues.sections.recent'),
-            content: (
-              <>
-                <VenueWorksList items={recentItems} labels={{ ...listLabels, emptyState: t('venues.empty.recent') }} />
-                {paginationNav}
-              </>
-            )
-          },
-          {
-            key: 'prominent',
-            label: t('venues.sections.prominent'),
-            content: <VenueWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('venues.empty.prominent') }} />
-          },
-          {
-            key: 'first',
-            label: t('venues.sections.first'),
-            content: (
-              <VenueWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} />
-            )
-          },
-          {
-            key: 'tools',
-            label: t('venues.sections.tools'),
-            content: <EntityTools kind="venue" entityId={id} filename={exportFilename('venue', venue)} worksCount={Number((venue as any)?.works_count) || 0} entityExportLabel={t('venues.tools.exportVenue')} />
-          }
-        ].filter(Boolean) as SectionTabDescriptor[];
-
-        return <SectionTabs ariaLabel={t('venues.sections.navLabel')} tabs={tabs} />;
-      })()}
+      <SectionTabs ariaLabel={t('venues.sections.navLabel')} tabs={tabs} />
     </div>
   );
 }

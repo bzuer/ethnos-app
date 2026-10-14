@@ -1,7 +1,6 @@
 {
   "layout": {
     "skipLink": "Pular para o conteúdo principal",
-    "brand": "ETHNOS_APP",
     "nav": {
       "home": "Início",
       "search": "Busca",
@@ -40,7 +39,6 @@
       "seeJournals": "Ver todos os periódicos",
       "previous": "Anterior",
       "next": "Próximo",
-      "goHome": "Ir para a página inicial",
       "loadMore": "Carregar mais",
       "addToList": "Incluir item",
       "inList": "Já na lista",
@@ -59,15 +57,12 @@
       "removeItem": "Remover item"
     },
     "labels": {
-      "searchInput": "Termo de busca",
       "term": "Termo",
       "itemsPerPage": "Itens por página",
       "sortBy": "Ordenar por",
       "sortOrder": "Ordem",
       "citedByMin": "Citações mín.",
       "citedByMax": "Citações máx.",
-      "query": "Consulta",
-      "parameters": "Parâmetros",
       "type": "Tipo",
       "work": "Obra",
       "author": "Autor",
@@ -79,13 +74,11 @@
       "peerReviewed": "Revisado por pares",
       "openAccess": "Open Access",
       "list": "Lista",
-      "items": "Itens",
       "pagination": "Paginação"
     },
     "placeholders": {
       "homeSearch": "Busque obras por título, autor ou palavra-chave...",
       "quickTerm": "Título, autor, periódico...",
-      "advancedTerm": "Título, palavras-chave...",
       "person": "Nome ou ID da pessoa",
       "venue": "Nome ou ID do periódico",
       "subject": "Tema ou palavra-chave",
@@ -107,12 +100,7 @@
       "loadingJournals": "Carregando periódicos...",
       "unableToLoadWorks": "Não foi possível carregar as obras.",
       "unableToLoadJournals": "Não foi possível carregar os periódicos.",
-      "noJournals": "Nenhum periódico disponível.",
-      "noPersonWorks": "Nenhuma obra encontrada para esta pessoa.",
-      "noVenueWorks": "Nenhuma publicação encontrada para este periódico.",
-      "emptyList": "Sua lista pessoal está vazia.",
-      "addFromDetails": "",
-      "exportUnavailable": "As opções de exportação requerem itens na lista."
+      "noJournals": "Nenhum periódico disponível."
     },
     "messages": {
       "itemExists": "O item já consta na sua lista",
@@ -132,7 +120,6 @@
       "authorUnknown": "Autor desconhecido",
       "publisherUnknown": "Editora não informada",
       "titleUnavailable": "Título indisponível",
-      "yearUnavailable": "Ano indisponível",
       "nameUnavailable": "Nome indisponível",
       "journalNotFound": "Periódico não encontrado",
       "institutionNotFound": "Instituição não encontrada",
@@ -149,15 +136,12 @@
       "actions": "Ações"
     },
     "meta": {
-      "peerReviewed": "Peer Reviewed",
       "openAccess": "Open Access",
       "citedBy": "Citada por",
       "references": "Referências",
-      "worksCount": "{count} obras",
-      "authorsCount": "{count} autores",
-      "termEmpty": "(vazio)",
+      "worksCount": "{count, plural, one {# obra} other {# obras}}",
+      "authorsCount": "{count, plural, one {# autor} other {# autores}}",
       "ariaSearchForm": "Formulário de busca",
-      "ariaAdvancedSearchForm": "Formulário de busca avançada",
       "ariaPersonalList": "Lista de leitura pessoal",
       "openWork": "Abrir detalhes de {title}"
     },
@@ -204,15 +188,11 @@
     "searchSection": "Busca",
     "updatesSection": "Atualizações",
     "venuesSection": "Periódicos",
-    "searchButton": "Buscar",
     "updatesCaption": "Obras mais recentes adicionadas ao acervo",
     "venuesCaption": "Periódicos com maior volume de obras indexadas"
   },
   "search": {
     "title": "Busca",
-    "quick": "Busca Rápida",
-    "advanced": "Busca Avançada",
-    "queryLegend": "Consulta",
     "parametersLegend": "Parâmetros",
     "filtersLegend": "Filtros",
     "textLegend": "Busca Textual",
@@ -243,7 +223,6 @@
   },
   "venues": {
     "title": "Periódicos",
-    "listHeading": "Lista",
     "detail": {
       "data": "Dados do Periódico",
       "type": "Tipo",
@@ -263,7 +242,6 @@
       "sjrQuartile": "Quartil SJR",
       "snip": "SNIP",
       "citescore": "CiteScore",
-      "cited": "Obras citadas",
       "hIndexLabel": "Índice h",
       "i10IndexLabel": "Índice i10",
       "meanCitedness": "Média de citações em 2 anos",
@@ -273,8 +251,7 @@
       "impactFactor": "Fator de impacto",
       "openAccess": "Open Access",
       "indexedScopus": "Scopus",
-      "doaj": "DOAJ",
-      "publications": "Número de publicações"
+      "doaj": "DOAJ"
     },
     "sections": {
       "navLabel": "Seções do periódico",
@@ -346,19 +323,12 @@
         "reviewOf": "Resenha de",
         "reviewedBy": "Resenhado por",
         "publisher": "Editora",
-        "publisherIds": "IDs da editora",
         "language": "Idioma",
         "citations": "Citações recebidas",
         "references": "Referências citadas",
         "downloads": "Downloads",
         "views": "Visualizações",
-        "addedAt": "Adicionado em",
-        "md5": "MD5",
-        "openLibraryId": "Open Library",
         "isbn": "ISBN",
-        "openAlex": "ID OpenAlex",
-        "licenses": "Licenças",
-        "publicationId": "ID da publicação",
         "scopus": "ID Scopus",
         "wikidata": "ID Wikidata",
         "mag": "ID MAG",
@@ -368,7 +338,6 @@
     }
   },
   "persons": {
-    "detailTitle": "Detalhes da Pessoa",
     "dataSection": "Dados Biográficos",
     "fields": {
       "id": "ID",
@@ -394,7 +363,6 @@
       "latestYear": "Ano mais recente de publicação",
       "hIndex": "Índice h"
     },
-    "worksHeading": "Obras desta pessoa",
     "roleFallback": "Autor",
     "sections": {
       "navLabel": "Seções do autor",
@@ -417,9 +385,6 @@
     "title": "Minha Lista",
     "savedItems": "Itens salvos",
     "export": "Exportar",
-    "itemsInListOne": "{count} item na lista",
-    "itemsInListOther": "{count} itens na lista",
-    "itemsChronological": "",
     "emptyStateTitle": "Sua lista pessoal está vazia.",
     "emptyStateDescription": "",
     "exportUnavailable": "Opções de exportação disponíveis após a adição de itens."
@@ -444,7 +409,6 @@
       "data": "Dados da instituição",
       "type": "Tipo",
       "country": "País",
-      "city": "Cidade",
       "works": "Trabalhos",
       "researchers": "Pesquisadores",
       "citations": "Citações",
@@ -459,8 +423,7 @@
       "openAlex": "OpenAlex",
       "website": "Site",
       "alternativeNames": "Também conhecida como",
-      "production": "Produção por tipo",
-      "trend": "Tendência de publicação"
+      "production": "Produção por tipo"
     },
     "sections": {
       "navLabel": "Seções da instituição",
@@ -475,9 +438,7 @@
       "recent": "Nenhum trabalho afiliado encontrado para esta instituição.",
       "prominent": "Sem trabalhos proeminentes nesta página.",
       "first": "Sem trabalhos iniciais nesta página.",
-      "funded": "Nenhum trabalho financiado registrado para esta instituição.",
-      "authors": "Nenhum dado de autor disponível.",
-      "related": "Nenhuma instituição relacionada registrada."
+      "funded": "Nenhum trabalho financiado registrado para esta instituição."
     },
     "tools": {
       "exportInstitution": "Exportar dados da instituição (JSON)"
@@ -572,8 +533,7 @@
       "persons": "Pesquisadores",
       "institutions": "Instituições",
       "subjects": "Assuntos",
-      "docs": "Documentation",
-      "docsCorpus": "The Ethnos Corpus"
+      "docs": "Documentation"
     },
     "descriptors": {
       "personProfile": "Perfil de pesquisador de {name} na bibliografia de antropologia e sociologia do Ethnos.",
@@ -626,7 +586,6 @@
     "intro": "Pesquise obras em todo o catálogo e navegue até autores e instituições relacionados.",
     "worksHeading": "Obras",
     "authorsHeading": "Autores relacionados",
-    "institutionsHeading": "Instituições relacionadas",
     "seeAllWorks": "Ver todas as {count} obras",
     "startPrompt": "Digite um termo para pesquisar obras e descobrir autores e instituições relacionados.",
     "noResults": "Nenhuma obra encontrada para este termo.",
@@ -661,7 +620,6 @@
   "docs": {
     "title": "Documentation",
     "lead": "How the Ethnos corpus is assembled, repaired, scored and published — written at once for the reader who knows the machinery and the reader who knows the literature.",
-    "collectionsLabel": "Collections",
     "contentsLabel": "Contents",
     "chapterNavLabel": "Chapter navigation",
     "previous": "Previous",

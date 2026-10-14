@@ -1,13 +1,7 @@
 import { getTranslations } from 'next-intl/server';
-import { defaultLocale, type Locale } from '@/i18n/config';
+import type { Locale } from '@/i18n/config';
 import { localizedPath } from '@/i18n/paths';
 import { SITE_THEME_COLOR } from './site';
-
-const LOCALE_DIRECTION: Record<Locale, 'ltr' | 'rtl'> = {
-  en: 'ltr',
-  pt: 'ltr',
-  es: 'ltr'
-};
 
 const SHORTCUTS: Array<{ key: 'search' | 'venues' | 'lists'; path: string }> = [
   { key: 'search', path: '/search' },
@@ -24,8 +18,8 @@ export async function buildWebManifest(locale: Locale) {
     short_name: t('shortName'),
     description: t('description'),
     lang: locale,
-    dir: LOCALE_DIRECTION[locale] || LOCALE_DIRECTION[defaultLocale],
-    start_url: `${start}${start.includes('?') ? '&' : '?'}source=pwa`,
+    dir: 'ltr',
+    start_url: `${start}?source=pwa`,
     scope: '/',
     categories: ['reference', 'education', 'books'],
     display: 'standalone',

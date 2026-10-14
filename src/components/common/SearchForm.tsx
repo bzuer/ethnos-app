@@ -37,7 +37,6 @@ function readState(searchParams: URLSearchParams | null): FormState {
     const v = searchParams?.get(key);
     return v == null ? '' : String(v);
   };
-  const workType = get('work_type') || get('type') || '';
   const rawLimit = get('limit') || DEFAULT_LIMIT;
   const limit = (LIMIT_OPTIONS as readonly string[]).includes(rawLimit) ? rawLimit : DEFAULT_LIMIT;
   return {
@@ -45,7 +44,7 @@ function readState(searchParams: URLSearchParams | null): FormState {
     author: get('author'),
     venue: get('venue'),
     subject: get('subject'),
-    work_type: workType,
+    work_type: get('work_type'),
     language: get('language'),
     year_from: get('year_from'),
     year_to: get('year_to'),

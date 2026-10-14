@@ -8,6 +8,7 @@ import {
   absoluteUrl,
   localeUrl
 } from './site';
+import { normalizeDoi } from './works';
 
 export type JsonLdValue = unknown;
 export type JsonLdNode = Record<string, JsonLdValue>;
@@ -122,7 +123,6 @@ export function buildItemList(locale: Locale, entries: Array<{ name: string; pat
   };
 }
 
-
 export function buildCollectionPageNode(input: {
   locale: Locale;
   path: string;
@@ -167,10 +167,6 @@ export function buildTechArticleNode(input: {
     publisher: { '@id': ORGANIZATION_ID },
     author: { '@id': ORGANIZATION_ID }
   });
-}
-
-export function normalizeDoi(value: string) {
-  return value.trim().replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:/i, '');
 }
 
 export function buildDoiIdentifier(value: string): JsonLdNode | undefined {

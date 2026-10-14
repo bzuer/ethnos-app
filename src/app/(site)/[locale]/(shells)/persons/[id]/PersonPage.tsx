@@ -20,38 +20,24 @@ const pickPersonName = (person: any) => {
   return person?.preferred_name || person?.name || [person?.given_names, person?.family_name].filter(Boolean).join(' ');
 };
 
-const getAffiliationsText = (person: any) => {
-  const affiliationsRaw: any = person?.affiliations || person?.affiliation || person?.current_affiliation || [];
-  const affiliations: string[] = Array.isArray(affiliationsRaw)
-    ? affiliationsRaw.map((a: any) => {
-        if (!a) return '';
-        if (typeof a === 'string') return a;
-        const org = a.organization || a.org || a.name || a.institution || '';
-        const role = a.role || a.position || '';
-        return [org, role].filter(Boolean).join(' — ');
-      }).filter(Boolean)
-    : [
-        typeof affiliationsRaw === 'string'
-          ? affiliationsRaw
-          : [
-              affiliationsRaw?.organization || affiliationsRaw?.org || affiliationsRaw?.name || affiliationsRaw?.institution || '',
-              affiliationsRaw?.role || affiliationsRaw?.position || '',
-            ].filter(Boolean).join(' — '),
-      ].filter(Boolean);
-  return affiliations.join('; ');
-};
+const pickAffiliations = (person: any): Array<{ id: string | number | null; name: string }> =>
+  (Array.isArray(person?.affiliations) ? person.affiliations : [])
+    .map((affiliation: any) => ({ id: affiliation?.id ?? null, name: String(affiliation?.name || '').trim() }))
+    .filter((affiliation: { name: string }) => affiliation.name);
+
+const getAffiliationsText = (person: any) => pickAffiliations(person).map((affiliation) => affiliation.name).join('; ');
 
 const uniqueList = (items: Array<string | null | undefined>) => Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
 
 const buildPersonMeta = (person: any, locale: string, id: string) => {
   const name = pickPersonName(person);
   const ids = person?.identifiers || {};
-  const orcid = ids?.orcid || person?.orcid;
-  const wikidataId = ids?.wikidata_id || person?.wikidata_id;
-  const openalexId = ids?.openalex_id || person?.openalex_id;
-  const scopusId = ids?.scopus_id || person?.scopus_id;
-  const lattesId = ids?.lattes_id || person?.lattes_id;
-  const homepageUrl = ids?.url || person?.url;
+  const orcid = ids.orcid;
+  const wikidataId = ids.wikidata_id;
+  const openalexId = ids.openalex_id;
+  const scopusId = ids.scopus_id;
+  const lattesId = ids.lattes_id;
+  const homepageUrl = ids.url;
   const publicUrl = localeUrl(locale as Locale, `/persons/${id}`);
   const affiliations = getAffiliationsText(person);
   const identifierList = uniqueList([
@@ -75,27 +61,6 @@ const buildPersonMeta = (person: any, locale: string, id: string) => {
   return other;
 };
 
-const toYearNumber = (value: any): number => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-};
-
-const toTimestamp = (value: any): number => {
-  if (!value) return 0;
-  const t = Date.parse(String(value));
-  return Number.isFinite(t) ? t : 0;
-};
-
-const sortByRecency = (items: any[]): any[] => {
-  return [...items].sort((a: any, b: any) => {
-    const yearB = toYearNumber(b?.publication_year || b?.publication?.year || b?.year);
-    const yearA = toYearNumber(a?.publication_year || a?.publication?.year || a?.year);
-    if (yearB !== yearA) return yearB - yearA;
-    return toTimestamp(b?.created_at) - toTimestamp(a?.created_at);
-  });
-};
-
-
 export async function generateMetadata(props: {
   params: Promise<{ locale: string; id: string }>;
   searchParams: Promise<{ page?: string }>;
@@ -106,22 +71,20 @@ export async function generateMetadata(props: {
     ogType: 'profile',
     query: page > 1 ? { page } : undefined
   });
-  let data: any = null;
+  let person: any = null;
   try {
-    data = await getPersonsWorks(id, 1, 25);
+    person = (await getPersonsWorks(id, page, 25)).person;
   } catch {
     return base;
   }
-  const person = data?.person || null;
   if (!person) return base;
   const safeLocale = locale as Locale;
   const t = await getTranslations({ locale: safeLocale, namespace: 'metadata.descriptors' });
   const personName = pickPersonName(person);
   const affiliations = getAffiliationsText(person);
-  const ids = person?.identifiers || {};
-  const orcid = ids?.orcid || person?.orcid;
+  const orcid = person?.identifiers?.orcid;
   const publicUrl = localeUrl(safeLocale, paginatedPath(`/persons/${id}`, page));
-  const worksCount = Number(person?.metrics?.works_count ?? person?.works_count) || 0;
+  const worksCount = Number(person?.metrics?.works_count) || 0;
   const description = personName
     ? composeDescription(t('personProfile', { name: personName }), [
         affiliations ? t('personAffiliations', { value: affiliations }) : '',
@@ -162,11 +125,7 @@ export async function generateMetadata(props: {
 export default async function PersonPage(props: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
   const { id, locale } = await props.params;
   const page = resolvePageParam((await props.searchParams).page);
-  const data: any = await getPersonsWorks(id, page, 25);
-  const person = data?.person || null;
-  const worksPage = data?.works || null;
-  const items: any[] = worksPage?.data || worksPage?.results || worksPage?.items || [];
-  const pagination: any = worksPage?.pagination || worksPage?.meta?.pagination || {};
+  const { person, works: recentItems, pagination } = await getPersonsWorks(id, page, 25);
   if (!person) notFound();
   const [prominentItems, firstItems] = await Promise.all([
     getPersonsWorksProminent(id, 25),
@@ -179,32 +138,25 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const givenNames = person?.given_names || '';
   const familyName = person?.family_name || '';
   const nameSignature = person?.name_signature || '';
-  const orcid = ids?.orcid || person?.orcid || '';
-  const lattesId = ids?.lattes_id || person?.lattes_id || '';
-  const scopusId = ids?.scopus_id || person?.scopus_id || '';
-  const wikidataId = ids?.wikidata_id || person?.wikidata_id || '';
-  const openalexId = ids?.openalex_id || person?.openalex_id || '';
-  const magId = ids?.mag_id || person?.mag_id || '';
-  const homepageUrl = ids?.url || person?.url || '';
+  const orcid = ids.orcid || '';
+  const lattesId = ids.lattes_id || '';
+  const scopusId = ids.scopus_id || '';
+  const wikidataId = ids.wikidata_id || '';
+  const openalexId = ids.openalex_id || '';
+  const magId = ids.mag_id || '';
+  const homepageUrl = ids.url || '';
   const isVerified = !!person?.is_verified;
   const metrics = person?.metrics || {};
   const profile = person?.authorship_profile || {};
-  const personWorksCount = Number(person?.metrics?.works_count ?? person?.authorship_profile?.works_count ?? pagination?.total) || 0;
+  const personWorksCount = Number(metrics.works_count ?? profile.works_count ?? pagination?.total) || 0;
   const subjectExpertise: any[] = Array.isArray(person?.subject_expertise) ? person.subject_expertise : [];
   const expertiseItems = subjectExpertise.map((subject: any) => {
     const term = subject?.term || subject?.display_name || subject?.name || '';
     const works = Number(subject?.works_count) || 0;
     return { term: String(term || ''), note: works > 0 ? t('common.meta.worksCount', { count: works }) : undefined };
   }).filter((subject) => subject.term);
-  const affiliationsRaw: any = person?.affiliations || person?.affiliation || person?.current_affiliation || [];
-  const affiliationSource: any[] = Array.isArray(affiliationsRaw) ? affiliationsRaw : (affiliationsRaw ? [affiliationsRaw] : []);
-  const affiliationEntries = affiliationSource.map((a: any) => {
-    if (!a) return null;
-    if (typeof a === 'string') return { name: a, id: null };
-    const orgName = a.name || a.organization || a.institution || '';
-    return orgName ? { name: String(orgName), id: a.id ?? null } : null;
-  }).filter(Boolean) as Array<{ name: string; id: number | string | null }>;
-  const affiliations: string[] = affiliationEntries.map((entry) => entry.name);
+  const affiliationEntries = pickAffiliations(person);
+  const affiliations = affiliationEntries.map((entry) => entry.name);
   const publicUrl = localeUrl(locale as Locale, `/persons/${id}`);
   const jsonLd: Record<string, any> = withSitePublisher({
     '@context': 'https://schema.org',
@@ -237,12 +189,11 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
     references: t('common.meta.references'),
     emptyState: ''
   };
-  const recentItems = sortByRecency(items);
 
   const pageHref = (target: number) => `/persons/${id}${target > 1 ? `?page=${target}` : ''}`;
   const paginationNav = (
     <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-      {pagination?.hasPrev || page > 1 ? (
+      {page > 1 ? (
         <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
       ) : (
         <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>

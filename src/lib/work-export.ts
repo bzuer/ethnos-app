@@ -1,4 +1,4 @@
-import { groupContributorsByRole, normalizeWorkDetail, pickContributorEntries } from './works';
+import { groupContributorsByRole, normalizeDoi, normalizeWorkDetail, pickAuthorNames, pickContributorEntries } from './works';
 import { buildIdentifierHref } from './identifiers';
 import { SITE_ORIGIN } from './site';
 
@@ -58,14 +58,6 @@ export function normalizeValue(value: any) {
   return value ? String(value).replace(/\s+/g, ' ').trim() : '';
 }
 
-export function normalizeDoi(value: any) {
-  const raw = normalizeValue(value);
-  if (!raw) return '';
-  return raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '');
-}
-
-export { SITE_ORIGIN } from './site';
-
 export function buildAccessUrl(id: string | number | null | undefined) {
   if (id === null || id === undefined) return '';
   const value = String(id).trim();
@@ -95,28 +87,15 @@ export function getIsbn(raw: any) {
   return '';
 }
 
-export function getFilesList(raw: any) {
-  const files = raw?.files;
-  if (Array.isArray(files)) return files;
-  if (files && typeof files === 'object') {
-    if (Array.isArray(files.data)) return files.data;
-    if (Array.isArray(files.items)) return files.items;
-    if (Array.isArray(files.results)) return files.results;
-  }
-  return [];
+function getFilesList(raw: any): any[] {
+  return Array.isArray(raw?.files) ? raw.files : [];
 }
 
 export function buildFileOpenAccessUrl(file: any): string {
   if (!file) return '';
   if (file.best_oa_url) return String(file.best_oa_url);
-  if (file?.best_oa?.url) return String(file.best_oa.url);
-  if (file.url) return String(file.url);
-  const oid = file.openacess_id || file.openaccess_id;
-  if (oid && typeof oid === 'string') {
-    const match = oid.trim().match(/^doi:\s*(.+)$/i);
-    if (match && match[1]) return `https://doi.org/${match[1].trim()}`;
-  }
-  return '';
+  const match = typeof file.openacess_id === 'string' ? file.openacess_id.trim().match(/^doi:\s*(.+)$/i) : null;
+  return match ? `https://doi.org/${match[1].trim()}` : '';
 }
 
 export function pickOpenAccessFile(files: any[]) {
@@ -160,7 +139,7 @@ export function toListItem(work: any) {
   return {
     id: work?.id,
     title: work?.title || null,
-    authors: work?.authors || work?.authors_preview || work?.author_string || null,
+    authors: pickAuthorNames(work),
     publication_year: work?.publication?.year || work?.publication_year || work?.year || null,
     venue_id: work?.venue?.id || work?.venue_id || null,
     venue_name: work?.venue?.name || work?.venue_name || null,
@@ -198,7 +177,7 @@ export function normWork(source: any) {
   const venue = raw.venue || {};
   const publisher = raw.publisher || {};
   const files = getFilesList(raw);
-  const md5 = raw.md5 || files.map((file: any) => file?.md5 || file?.md5_hash || file?.md5sum || file?.md5Hash || file?.checksum).find(Boolean) || null;
+  const md5 = files.map((file: any) => file?.md5).find(Boolean) || null;
   const isbn = getIsbn(raw);
   const oaFile = pickOpenAccessFile(files);
   const oaUrl = oaFile ? buildFileOpenAccessUrl(oaFile) : '';
