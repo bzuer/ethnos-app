@@ -1,9 +1,16 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { buildPageMetadata } from '@/i18n/metadata';
+import type { Locale } from '@/i18n/config';
+import { buildPageMetadata, resolveLocale } from '@/i18n/metadata';
 
 export const dynamic = 'force-static';
 export const revalidate = false;
+
+const SOURCES: Record<Locale, string> = {
+  en: 'PRIVACY_AND_COOKIES.md',
+  pt: 'PRIVACY_AND_COOKIES_PT.md',
+  es: 'PRIVACY_AND_COOKIES_ES.md'
+};
 
 type ListItem = { text: string; children: ListItem[] };
 
@@ -97,9 +104,9 @@ function renderList(items: ListItem[], keyPrefix: string) {
   );
 }
 
-export default async function PrivacyPage() {
-  const markdownPath = join(process.cwd(), 'docs', 'PRIVACY_AND_COOKIES.md');
-  const markdown = await readFile(markdownPath, 'utf8');
+export default async function PrivacyPage(props: { params: Promise<{ locale: string }> }) {
+  const { locale } = await props.params;
+  const markdown = await readFile(join(process.cwd(), 'docs', SOURCES[resolveLocale(locale)]), 'utf8');
   const blocks = parseMarkdown(markdown);
   const titleBlock = blocks[0]?.kind === 'heading' && blocks[0].level === 1 ? blocks[0] : null;
   const title = titleBlock ? titleBlock.text.toUpperCase() : 'PRIVACY AND COOKIES';
