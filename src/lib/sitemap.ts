@@ -28,7 +28,7 @@ export const RECENT_WORKS_WINDOW_DAYS = 90;
 type CuratedSection = Extract<SitemapSection, 'works' | 'venues' | 'persons'>;
 
 const execFileAsync = promisify(execFile);
-const RECENT_CACHE_MS = 15 * 60 * 1000;
+const RECENT_CACHE_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const CURATED_FILES: Record<CuratedSection, string> = {

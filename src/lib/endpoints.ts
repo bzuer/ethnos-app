@@ -84,7 +84,7 @@ export async function searchWorks(params: Record<string, string | number | undef
   });
   qs.set('page', String(normalizeLimit(Number(params.page) || 1, Number.MAX_SAFE_INTEGER)));
   qs.set('limit', String(normalizeLimit(Number(params.limit) || 20, 100)));
-  return await fetchJson<any>(`/works?${qs.toString()}`, { retries: 1 });
+  return await fetchJson<any>(`/works?${qs.toString()}`, { attempts: 1 });
 }
 
 export type VenuesListFilters = {
@@ -196,13 +196,11 @@ export async function getSubjectWorksPage(id: string, page = 1, limit = 25) {
 }
 
 export async function resolveDoi(doi: string) {
-  const clean = String(doi || '').trim()
-    .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
-    .replace(/^doi:\s*/i, '');
-  if (!clean || !clean.includes('/')) return null;
+  const clean = String(doi || '').trim().replace(/^(?:doi:\s*|(?:https?:\/+)?(?:dx\.)?doi\.org\/)/i, '');
+  if (!clean.includes('/')) return null;
   const encoded = clean.split('/').map((segment) => encodeURIComponent(segment)).join('/');
   try {
-    return unwrapData(await fetchJson<any>(`/${encoded}`));
+    return unwrapData(await fetchJson<any>(`/${encoded}?include_citations=false&include_references=false`));
   } catch (error) {
     if (isMissingEntityError(error)) return null;
     throw error;

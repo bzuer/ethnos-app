@@ -43,7 +43,7 @@ export async function actAutocompleteSuggest(query: string): Promise<Autocomplet
   const q = String(query || '').trim().slice(0, 200);
   if (q.length < 2) return [];
   try {
-    const res = await fetchJson<any>(`/search/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { retries: 1, timeoutMs: 4000 });
+    const res = await fetchJson<any>(`/search/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { attempts: 1, timeoutMs: 4000 });
     const suggestions: any[] = Array.isArray(res?.data?.suggestions) ? res.data.suggestions : [];
     return suggestions
       .map((s): AutocompleteSuggestion => ({
@@ -63,7 +63,7 @@ export type GlobalSearchResult = {
 
 export async function actSearchGlobal(query: string): Promise<GlobalSearchResult> {
   const q = String(query || '').trim().slice(0, 200);
-  const data = unwrapData(await fetchJson<any>(`/search/global?q=${encodeURIComponent(q)}&limit=10`, { retries: 1 }));
+  const data = unwrapData(await fetchJson<any>(`/search/global?q=${encodeURIComponent(q)}&limit=10`, { attempts: 1 }));
   const works: any[] = Array.isArray(data?.works?.results) ? data.works.results : [];
   const persons: any[] = Array.isArray(data?.persons?.results) ? data.persons.results : [];
   return {
@@ -78,7 +78,7 @@ export async function actSearchGlobal(query: string): Promise<GlobalSearchResult
 export async function actGetWorkFull(id: string, slim = false) {
   try {
     if (!slim) return await loadWork(id);
-    return unwrapData(await fetchJson<any>(`/works/${encodeURIComponent(id)}?include_citations=false&include_references=false`, { retries: 1 }));
+    return unwrapData(await fetchJson<any>(`/works/${encodeURIComponent(id)}?include_citations=false&include_references=false`, { attempts: 1 }));
   } catch {
     return null;
   }
@@ -89,13 +89,13 @@ function relatedQuery(page: number) {
 }
 
 export async function actGetWorkCitations(id: string, page = 1) {
-  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/citations?${relatedQuery(page)}`, { retries: 1, timeoutMs: 10000 });
+  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/citations?${relatedQuery(page)}`, { attempts: 1, timeoutMs: 10000 });
   const rows = Array.isArray(env?.data?.citing_works) ? env.data.citing_works : [];
   return { items: rows.map(toRelatedWorkRow), hasNext: env?.pagination?.hasNext === true };
 }
 
 export async function actGetWorkReferences(id: string, page = 1) {
-  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/references?${relatedQuery(page)}`, { retries: 1, timeoutMs: 10000 });
+  const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/references?${relatedQuery(page)}`, { attempts: 1, timeoutMs: 10000 });
   const rows = Array.isArray(env?.data?.referenced_works) ? env.data.referenced_works : [];
   return { items: rows.map(toRelatedWorkRow), hasNext: env?.pagination?.hasNext === true };
 }

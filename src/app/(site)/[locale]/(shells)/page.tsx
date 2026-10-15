@@ -8,7 +8,7 @@ import type { Locale } from '@/i18n/config';
 import { formatMetadataAuthors } from '@/lib/works';
 
 export const dynamic = 'force-static';
-export const revalidate = false;
+export const revalidate = 3600;
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
   return buildPageMetadata(props.params, 'metadata.home', '/', { absoluteTitle: true });
