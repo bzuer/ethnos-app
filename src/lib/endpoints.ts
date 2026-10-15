@@ -74,41 +74,17 @@ export async function listRecentlyAddedWorks(options: { limit: number; since?: D
   return works;
 }
 
-const SEARCH_FILTER_KEYS = ['type', 'author', 'venue', 'venue_name', 'subject', 'language', 'year_from', 'year_to', 'peer_reviewed', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
+const SEARCH_PARAMS = ['q', 'author', 'venue', 'subject', 'work_type', 'language', 'year_from', 'year_to', 'open_access', 'cited_by_min', 'cited_by_max', 'sort_by', 'sort_order'] as const;
 
-export async function searchWorks(params: Record<string, string | number | boolean | undefined | null>) {
+export async function searchWorks(params: Record<string, string | number | undefined | null>) {
   const qs = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && String(v) !== '') qs.set(k, String(v)); });
-  const query = qs.get('q') || '';
-  const page = qs.get('page') || '1';
-  const limit = String(normalizeLimit(Number(qs.get('limit') || '25'), 100));
-  qs.set('limit', limit);
-  const workType = qs.get('work_type');
-  qs.delete('work_type');
-  if (workType && !qs.has('type')) qs.set('type', workType);
-  qs.delete('scope');
-
-  const hasFilters = SEARCH_FILTER_KEYS.some((k) => qs.get(k));
-  const init = { retries: 1 };
-
-  if (!query || query === '*') {
-    qs.delete('q');
-    if (hasFilters) return await fetchJson(`/search/works?${qs.toString()}`, init);
-    const showcase = new URLSearchParams({ page, limit });
-    const sortBy = qs.get('sort_by');
-    const sortOrder = qs.get('sort_order');
-    if (sortBy) showcase.set('sort_by', sortBy);
-    if (sortOrder) showcase.set('sort_order', sortOrder);
-    return await fetchJson(`/works/showcase?${showcase.toString()}`, init);
-  }
-
-  try {
-    return await fetchJson(`/search/works?${qs.toString()}`, init);
-  } catch (error) {
-    if (hasFilters) throw error;
-    const fallback = new URLSearchParams({ search: query, page, limit });
-    return await fetchJson(`/works?${fallback.toString()}`, init);
-  }
+  SEARCH_PARAMS.forEach((key) => {
+    const value = String(params[key] ?? '').trim();
+    if (value) qs.set(key, value);
+  });
+  qs.set('page', String(normalizeLimit(Number(params.page) || 1, Number.MAX_SAFE_INTEGER)));
+  qs.set('limit', String(normalizeLimit(Number(params.limit) || 20, 100)));
+  return await fetchJson<any>(`/works?${qs.toString()}`, { retries: 1 });
 }
 
 export type VenuesListSort =

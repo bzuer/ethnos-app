@@ -24,19 +24,20 @@ export default function SearchGlobalClient({ formAction }: Props) {
   const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   const query = mounted ? String(searchParams?.get('q') || '').trim() : '';
   const hasQuery = query.length >= 2;
-  const [result, setResult] = useState<{ query: string; data: GlobalSearchResult } | null>(null);
+  const [result, setResult] = useState<{ query: string; data: GlobalSearchResult | null } | null>(null);
 
   useEffect(() => {
     if (!hasQuery) return undefined;
     let cancelled = false;
     actSearchGlobal(query)
       .then((res) => { if (!cancelled) setResult({ query, data: res }); })
-      .catch(() => { if (!cancelled) setResult({ query, data: EMPTY }); });
+      .catch(() => { if (!cancelled) setResult({ query, data: null }); });
     return () => { cancelled = true; };
   }, [query, hasQuery]);
 
   const loading = hasQuery && result?.query !== query;
-  const data = hasQuery && result?.query === query ? result.data : EMPTY;
+  const failed = hasQuery && result?.query === query && result.data === null;
+  const data = (hasQuery && result?.query === query ? result.data : null) || EMPTY;
 
   const resultLabels: WorkResultLabels = useMemo(() => ({
     titleUnavailable: t('common.entities.titleUnavailable'),
@@ -53,7 +54,7 @@ export default function SearchGlobalClient({ formAction }: Props) {
 
   const works = data.works.results;
   const persons = data.persons.results;
-  const showNoResults = mounted && hasQuery && !loading && works.length === 0;
+  const showNoResults = mounted && hasQuery && !loading && !failed && works.length === 0;
   const showStartPrompt = mounted && !hasQuery;
 
   return (
@@ -71,6 +72,8 @@ export default function SearchGlobalClient({ formAction }: Props) {
             id="global-q"
             name="q"
             defaultValue={query}
+            minLength={2}
+            maxLength={200}
             placeholder={t('common.placeholders.quickTerm')}
             aria-label={t('common.aria.searchInput')}
           />
@@ -86,6 +89,10 @@ export default function SearchGlobalClient({ formAction }: Props) {
         <p className="temporary-message temporary-message-info">{t('searchGlobal.startPrompt')}</p>
       ) : null}
 
+      {failed ? (
+        <p className="temporary-message temporary-message-error" role="status">{t('common.states.unableToLoadWorks')}</p>
+      ) : null}
+
       {showNoResults ? (
         <p className="temporary-message temporary-message-info">{t('searchGlobal.noResults')}</p>
       ) : null}
@@ -94,7 +101,7 @@ export default function SearchGlobalClient({ formAction }: Props) {
         <section aria-labelledby="global-works-heading">
           <h2 className="title-section" id="global-works-heading">{t('searchGlobal.worksHeading')}</h2>
           <ul className="results-list">
-            {works.map((it: any) => (
+            {works.map((it) => (
               <WorkResultItem key={it.id} item={it} labels={resultLabels} />
             ))}
           </ul>
@@ -112,25 +119,16 @@ export default function SearchGlobalClient({ formAction }: Props) {
         <section aria-labelledby="global-authors-heading">
           <h2 className="title-section" id="global-authors-heading">{t('searchGlobal.authorsHeading')}</h2>
           <ul className="results-list">
-            {persons.map((p: any, idx: number) => {
-              const pid = p?.id;
-              const name = p?.preferred_name || [p?.given_names, p?.family_name].filter(Boolean).join(' ') || t('common.entities.authorUnknown');
-              const worksCount = Number(p?.metrics?.works_count) || 0;
-              return (
-                <li className="result-item" key={pid || idx}>
-                  <h3 className="result-title">
-                    {pid ? (
-                      <LocaleLink className="result-link" href={`/persons/${pid}`}>{name}</LocaleLink>
-                    ) : (
-                      <span className="field-value">{name}</span>
-                    )}
-                  </h3>
-                  {worksCount > 0 ? (
-                    <p className="result-meta"><span className="result-total">{t('common.meta.worksCount', { count: worksCount })}</span></p>
-                  ) : null}
-                </li>
-              );
-            })}
+            {persons.map((p) => (
+              <li className="result-item" key={p.id}>
+                <h3 className="result-title">
+                  <LocaleLink className="result-link" href={`/persons/${p.id}`}>{p.name}</LocaleLink>
+                </h3>
+                {p.worksCount > 0 ? (
+                  <p className="result-meta"><span className="result-total">{t('common.meta.worksCount', { count: p.worksCount })}</span></p>
+                ) : null}
+              </li>
+            ))}
           </ul>
         </section>
       ) : null}

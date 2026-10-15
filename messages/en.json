@@ -71,7 +71,6 @@
       "yearFrom": "Year from",
       "yearTo": "Year to",
       "language": "Language",
-      "peerReviewed": "Peer reviewed",
       "openAccess": "Open Access",
       "list": "List",
       "pagination": "Pagination"
@@ -79,8 +78,8 @@
     "placeholders": {
       "homeSearch": "Search works by title, author, or keyword...",
       "quickTerm": "Title, author, journal...",
-      "person": "Person name or ID",
-      "venue": "Journal name or ID",
+      "person": "Person name",
+      "venue": "Journal name",
       "subject": "Topic or keyword",
       "yearFrom": "Ex: 2001",
       "yearTo": "Ex: 2024",
@@ -199,10 +198,7 @@
     "filtersLegend": "Filters",
     "textLegend": "Text Search",
     "tipsHeading": "Tips",
-    "tipPhrase": "Exact phrase: use quotes \"complete phrase\"",
-    "tipMultiple": "Multiple words: anthropology culture ritual",
-    "tipExclude": "Exclude term: anthropology -religion",
-    "tipAuthor": "Specific author: \"Lévi-Strauss\"",
+    "tipMultiple": "Every word is required: anthropology culture ritual",
     "tipEmpty": "Leave the term empty to browse with filters only."
   },
   "results": {
@@ -211,9 +207,7 @@
     "summaryHeading": "Search summary",
     "queryEcho": "Results for <strong>{query}</strong>",
     "total": "{count, plural, one {# result} other {# results}}",
-    "totalApprox": "about {count, plural, one {# result} other {# results}}",
-    "totalSingular": "1 result",
-    "pagePosition": "Page {page} of {totalPages}",
+    "pagePosition": "Page {page, number} of {totalPages, number}",
     "refineHeading": "Refine search",
     "activeFiltersHeading": "Active filters",
     "removeFilter": "Remove {label}",
@@ -348,7 +342,6 @@
       "latestYear": "Latest publication year",
       "hIndex": "h-index"
     },
-    "roleFallback": "Author",
     "sections": {
       "navLabel": "Author sections",
       "recent": "Recent",
@@ -482,8 +475,8 @@
     },
     "searchGlobal": {
       "title": "Global Search",
-      "description": "Unified search over the Ethnos bibliography that returns works, with related authors and institutions offered as refinements of the query.",
-      "keywords": "global search, works, authors, institutions, bibliographic research"
+      "description": "Unified search over the Ethnos bibliography that returns works, with the related authors of the query offered as a way to refine it.",
+      "keywords": "global search, works, authors, bibliographic research"
     },
     "lists": {
       "title": "My List",
@@ -568,11 +561,11 @@
   },
   "searchGlobal": {
     "title": "Global search",
-    "intro": "Search works across the catalog and jump to related authors and institutions.",
+    "intro": "Search works across the catalog and jump to related authors.",
     "worksHeading": "Works",
     "authorsHeading": "Related authors",
-    "seeAllWorks": "See all {count} works",
-    "startPrompt": "Enter a term to search works and discover related authors and institutions.",
+    "seeAllWorks": "{count, plural, one {See # work} other {See all # works}}",
+    "startPrompt": "Enter a term to search works and discover related authors.",
     "noResults": "No works found for this term.",
     "submit": "Search"
   },

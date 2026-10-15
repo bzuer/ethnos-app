@@ -178,7 +178,6 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
   const listLabels = {
     titleUnavailable: t('common.entities.titleUnavailable'),
     authorUnknown: t('common.entities.authorUnknown'),
-    roleFallback: t('persons.roleFallback'),
     openAccess: t('common.meta.openAccess'),
     addToList: t('common.actions.addToList'),
     inList: t('common.actions.inList'),

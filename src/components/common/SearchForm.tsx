@@ -20,7 +20,6 @@ type FormState = {
   language: string;
   year_from: string;
   year_to: string;
-  peer_reviewed: string;
   open_access: string;
   sort_by: string;
   sort_order: string;
@@ -48,7 +47,6 @@ function readState(searchParams: URLSearchParams | null): FormState {
     language: get('language'),
     year_from: get('year_from'),
     year_to: get('year_to'),
-    peer_reviewed: get('peer_reviewed'),
     open_access: get('open_access'),
     sort_by: get('sort_by'),
     sort_order: get('sort_order'),
@@ -60,7 +58,7 @@ function readState(searchParams: URLSearchParams | null): FormState {
 
 const EMPTY_STATE: FormState = {
   q: '', author: '', venue: '', subject: '', work_type: '', language: '',
-  year_from: '', year_to: '', peer_reviewed: '', open_access: '',
+  year_from: '', year_to: '', open_access: '',
   sort_by: '', sort_order: '', cited_by_min: '', cited_by_max: '', limit: DEFAULT_LIMIT
 };
 
@@ -115,6 +113,8 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               value={state.author}
               onChange={update('author')}
               placeholder={t('common.placeholders.person')}
+              minLength={2}
+              maxLength={255}
             />
           </div>
           <div className="filter-label">
@@ -127,6 +127,8 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               value={state.venue}
               onChange={update('venue')}
               placeholder={t('common.placeholders.venue')}
+              minLength={2}
+              maxLength={255}
             />
           </div>
           <div className="filter-label">
@@ -139,6 +141,8 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               value={state.subject}
               onChange={update('subject')}
               placeholder={t('common.placeholders.subject')}
+              minLength={2}
+              maxLength={255}
             />
           </div>
         </div>
@@ -161,13 +165,11 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               <option value="BOOK">BOOK</option>
               <option value="CHAPTER">CHAPTER</option>
               <option value="CONFERENCE">CONFERENCE</option>
-              <option value="CONFERENCE_PAPER">CONFERENCE_PAPER</option>
               <option value="THESIS">THESIS</option>
               <option value="REPORT">REPORT</option>
               <option value="DATASET">DATASET</option>
               <option value="PREPRINT">PREPRINT</option>
               <option value="REVIEW">REVIEW</option>
-              <option value="EDITORIAL">EDITORIAL</option>
               <option value="OTHER">OTHER</option>
             </select>
           </div>
@@ -181,6 +183,8 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               value={state.language}
               onChange={update('language')}
               placeholder={t('common.placeholders.language')}
+              minLength={2}
+              maxLength={5}
             />
           </div>
           <div className="filter-label">
@@ -193,8 +197,7 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               value={state.year_from}
               onChange={update('year_from')}
               placeholder={t('common.placeholders.yearFrom')}
-              min={1500}
-              max={2100}
+              min={1000}
             />
           </div>
           <div className="filter-label">
@@ -207,23 +210,8 @@ export default function SearchForm({ action, autocompleteId = 'q', embedded = fa
               value={state.year_to}
               onChange={update('year_to')}
               placeholder={t('common.placeholders.yearTo')}
-              min={1500}
-              max={2100}
+              min={1000}
             />
-          </div>
-          <div className="filter-label">
-            <label className="form-label" htmlFor={`${autocompleteId}-peer_reviewed`}>{t('common.labels.peerReviewed')}</label>
-            <select
-              className="form-input"
-              id={`${autocompleteId}-peer_reviewed`}
-              name="peer_reviewed"
-              value={state.peer_reviewed}
-              onChange={update('peer_reviewed')}
-            >
-              <option value="">{t('common.options.any')}</option>
-              <option value="true">{t('common.values.yes')}</option>
-              <option value="false">{t('common.values.no')}</option>
-            </select>
           </div>
           <div className="filter-label">
             <label className="form-label" htmlFor={`${autocompleteId}-open_access`}>{t('common.labels.openAccess')}</label>

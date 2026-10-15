@@ -58,7 +58,7 @@ export function exportSlug(value: any): string {
 }
 
 export function exportFilename(kind: ExportKind, entity: any): string {
-  const rawId = entity?.id ?? entity?.work_id ?? null;
+  const rawId = entity?.id ?? null;
   const id = rawId === null || rawId === undefined ? '' : String(rawId).trim();
   const slug = exportSlug(entityLabel(entity));
   if (slug && id) return `${slug}-${id}`;
@@ -115,7 +115,7 @@ export function mergeWorkLists(...lists: any[][]) {
   lists.forEach((list) => {
     (Array.isArray(list) ? list : []).forEach((item) => {
       if (!item || typeof item !== 'object') return;
-      const rawId = item.id ?? item.work_id ?? null;
+      const rawId = item.id ?? null;
       if (rawId === null || rawId === undefined || rawId === '') {
         unidentified.push(item);
         return;

@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import LocaleLink from '@/components/common/LocaleLink';
-import HomeSearchInput from '@/components/common/HomeSearchInput';
+import SearchAutocomplete from '@/components/common/SearchAutocomplete';
 import { getHomeRecentWorks, getHomeTopVenues } from '@/lib/endpoints';
 import { buildPageMetadata } from '@/i18n/metadata';
 import { localizedPath } from '@/i18n/paths';
@@ -29,7 +29,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
         <h2 className="title-section" id="search-section">{t('home.searchSection')}</h2>
         <form className="search-form" role="search" action={searchAction} method="get" id="search-form">
           <div className="search-input-container">
-            <HomeSearchInput placeholder={t('common.placeholders.homeSearch')} ariaLabel={t('common.aria.searchInput')} />
+            <SearchAutocomplete inputId="search-input" inputName="q" placeholder={t('common.placeholders.homeSearch')} ariaLabel={t('common.aria.searchInput')} />
           </div>
           <button className="search-btn btn-positive" type="submit" aria-label={t('common.aria.searchButton')}>{t('common.actions.search')}</button>
         </form>

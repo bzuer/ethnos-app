@@ -6,5 +6,5 @@ type Props = {
 };
 
 export default function PersonWorksList({ items, labels }: Props) {
-  return <WorkResultList items={items} labels={labels} useRoleFallback titleMaxLength={200} />;
+  return <WorkResultList items={items} labels={labels} titleMaxLength={200} />;
 }

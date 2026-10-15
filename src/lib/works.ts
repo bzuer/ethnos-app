@@ -256,6 +256,23 @@ export function workDoi(work: any): string | null {
   return work?.doi || (Array.isArray(work?.identifiers?.doi) ? work.identifiers.doi[0] : null) || null;
 }
 
+export function toWorkListRow(raw: any) {
+  return {
+    id: raw?.id ?? null,
+    title: raw?.title ?? null,
+    type: raw?.type ?? null,
+    publication_year: raw?.publication_year ?? null,
+    venue_name: pickWorkVenue(raw) || null,
+    contributors_preview: Array.isArray(raw?.contributors_preview) ? raw.contributors_preview : [],
+    author_count: raw?.author_count ?? null,
+    cited_by_count: raw?.cited_by_count ?? null,
+    references_count: raw?.references_count ?? null,
+    open_access: raw?.open_access === true,
+    doi: raw?.doi ?? null,
+    abstract: getWorkAbstractSnippet(raw)
+  };
+}
+
 export function toRelatedWorkRow(raw: any) {
   return {
     id: raw?.work_id ?? raw?.citing_work_id ?? raw?.cited_work_id ?? null,

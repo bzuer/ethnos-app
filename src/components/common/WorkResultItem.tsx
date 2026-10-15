@@ -1,14 +1,15 @@
 import { Fragment, type ReactNode } from 'react';
+import { useLocale } from 'next-intl';
 import LocaleLink from '@/components/common/LocaleLink';
 import ListToggleBadge from '@/components/common/ListToggleBadge';
+import { formatNumber } from '@/lib/format';
 import {
   formatMetadataAuthors,
   formatMetadataType,
   formatMetadataVenue,
   getWorkAbstractSnippet,
   getWorkOpenAccessDoiUrl,
-  isWorkOpenAccess,
-  truncateMetadataText
+  isWorkOpenAccess
 } from '@/lib/works';
 import { toListItem } from '@/lib/work-export';
 
@@ -23,7 +24,6 @@ export type WorkResultLabels = {
   itemRemoved: string;
   citedBy: string;
   references: string;
-  roleFallback?: string;
   emptyState?: string;
 };
 
@@ -31,9 +31,7 @@ type WorkResultItemProps = {
   item: any;
   labels: WorkResultLabels;
   showVenue?: boolean;
-  showType?: boolean;
   showAuthors?: boolean;
-  useRoleFallback?: boolean;
   titleMaxLength?: number;
   pickAuthors?: (item: any) => string;
 };
@@ -44,24 +42,20 @@ export function WorkResultItem({
   item,
   labels,
   showVenue = true,
-  showType = true,
   showAuthors = true,
-  useRoleFallback = false,
   titleMaxLength = 0,
   pickAuthors
 }: WorkResultItemProps) {
-  const id = item?.id ?? item?.work_id ?? null;
+  const locale = useLocale();
+  const id = item?.id ?? null;
   const rawTitle = item?.title || '';
   const displayTitle = titleMaxLength > 0 && rawTitle.length > titleMaxLength
     ? `${rawTitle.slice(0, titleMaxLength)}…`
     : (rawTitle || labels.titleUnavailable);
   const openAccess = isWorkOpenAccess(item);
-  const roleText = useRoleFallback
-    ? truncateMetadataText(String(item?.authorship?.role || labels.roleFallback || '').toUpperCase(), 48)
-    : '';
-  const authors = pickAuthors ? pickAuthors(item) : formatMetadataAuthors(item, useRoleFallback ? '' : labels.authorUnknown);
-  const authorsDisplay = authors || roleText || labels.authorUnknown;
-  const type = showType ? formatMetadataType(item?.type || '') : '';
+  const authors = (pickAuthors ? pickAuthors(item) : formatMetadataAuthors(item)) || labels.authorUnknown;
+  const role = item?.authorship?.role && item.authorship.role !== 'AUTHOR' ? String(item.authorship.role) : '';
+  const type = formatMetadataType(item?.type || '');
   const venue = showVenue ? formatMetadataVenue(item, 35) : '';
   const year = item?.publication_year || item?.year || '';
   const abstract = getWorkAbstractSnippet(item);
@@ -69,12 +63,13 @@ export function WorkResultItem({
   const referencesCount = Number(item?.references_count);
   const openAccessHref = openAccess ? getWorkOpenAccessDoiUrl(item) : '';
   const metaParts: ReactNode[] = [];
-  if (showAuthors) metaParts.push(<span className="result-authors">{authorsDisplay}</span>);
+  if (showAuthors) metaParts.push(<span className="result-authors">{authors}</span>);
+  if (role) metaParts.push(<span className="result-type">{role}</span>);
   if (type) metaParts.push(<span className="result-type">{type}</span>);
   if (venue) metaParts.push(<span className="result-venue">{venue}</span>);
   if (year) metaParts.push(<span className="result-year">{year}</span>);
-  if (Number.isFinite(citedByCount) && citedByCount > 0) metaParts.push(<span className="result-cited">{labels.citedBy}: {citedByCount}</span>);
-  if (Number.isFinite(referencesCount) && referencesCount > 0) metaParts.push(<span className="result-refs">{labels.references}: {referencesCount}</span>);
+  if (Number.isFinite(citedByCount) && citedByCount > 0) metaParts.push(<span className="result-cited">{labels.citedBy}: {formatNumber(citedByCount, locale)}</span>);
+  if (Number.isFinite(referencesCount) && referencesCount > 0) metaParts.push(<span className="result-refs">{labels.references}: {formatNumber(referencesCount, locale)}</span>);
   return (
     <li className="result-item">
       <h3 className="result-title">
@@ -124,7 +119,7 @@ export function WorkResultList({ items, labels, ...itemProps }: WorkResultListPr
   return (
     <ul className="results-list">
       {items.map((item: any, idx: number) => (
-        <WorkResultItem key={item?.id ?? item?.work_id ?? idx} item={item} labels={labels} {...itemProps} />
+        <WorkResultItem key={item?.id ?? idx} item={item} labels={labels} {...itemProps} />
       ))}
     </ul>
   );

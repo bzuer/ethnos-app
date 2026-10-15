@@ -7,23 +7,13 @@ import LocaleLink from '@/components/common/LocaleLink';
 import SearchForm from '@/components/common/SearchForm';
 import { WorkResultItem, type WorkResultLabels } from '@/components/common/WorkResultItem';
 import { usePathname } from '@/i18n/routing';
-import { actSearchWorks } from '@/lib/actions';
-
-type SearchState = {
-  items: any[];
-  pageNum: number;
-  totalPages?: number;
-  hasPrev: boolean;
-  hasNext: boolean;
-  totalCount: number;
-  totalIsExact: boolean;
-};
+import { actSearchWorks, type WorksSearchPage } from '@/lib/actions';
 
 type Props = {
   formAction: string;
 };
 
-const FILTER_KEYS = ['work_type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'peer_reviewed', 'open_access'] as const;
+const FILTER_KEYS = ['work_type', 'author', 'venue', 'subject', 'year_from', 'year_to', 'language', 'open_access', 'cited_by_min', 'cited_by_max'] as const;
 type FilterKey = typeof FILTER_KEYS[number];
 const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
   work_type: 'common.labels.type',
@@ -33,23 +23,18 @@ const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
   year_from: 'common.labels.yearFrom',
   year_to: 'common.labels.yearTo',
   language: 'common.labels.language',
-  peer_reviewed: 'common.labels.peerReviewed',
-  open_access: 'common.labels.openAccess'
+  open_access: 'common.labels.openAccess',
+  cited_by_min: 'common.labels.citedByMin',
+  cited_by_max: 'common.labels.citedByMax'
 };
+
+const EMPTY_PAGE: WorksSearchPage = { items: [], page: 1, hasNext: false, total: null, totalPages: null };
 
 export default function SearchResultsClient({ formAction }: Props) {
   const t = useTranslations();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [state, setState] = useState<SearchState>({
-    items: [],
-    pageNum: 1,
-    totalPages: undefined,
-    hasPrev: false,
-    hasNext: false,
-    totalCount: 0,
-    totalIsExact: true
-  });
+  const [state, setState] = useState<WorksSearchPage>(EMPTY_PAGE);
   const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refineOpen, setRefineOpen] = useState(false);
@@ -82,11 +67,11 @@ export default function SearchResultsClient({ formAction }: Props) {
       try {
         const response = await actSearchWorks({ ...params, page, limit });
         if (cancelled) return;
-        setState(parseSearchState(response, page, limit));
+        setState(response);
       } catch {
         if (cancelled) return;
         setLoadError(true);
-        setState((prev) => ({ ...prev, items: [], totalCount: 0, hasNext: false, hasPrev: false, totalPages: undefined }));
+        setState(EMPTY_PAGE);
       } finally {
         if (cancelled) return;
         setLoading(false);
@@ -112,13 +97,11 @@ export default function SearchResultsClient({ formAction }: Props) {
   };
   const clearAllHref = pathname;
 
-  const prevHref = state.hasPrev ? buildPagedHref(state.pageNum - 1) : undefined;
-  const nextHref = state.hasNext ? buildPagedHref(state.pageNum + 1) : undefined;
+  const prevHref = state.page > 1 ? buildPagedHref(state.page - 1) : undefined;
+  const nextHref = state.hasNext ? buildPagedHref(state.page + 1) : undefined;
 
-  const totalLabel = formatTotal(state.totalCount, state.totalIsExact, t);
-  const pagePositionLabel = state.totalPages && state.totalPages > 0
-    ? t('results.pagePosition', { page: state.pageNum, totalPages: state.totalPages })
-    : '';
+  const totalLabel = state.total ? t('results.total', { count: state.total }) : '';
+  const pagePositionLabel = state.totalPages && state.items.length ? t('results.pagePosition', { page: state.page, totalPages: state.totalPages }) : '';
 
   const showNoResults = !loading && !loadError && state.items.length === 0 && hasUserInput;
   const showStartPrompt = !loading && !loadError && noParams && state.items.length === 0;
@@ -148,7 +131,7 @@ export default function SearchResultsClient({ formAction }: Props) {
               {t.rich('results.queryEcho', { query, strong: (chunks) => <strong>{chunks}</strong> })}
             </p>
           ) : null}
-          {!loading && !loadError && state.totalCount > 0 ? (
+          {!loading && !loadError && totalLabel ? (
             <p className="results-summary-stats">
               <span className="results-summary-total">{totalLabel}</span>
               {pagePositionLabel ? (
@@ -242,7 +225,7 @@ export default function SearchResultsClient({ formAction }: Props) {
             <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
           )}
           <span className="pagination-info" aria-live="polite">
-            {pagePositionLabel || (state.totalCount > 0 ? totalLabel : '')}
+            {pagePositionLabel}
           </span>
           {nextHref ? (
             <LocaleLink className="pagination-btn btn-positive" href={nextHref} rel="next">{t('common.actions.next')}</LocaleLink>
@@ -259,39 +242,7 @@ function readActiveFilters(params: Record<string, string>) {
   return FILTER_KEYS.filter((key) => params[key]).map((key) => ({ key, value: params[key] }));
 }
 
-function formatTotal(total: number, exact: boolean, t: ReturnType<typeof useTranslations>) {
-  if (!total) return '';
-  if (!exact) return t('results.totalApprox', { count: total });
-  return total === 1 ? t('results.totalSingular') : t('results.total', { count: total });
-}
-
 function formatFilterValue(key: FilterKey, value: string, t: ReturnType<typeof useTranslations>) {
-  if (key === 'peer_reviewed' || key === 'open_access') {
-    return value === 'true' ? t('common.values.yes') : value === 'false' ? t('common.values.no') : value;
-  }
+  if (key === 'open_access') return value === 'true' ? t('common.values.yes') : value === 'false' ? t('common.values.no') : value;
   return value;
-}
-
-function parseSearchState(data: any, page: string, limit: string): SearchState {
-  const seen = new Set<string>();
-  const items = (Array.isArray(data?.data) ? data.data : []).filter((item: any) => {
-    const key = item?.id == null ? '' : String(item.id);
-    if (!key) return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  const pagination = data?.pagination || {};
-  const totalCount = Number(pagination.total) || 0;
-  const pageNum = Number(pagination.page) || Number(page) || 1;
-  const totalPages = Number(pagination.totalPages) || (totalCount ? Math.ceil(totalCount / Number(limit)) : 0) || undefined;
-  return {
-    items,
-    pageNum,
-    totalPages,
-    hasPrev: pageNum > 1,
-    hasNext: pagination.hasNext === true,
-    totalCount,
-    totalIsExact: data?.meta?.pagination_total_exact !== false
-  };
 }

@@ -12,60 +12,69 @@ import {
 } from './endpoints';
 import type { EntityExportWorks, EntityKind } from './entity-export';
 import { toVenueListPage } from './venues';
-import { toRelatedWorkRow } from './works';
+import { toRelatedWorkRow, toWorkListRow } from './works';
 
-export async function actSearchWorks(params: Record<string, string>) {
-  return await searchWorks(params);
+export type WorksSearchPage = {
+  items: ReturnType<typeof toWorkListRow>[];
+  page: number;
+  hasNext: boolean;
+  total: number | null;
+  totalPages: number | null;
+};
+
+export async function actSearchWorks(params: Record<string, string>): Promise<WorksSearchPage> {
+  const res = await searchWorks(params);
+  if (res?.meta?.page_degraded) throw new Error('Degraded page');
+  const pagination = res?.pagination || {};
+  const exact = res?.meta?.pagination_total_exact !== false;
+  return {
+    items: (Array.isArray(res?.data) ? res.data : []).map(toWorkListRow),
+    page: Number(pagination.page) || 1,
+    hasNext: pagination.hasNext === true,
+    total: exact ? Number(pagination.total) || 0 : null,
+    totalPages: exact ? Number(pagination.totalPages) || 0 : null
+  };
 }
 
 export type AutocompleteSuggestion = {
   text: string;
   type: 'title' | 'author' | 'venue';
-  workCount?: number;
 };
 
 export async function actAutocompleteSuggest(query: string): Promise<AutocompleteSuggestion[]> {
-  const q = String(query || '').trim();
+  const q = String(query || '').trim().slice(0, 200);
   if (q.length < 2) return [];
   try {
     const res = await fetchJson<any>(`/search/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { retries: 1, timeoutMs: 4000 });
     const suggestions: any[] = Array.isArray(res?.data?.suggestions) ? res.data.suggestions : [];
     return suggestions
-      .map((s) => {
-        const count = Number(s?.work_count);
-        return {
-          text: String(s?.text ?? '').trim(),
-          type: s?.type === 'author' || s?.type === 'venue' ? s.type : 'title',
-          workCount: Number.isFinite(count) && count > 0 ? count : undefined
-        } as AutocompleteSuggestion;
-      })
-      .filter((s) => s.text)
-      .slice(0, 8);
+      .map((s): AutocompleteSuggestion => ({
+        text: String(s?.text ?? '').trim(),
+        type: s?.type === 'author' || s?.type === 'venue' ? s.type : 'title'
+      }))
+      .filter((s) => s.text);
   } catch {
     return [];
   }
 }
 
 export type GlobalSearchResult = {
-  works: { total: number; results: any[] };
-  persons: { total: number; results: any[] };
+  works: { total: number; results: ReturnType<typeof toWorkListRow>[] };
+  persons: { total: number; results: Array<{ id: number; name: string; worksCount: number }> };
 };
 
-const EMPTY_GLOBAL: GlobalSearchResult = { works: { total: 0, results: [] }, persons: { total: 0, results: [] } };
-
 export async function actSearchGlobal(query: string): Promise<GlobalSearchResult> {
-  const q = String(query || '').trim();
-  if (q.length < 2) return EMPTY_GLOBAL;
-  try {
-    const data = unwrapData(await fetchJson<any>(`/search/global?q=${encodeURIComponent(q)}&limit=10`, { retries: 1 }));
-    const bucket = (b: any) => ({
-      total: Number(b?.total) || 0,
-      results: Array.isArray(b?.results) ? b.results : []
-    });
-    return { works: bucket(data?.works), persons: bucket(data?.persons) };
-  } catch {
-    return EMPTY_GLOBAL;
-  }
+  const q = String(query || '').trim().slice(0, 200);
+  const data = unwrapData(await fetchJson<any>(`/search/global?q=${encodeURIComponent(q)}&limit=10`, { retries: 1 }));
+  const works: any[] = Array.isArray(data?.works?.results) ? data.works.results : [];
+  const persons: any[] = Array.isArray(data?.persons?.results) ? data.persons.results : [];
+  return {
+    works: { total: Number(data?.works?.total) || 0, results: works.map(toWorkListRow) },
+    persons: {
+      total: Number(data?.persons?.total) || 0,
+      results: persons.map((p) => ({ id: p.id, name: p.preferred_name, worksCount: Number(p.metrics?.works_count) || 0 }))
+    }
+  };
 }
 
 export async function actGetWorkFull(id: string, slim = false) {

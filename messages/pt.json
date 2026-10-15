@@ -71,7 +71,6 @@
       "yearFrom": "Ano de",
       "yearTo": "Ano até",
       "language": "Idioma",
-      "peerReviewed": "Revisado por pares",
       "openAccess": "Open Access",
       "list": "Lista",
       "pagination": "Paginação"
@@ -79,8 +78,8 @@
     "placeholders": {
       "homeSearch": "Busque obras por título, autor ou palavra-chave...",
       "quickTerm": "Título, autor, periódico...",
-      "person": "Nome ou ID da pessoa",
-      "venue": "Nome ou ID do periódico",
+      "person": "Nome da pessoa",
+      "venue": "Nome do periódico",
       "subject": "Tema ou palavra-chave",
       "yearFrom": "Ex: 2001",
       "yearTo": "Ex: 2024",
@@ -199,10 +198,7 @@
     "filtersLegend": "Filtros",
     "textLegend": "Busca Textual",
     "tipsHeading": "Dicas",
-    "tipPhrase": "Frase exata: use aspas \"frase completa\"",
-    "tipMultiple": "Múltiplas palavras: antropologia cultura ritual",
-    "tipExclude": "Excluir termo: antropologia -religião",
-    "tipAuthor": "Autor específico: \"Lévi-Strauss\"",
+    "tipMultiple": "Todas as palavras são obrigatórias: antropologia cultura ritual",
     "tipEmpty": "Deixe o termo vazio para navegar apenas com filtros."
   },
   "results": {
@@ -211,9 +207,7 @@
     "summaryHeading": "Resumo da busca",
     "queryEcho": "Resultados para <strong>{query}</strong>",
     "total": "{count, plural, one {# resultado} other {# resultados}}",
-    "totalApprox": "cerca de {count, plural, one {# resultado} other {# resultados}}",
-    "totalSingular": "1 resultado",
-    "pagePosition": "Página {page} de {totalPages}",
+    "pagePosition": "Página {page, number} de {totalPages, number}",
     "refineHeading": "Refinar busca",
     "activeFiltersHeading": "Filtros ativos",
     "removeFilter": "Remover {label}",
@@ -348,7 +342,6 @@
       "latestYear": "Ano mais recente de publicação",
       "hIndex": "Índice h"
     },
-    "roleFallback": "Autor",
     "sections": {
       "navLabel": "Seções do autor",
       "recent": "Recentes",
@@ -482,8 +475,8 @@
     },
     "searchGlobal": {
       "title": "Busca Global",
-      "description": "Busca unificada na bibliografia Ethnos que retorna obras, com autores e instituições relacionados oferecidos como refinamentos da consulta.",
-      "keywords": "busca global, obras, autores, instituições, pesquisa bibliográfica"
+      "description": "Busca unificada na bibliografia Ethnos que retorna obras, com os autores relacionados à consulta oferecidos como forma de refiná-la.",
+      "keywords": "busca global, obras, autores, pesquisa bibliográfica"
     },
     "lists": {
       "title": "Minha Lista",
@@ -568,11 +561,11 @@
   },
   "searchGlobal": {
     "title": "Busca global",
-    "intro": "Pesquise obras em todo o catálogo e navegue até autores e instituições relacionados.",
+    "intro": "Pesquise obras em todo o catálogo e navegue até autores relacionados.",
     "worksHeading": "Obras",
     "authorsHeading": "Autores relacionados",
-    "seeAllWorks": "Ver todas as {count} obras",
-    "startPrompt": "Digite um termo para pesquisar obras e descobrir autores e instituições relacionados.",
+    "seeAllWorks": "{count, plural, one {Ver # obra} other {Ver todas as # obras}}",
+    "startPrompt": "Digite um termo para pesquisar obras e descobrir autores relacionados.",
     "noResults": "Nenhuma obra encontrada para este termo.",
     "submit": "Pesquisar"
   },

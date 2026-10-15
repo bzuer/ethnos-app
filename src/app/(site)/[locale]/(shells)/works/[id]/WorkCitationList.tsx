@@ -13,10 +13,7 @@ type Props = {
   total: number;
 };
 
-const idOf = (item: any) => {
-  const id = item?.id ?? item?.work_id;
-  return id !== null && id !== undefined ? String(id) : '';
-};
+const idOf = (item: any) => (item?.id !== null && item?.id !== undefined ? String(item.id) : '');
 
 export default function WorkCitationList({ workId, kind, initialItems, total }: Props) {
   const t = useTranslations();

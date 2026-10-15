@@ -1413,12 +1413,6 @@ section:last-of-type {
     margin-bottom: 4px;
 }
 
-.suggestion-meta {
-    font-size: 12px;
-    color: var(--subtle-gray);
-    font-family: var(--mono);
-}
-
 .suggestion-type {
     display: inline-block;
     padding: 2px 6px;

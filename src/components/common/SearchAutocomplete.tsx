@@ -9,7 +9,6 @@ import type { Locale } from '@/i18n/config';
 type Suggestion = {
   key: string;
   text: string;
-  meta: string;
   type: 'title' | 'author' | 'venue';
   href: string;
 };
@@ -21,7 +20,6 @@ type Props = {
   inputClassName?: string;
   defaultValue?: string;
   ariaLabel?: string;
-  onSelect?: (suggestion: Suggestion) => void;
 };
 
 const DEBOUNCE_MS = 280;
@@ -35,7 +33,6 @@ export default function SearchAutocomplete({
   inputClassName = 'form-input',
   defaultValue = '',
   ariaLabel,
-  onSelect,
 }: Props) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
@@ -44,7 +41,6 @@ export default function SearchAutocomplete({
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,7 +67,6 @@ export default function SearchAutocomplete({
     const results: Suggestion[] = payload.slice(0, MAX_RESULTS).map((s, idx) => ({
       key: `${s.type}-${idx}-${s.text}`,
       text: s.text,
-      meta: s.workCount ? t('common.meta.worksCount', { count: s.workCount }) : '',
       type: s.type,
       href: buildHref(s.type, s.text),
     }));
@@ -79,7 +74,7 @@ export default function SearchAutocomplete({
     setSuggestions(results);
     setOpen(results.length > 0);
     setHighlighted(-1);
-  }, [buildHref, t]);
+  }, [buildHref]);
 
   const handleInput = useCallback((value: string) => {
     setQuery(value);
@@ -96,12 +91,8 @@ export default function SearchAutocomplete({
     setQuery(item.text);
     setOpen(false);
     setHighlighted(-1);
-    if (onSelect) {
-      onSelect(item);
-    } else {
-      window.location.assign(item.href);
-    }
-  }, [onSelect]);
+    window.location.assign(item.href);
+  }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!open || suggestions.length === 0) return;
@@ -157,12 +148,13 @@ export default function SearchAutocomplete({
   return (
     <div className="search-input-wrapper" ref={wrapperRef}>
       <input
-        ref={inputRef}
         className={inputClassName}
         type="text"
         id={inputId}
         name={inputName}
         placeholder={placeholder}
+        minLength={2}
+        maxLength={200}
         autoComplete="off"
         value={query}
         onChange={e => handleInput(e.target.value)}
@@ -192,7 +184,6 @@ export default function SearchAutocomplete({
           >
             <span className={typeClassName(item.type)}>{typeLabel(item.type)}</span>
             <span className="suggestion-text">{item.text}</span>
-            {item.meta ? <span className="suggestion-meta">{item.meta}</span> : null}
           </div>
         ))}
       </div>

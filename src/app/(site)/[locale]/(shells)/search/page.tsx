@@ -28,10 +28,7 @@ export default async function SearchPage(props: { params: Promise<{ locale: stri
       <section aria-labelledby="search-tips-section">
         <h2 className="title-section" id="search-tips-section">{t('search.tipsHeading')}</h2>
         <div className="search-tips">
-          <p><strong>{t('search.tipPhrase')}</strong></p>
           <p><strong>{t('search.tipMultiple')}</strong></p>
-          <p><strong>{t('search.tipExclude')}</strong></p>
-          <p><strong>{t('search.tipAuthor')}</strong></p>
           <p><strong>{t('search.tipEmpty')}</strong></p>
         </div>
       </section>
