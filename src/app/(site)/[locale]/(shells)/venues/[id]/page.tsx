@@ -5,7 +5,7 @@ import SectionTabs, { type SectionTabDescriptor } from '@/components/common/Sect
 import EntityTools from '@/components/common/EntityTools';
 import { exportFilename } from '@/lib/entity-export';
 import SubjectLinks from '@/components/common/SubjectLinks';
-import VenueWorksList from './VenueWorksList';
+import { WorkResultList } from '@/components/common/WorkResultItem';
 import { getVenue, getVenueWorksPage, type WorksListOptions } from '@/lib/endpoints';
 import { venueSubjectTerms } from '@/lib/venues';
 import { buildIdentifierHref, getIdentifierSpec, identifierLabelKey, normalizeIdentifierKey } from '@/lib/identifiers';
@@ -24,7 +24,7 @@ const LIMIT = 25;
 const RECENT: WorksListOptions = { sortBy: 'publication_year', sortOrder: 'desc' };
 const PROMINENT: WorksListOptions = { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 };
 const FIRST: WorksListOptions = { sortBy: 'publication_year', sortOrder: 'asc' };
-const SEPARATELY_SHOWN = new Set(['issn', 'eissn', 'scopus']);
+const SEPARATELY_SHOWN = new Set(['issn', 'eissn']);
 
 const uniqueList = (items: Array<string | null | undefined>) => Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
 
@@ -119,6 +119,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     loadWorks(id, 1, FIRST)
   ]);
   const recentItems: any[] = Array.isArray(recentEnvelope?.data) ? recentEnvelope.data : [];
+  if (page > 1 && recentEnvelope && !recentItems.length) notFound();
   const hasNext = recentEnvelope?.pagination?.hasNext === true;
   const t = await getTranslations({ locale });
 
@@ -138,7 +139,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     publisher: venue.publisher?.name ? { '@type': 'Organization', name: venue.publisher.name } : undefined,
     url: canonical,
     mainEntityOfPage: canonical,
-    inLanguage: venue.language || locale,
+    inLanguage: venue.language || undefined,
     description: descriptionText || undefined
   });
 
@@ -207,7 +208,7 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
       label: t('venues.sections.recent'),
       content: (
         <>
-          <VenueWorksList items={recentItems} labels={{ ...listLabels, emptyState: t('venues.empty.recent') }} />
+          <WorkResultList items={recentItems} labels={{ ...listLabels, emptyState: t('venues.empty.recent') }} showVenue={false} titleMaxLength={200} />
           {paginationNav}
         </>
       )
@@ -215,12 +216,12 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     {
       key: 'prominent',
       label: t('venues.sections.prominent'),
-      content: <VenueWorksList items={prominentItems} labels={{ ...listLabels, emptyState: t('venues.empty.prominent') }} />
+      content: <WorkResultList items={prominentItems} labels={{ ...listLabels, emptyState: t('venues.empty.prominent') }} showVenue={false} titleMaxLength={200} />
     },
     {
       key: 'first',
       label: t('venues.sections.first'),
-      content: <VenueWorksList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} />
+      content: <WorkResultList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} showVenue={false} titleMaxLength={200} />
     },
     {
       key: 'tools',
@@ -229,17 +230,18 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
     }
   ].filter(Boolean) as SectionTabDescriptor[];
 
+  const decimal = (value: any) => formatNumber(Number(value), locale);
   const metricRows: Array<{ key: string; label: string; value: string }> = [
-    { key: 'impact_factor', label: t('venues.detail.impactFactor'), value: venue.impact_factor ? String(venue.impact_factor) : '' },
-    { key: 'sjr', label: t('venues.detail.sjr'), value: venue.sjr ? `${venue.sjr}${venue.sjr_best_quartile ? ` (${venue.sjr_best_quartile})` : ''}` : '' },
+    { key: 'impact_factor', label: t('venues.detail.impactFactor'), value: venue.impact_factor ? decimal(venue.impact_factor) : '' },
+    { key: 'sjr', label: t('venues.detail.sjr'), value: venue.sjr ? `${decimal(venue.sjr)}${venue.sjr_best_quartile ? ` (${venue.sjr_best_quartile})` : ''}` : '' },
     { key: 'sjr_best_quartile', label: t('venues.detail.sjrQuartile'), value: !venue.sjr && venue.sjr_best_quartile ? String(venue.sjr_best_quartile) : '' },
-    { key: 'snip', label: t('venues.detail.snip'), value: venue.snip ? String(venue.snip) : '' },
-    { key: 'citescore', label: t('venues.detail.citescore'), value: venue.citescore ? String(venue.citescore) : '' },
+    { key: 'snip', label: t('venues.detail.snip'), value: venue.snip ? decimal(venue.snip) : '' },
+    { key: 'citescore', label: t('venues.detail.citescore'), value: venue.citescore ? decimal(venue.citescore) : '' },
     { key: 'h_index', label: t('venues.detail.hIndexLabel'), value: venue.h_index ? formatNumber(Number(venue.h_index), locale) : '' },
     { key: 'i10_index', label: t('venues.detail.i10IndexLabel'), value: venue.i10_index ? formatNumber(Number(venue.i10_index), locale) : '' },
-    { key: 'two_yr_mean_citedness', label: t('venues.detail.meanCitedness'), value: venue.two_yr_mean_citedness ? String(venue.two_yr_mean_citedness) : '' },
+    { key: 'two_yr_mean_citedness', label: t('venues.detail.meanCitedness'), value: venue.two_yr_mean_citedness ? decimal(venue.two_yr_mean_citedness) : '' },
     { key: 'overton', label: t('venues.detail.overton'), value: venue.overton ? formatNumber(Number(venue.overton), locale) : '' },
-    { key: 'female_share', label: t('venues.detail.femaleShare'), value: venue.female_share ? `${Number(venue.female_share).toFixed(1)}%` : '' }
+    { key: 'female_share', label: t('venues.detail.femaleShare'), value: venue.female_share ? `${decimal(Math.round(Number(venue.female_share) * 10) / 10)}%` : '' }
   ].filter((row) => row.value);
 
   return (
@@ -279,14 +281,6 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
               <tr>
                 <th scope="row">{t('venues.detail.issn')}</th>
                 <td className="field-value">{issnText}</td>
-              </tr>
-            ) : null}
-            {venue.scopus_id ? (
-              <tr>
-                <th scope="row">{idLabel('scopus')}</th>
-                <td className="field-value">
-                  <a className="action-link table-link" href={buildIdentifierHref('scopus', venue.scopus_id, 'venue') || undefined} target="_blank" rel="noopener noreferrer">{venue.scopus_id}</a>
-                </td>
               </tr>
             ) : null}
             {identifierRows.map((row) => (

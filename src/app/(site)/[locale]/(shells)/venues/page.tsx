@@ -8,11 +8,10 @@ import { toVenueListPage, type VenueListPage } from '@/lib/venues';
 export const dynamic = 'force-static';
 export const revalidate = false;
 
-const LIMIT = 25;
-const EMPTY: VenueListPage = { items: [], page: 1, hasPrev: false, hasNext: false };
+const EMPTY: VenueListPage = { items: [], page: 1, hasNext: false };
 
-const loadPage = (filters: VenuesListFilters) =>
-  getVenuesPage(1, LIMIT, filters).then(toVenueListPage).catch(() => EMPTY);
+const loadPage = (filters?: VenuesListFilters) =>
+  getVenuesPage(1, filters).then(toVenueListPage).catch(() => EMPTY);
 
 export async function generateMetadata(props: { params: Promise<{ locale: string }> }) {
   return buildPageMetadata(props.params, 'metadata.venues', '/venues');
@@ -21,8 +20,8 @@ export async function generateMetadata(props: { params: Promise<{ locale: string
 export default async function VenuesPage(props: { params: Promise<{ locale: string }> }) {
   const { locale } = await props.params;
   const [best, prominent, recent, first] = await Promise.all([
-    loadPage({ sortBy: 'score', sortOrder: 'DESC' }),
-    loadPage({ sortBy: 'cited_by_count', sortOrder: 'DESC' }),
+    loadPage(),
+    loadPage({ sortBy: 'cited_by_count' }),
     loadPage({ sortBy: 'newest', type: 'JOURNAL' }),
     loadPage({ sortBy: 'oldest', type: 'JOURNAL' })
   ]);
@@ -32,22 +31,22 @@ export default async function VenuesPage(props: { params: Promise<{ locale: stri
     {
       key: 'best',
       label: t('venues.listSections.best'),
-      content: <VenuesList initial={best} limit={LIMIT} sortBy="score" sortOrder="DESC" paginated />
+      content: <VenuesList initial={best} paginated />
     },
     {
       key: 'prominent',
       label: t('venues.listSections.prominent'),
-      content: <VenuesList initial={prominent} limit={LIMIT} />
+      content: <VenuesList initial={prominent} />
     },
     {
       key: 'recent',
       label: t('venues.listSections.recent'),
-      content: <VenuesList initial={recent} limit={LIMIT} />
+      content: <VenuesList initial={recent} />
     },
     {
       key: 'first',
       label: t('venues.listSections.first'),
-      content: <VenuesList initial={first} limit={LIMIT} />
+      content: <VenuesList initial={first} />
     }
   ];
 

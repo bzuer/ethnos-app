@@ -5,22 +5,18 @@ import { useSearchParams } from 'next/navigation';
 import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { actGetVenuesPage } from '@/lib/actions';
-import type { VenuesListSort, VenuesListSortOrder } from '@/lib/endpoints';
 import { formatNumber } from '@/lib/format';
 import type { VenueListItem, VenueListPage } from '@/lib/venues';
 import { usePathname } from '@/i18n/routing';
 
 type Props = {
   initial: VenueListPage;
-  limit: number;
-  sortBy?: VenuesListSort;
-  sortOrder?: VenuesListSortOrder;
   paginated?: boolean;
 };
 
 const subscribeNever = () => () => {};
 
-export default function VenuesList({ initial, limit, sortBy, sortOrder, paginated = false }: Props) {
+export default function VenuesList({ initial, paginated = false }: Props) {
   const tv = useTranslations('venues.detail');
   const tc = useTranslations('common');
   const locale = useLocale();
@@ -37,11 +33,11 @@ export default function VenuesList({ initial, limit, sortBy, sortOrder, paginate
   useEffect(() => {
     if (page === initial.page) return undefined;
     let cancelled = false;
-    actGetVenuesPage(page, limit, sortBy, sortOrder)
+    actGetVenuesPage(page)
       .then((result) => { if (!cancelled) setLoaded({ ...result, page }); })
       .catch(() => { if (!cancelled) setFailedPage(page); });
     return () => { cancelled = true; };
-  }, [page, initial.page, limit, sortBy, sortOrder]);
+  }, [page, initial.page]);
 
   const items = state?.items ?? [];
   const pageHref = (target: number) => (target > 1 ? `${pathname}?page=${target}` : pathname);
@@ -55,8 +51,8 @@ export default function VenuesList({ initial, limit, sortBy, sortOrder, paginate
     { className: 'result-isbn', text: !v.issn && !v.eissn && v.isbn13 ? `${tv('isbn13')} ${v.isbn13}` : '' },
     { className: 'result-total', text: v.worksCount !== null ? tc('meta.worksCount', { count: v.worksCount }) : '' },
     { className: 'result-cited', text: v.citedByCount !== null ? `${tc('meta.citedBy')}: ${formatNumber(v.citedByCount, locale)}` : '' },
-    { className: 'result-hindex', text: v.hIndex ? `${tv('hIndexLabel')}: ${v.hIndex}` : '' },
-    { className: 'result-impact', text: v.impactFactor ? `${tv('impact')}: ${v.impactFactor.toFixed(2)}` : '' },
+    { className: 'result-hindex', text: v.hIndex ? `${tv('hIndexLabel')}: ${formatNumber(v.hIndex, locale)}` : '' },
+    { className: 'result-impact', text: v.impactFactor ? `${tv('impact')}: ${formatNumber(Math.round(v.impactFactor * 100) / 100, locale)}` : '' },
     { className: 'result-quartile', text: v.quartile ? `${tv('sjr')} ${v.quartile}` : '' },
     { className: 'result-country', text: v.country }
   ].filter((segment) => segment.text);

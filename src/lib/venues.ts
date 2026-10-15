@@ -42,9 +42,11 @@ export type VenueListItem = {
 export type VenueListPage = {
   items: VenueListItem[];
   page: number;
-  hasPrev: boolean;
   hasNext: boolean;
 };
+
+export const VENUES_PAGE_SIZE = 25;
+export const VENUES_MAX_PAGE = 1000;
 
 const SUMMARY_LIMIT = 420;
 
@@ -93,7 +95,6 @@ export function toVenueListPage(envelope: any): VenueListPage {
   return {
     items: (Array.isArray(envelope?.data) ? envelope.data : []).map(toVenueListItem),
     page,
-    hasPrev: page > 1,
-    hasNext: pagination.hasNext === true
+    hasNext: pagination.hasNext === true && page < VENUES_MAX_PAGE
   };
 }

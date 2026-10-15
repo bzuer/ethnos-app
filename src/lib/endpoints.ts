@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { fetchJson, isMissingEntityError, unwrapData } from './api';
-import { normalizeVenue } from './venues';
+import { VENUES_MAX_PAGE, VENUES_PAGE_SIZE, normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
 import { normalizePersonWorkItem } from './works';
@@ -21,7 +21,7 @@ export async function getHomeRecentWorks(limit = 20) {
 }
 
 export async function getHomeTopVenues(limit = 15) {
-  return listOf(await fetchJson(`/venues?limit=${normalizeLimit(limit, 100)}`)).map(normalizeVenue);
+  return listOf(await fetchJson(`/venues?limit=${normalizeLimit(limit, 100)}`));
 }
 
 export type RecentlyAddedWork = { id: number; addedAt: Date | null };
@@ -87,97 +87,25 @@ export async function searchWorks(params: Record<string, string | number | undef
   return await fetchJson<any>(`/works?${qs.toString()}`, { retries: 1 });
 }
 
-export type VenuesListSort =
-  | 'id' | 'name' | 'type'
-  | 'score' | 'ranking' | 'works_count' | 'cited_by_count'
-  | 'impact_factor' | 'citescore' | 'sjr' | 'snip'
-  | 'h_index' | 'i10_index' | 'two_yr_mean_citedness'
-  | 'overton' | 'female_share'
-  | 'coverage_start_year' | 'coverage_end_year' | 'oldest' | 'newest'
-  | 'created_at' | 'updated_at';
-export type VenuesListSortOrder = 'ASC' | 'DESC';
-export type VenuesListQuartile = 'Q1' | 'Q2' | 'Q3' | 'Q4';
-export type VenuesListValidationStatus = 'PENDING' | 'VALIDATED' | 'NOT_FOUND' | 'FAILED';
 export type VenuesListFilters = {
-  sortBy?: VenuesListSort;
-  sortOrder?: VenuesListSortOrder;
-  type?: string;
-  coverageFrom?: number;
-  coverageTo?: number;
-  activeInYear?: number;
-  country?: string;
-  language?: string;
-  aggregationType?: string;
-  publisherId?: number;
-  sjrBestQuartile?: VenuesListQuartile;
-  validationStatus?: VenuesListValidationStatus;
-  openAccess?: boolean;
-  isInDoaj?: boolean;
-  isInScielo?: boolean;
-  isIndexedInScopus?: boolean;
-  isOaDiamond?: boolean;
-  hasIssn?: boolean;
-  hasIsbn13?: boolean;
-  hasSummary?: boolean;
-  worksMin?: number;
-  worksMax?: number;
-  citedByMin?: number;
-  citedByMax?: number;
-  impactFactorMin?: number;
-  impactFactorMax?: number;
-  hIndexMin?: number;
-  scoreMin?: number;
+  sortBy?: 'cited_by_count' | 'newest' | 'oldest';
+  type?: 'JOURNAL';
 };
 
-const VENUES_FILTER_PARAMS: Array<[keyof VenuesListFilters, string]> = [
-  ['sortBy', 'sort_by'],
-  ['sortOrder', 'sort_order'],
-  ['type', 'type'],
-  ['country', 'country'],
-  ['language', 'language'],
-  ['aggregationType', 'aggregation_type'],
-  ['sjrBestQuartile', 'sjr_best_quartile'],
-  ['validationStatus', 'validation_status'],
-  ['coverageFrom', 'coverage_from'],
-  ['coverageTo', 'coverage_to'],
-  ['activeInYear', 'active_in_year'],
-  ['publisherId', 'publisher_id'],
-  ['worksMin', 'works_min'],
-  ['worksMax', 'works_max'],
-  ['citedByMin', 'cited_by_min'],
-  ['citedByMax', 'cited_by_max'],
-  ['impactFactorMin', 'impact_factor_min'],
-  ['impactFactorMax', 'impact_factor_max'],
-  ['hIndexMin', 'h_index_min'],
-  ['scoreMin', 'score_min'],
-  ['openAccess', 'open_access'],
-  ['isInDoaj', 'is_in_doaj'],
-  ['isInScielo', 'is_in_scielo'],
-  ['isIndexedInScopus', 'is_indexed_in_scopus'],
-  ['isOaDiamond', 'is_oa_diamond'],
-  ['hasIssn', 'has_issn'],
-  ['hasIsbn13', 'has_isbn13'],
-  ['hasSummary', 'has_summary']
-];
-
-export async function getVenuesPage(page = 1, limit = 25, opts?: VenuesListFilters) {
+export async function getVenuesPage(page = 1, filters: VenuesListFilters = {}) {
   const params = new URLSearchParams({
-    page: String(normalizeLimit(page, Number.MAX_SAFE_INTEGER)),
-    limit: String(normalizeLimit(limit, 100))
+    page: String(normalizeLimit(page, VENUES_MAX_PAGE)),
+    limit: String(VENUES_PAGE_SIZE)
   });
-  VENUES_FILTER_PARAMS.forEach(([key, param]) => {
-    const value = opts?.[key];
-    if (value === undefined || value === null || value === '') return;
-    if (typeof value === 'number' && !Number.isFinite(value)) return;
-    params.set(param, String(value));
-  });
+  if (filters.sortBy) params.set('sort_by', filters.sortBy);
+  if (filters.type) params.set('type', filters.type);
   const r: any = await fetchJson(`/venues?${params.toString()}`);
   return { ...r, data: listOf(r).map(normalizeVenue) };
 }
 
 export const getVenue = cache(async (id: string) => {
   try {
-    const venue = unwrapData(await fetchJson(`/venues/${encodeURIComponent(id)}`));
+    const venue = unwrapData(await fetchJson(`/venues/${encodeURIComponent(id)}?include_yearly=false&include_top_authors=false&include_recent_works=false`));
     return venue ? normalizeVenue(venue) : null;
   } catch (error) {
     if (isMissingEntityError(error)) return null;
@@ -340,11 +268,16 @@ export async function getEntityExportWorks(kind: EntityKind, id: string): Promis
 
   if (kind === 'venue') {
     const year = new Date().getFullYear();
-    const collected = await collectAllPages((page) => fetchJson<any>(
-      `/venues/${safeId}/works?page=${page}&limit=${EXPORT_PAGE_SIZE}&year=${year}`
-    ));
+    const [venue, collected] = await Promise.all([
+      getVenue(id),
+      collectAllPages((page) => fetchJson<any>(`/venues/${safeId}/works?page=${page}&limit=${EXPORT_PAGE_SIZE}&year=${year}`))
+    ]);
+    const stamp = venue ? {
+      venue: { id: venue.id, name: venue.name, issn: venue.issn, eissn: venue.eissn },
+      publisher: venue.publisher ? { id: venue.publisher.id, name: venue.publisher.name } : null
+    } : {};
     return {
-      works: collected.works,
+      works: collected.works.map((work) => ({ ...work, ...stamp })),
       total: collected.total,
       scope: { works: 'current_year', year, limit: null, truncated: collected.truncated }
     };
@@ -364,7 +297,7 @@ export async function getEntityExportWorks(kind: EntityKind, id: string): Promis
 }
 
 export async function getEntityRecord(kind: EntityKind, id: string) {
-  if (kind === 'venue') return getVenue(id);
+  if (kind === 'venue') return unwrapData(await fetchJson<any>(`/venues/${encodeURIComponent(id)}`));
   if (kind === 'institution') return getInstitution(id);
   if (kind === 'subject') return getSubject(id);
   return unwrapData(await fetchJson<any>(`/persons/${encodeURIComponent(id)}`));

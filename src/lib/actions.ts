@@ -6,9 +6,7 @@ import {
   getEntityRecord,
   getVenuesPage,
   loadWork,
-  searchWorks,
-  type VenuesListSort,
-  type VenuesListSortOrder
+  searchWorks
 } from './endpoints';
 import type { EntityExportWorks, EntityKind } from './entity-export';
 import { toVenueListPage } from './venues';
@@ -118,6 +116,6 @@ export async function actGetEntityRecord(kind: EntityKind, id: string) {
   }
 }
 
-export async function actGetVenuesPage(page: number, limit: number, sortBy?: VenuesListSort, sortOrder?: VenuesListSortOrder) {
-  return toVenueListPage(await getVenuesPage(page, limit, { sortBy, sortOrder }));
+export async function actGetVenuesPage(page: number) {
+  return toVenueListPage(await getVenuesPage(page));
 }
