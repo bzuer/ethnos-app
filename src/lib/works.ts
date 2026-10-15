@@ -252,139 +252,21 @@ export function formatMetadataType(value: any, maxChars: number = METADATA_TEXT_
   return truncateMetadataText(normalized, maxChars);
 }
 
-const IDENTIFIER_KEYS = [
-  'doi', 'pmid', 'pmcid', 'arxiv', 'wos_id', 'handle',
-  'wikidata_id', 'openalex_id', 'isbn', 'openlibrary_id',
-  'scielo_pid', 'google_book_id', 'mag_id'
-] as const;
-
-type IdKey = typeof IDENTIFIER_KEYS[number];
-type FlatIds = Record<IdKey, string>;
-
-function fileIsMain(file: any) {
-  if (!file) return false;
-  const role = String(file?.role || '').toUpperCase();
-  return role === 'MAIN' || Boolean(file?.best_oa_url || file?.scimag_id || file?.libgen_id);
+export function workDoi(work: any): string | null {
+  return work?.doi || (Array.isArray(work?.identifiers?.doi) ? work.identifiers.doi[0] : null) || null;
 }
 
-function publicationHasMainFile(pub: any) {
-  const files = Array.isArray(pub?.files) ? pub.files : [];
-  return files.some(fileIsMain);
-}
-
-export function pickPrimaryPublication(raw: any): any {
-  const list = Array.isArray(raw?.publications) ? raw.publications : [];
-  if (!list.length) return null;
-  const oaMain = list.find((pub: any) => pub?.open_access === true && publicationHasMainFile(pub));
-  if (oaMain) return oaMain;
-  const hasMainFile = list.find((pub: any) => pub?.has_files === true && publicationHasMainFile(pub));
-  if (hasMainFile) return hasMainFile;
-  const openAccess = list.find((pub: any) => pub?.open_access === true);
-  if (openAccess) return openAccess;
-  const anyFiles = list.find((pub: any) => pub?.has_files === true || (Array.isArray(pub?.files) && pub.files.length));
-  if (anyFiles) return anyFiles;
-  const dated = [...list]
-    .filter((pub: any) => pub?.publication_date)
-    .sort((a: any, b: any) => String(b.publication_date).localeCompare(String(a.publication_date)));
-  if (dated.length) return dated[0];
-  return list[0];
-}
-
-function pickFirstIdentifier(raw: any): string {
-  if (raw === null || raw === undefined) return '';
-  if (Array.isArray(raw)) {
-    for (const entry of raw) {
-      const value = pickFirstIdentifier(entry);
-      if (value) return value;
-    }
-    return '';
-  }
-  if (typeof raw === 'object') {
-    return pickFirstIdentifier(raw?.id ?? raw?.value ?? raw?.identifier ?? '');
-  }
-  const text = String(raw).trim();
-  return text;
-}
-
-export function flattenIdentifierArrays(input: any): FlatIds {
-  const source = input && typeof input === 'object' ? input : {};
-  const flat = {} as FlatIds;
-  IDENTIFIER_KEYS.forEach((key) => {
-    flat[key] = pickFirstIdentifier(source[key]);
-  });
-  return flat;
-}
-
-function mergeIdentifierSources(primary: any, fallback: any) {
-  const merged: Record<string, any> = { ...(fallback && typeof fallback === 'object' ? fallback : {}) };
-  if (primary && typeof primary === 'object') {
-    Object.entries(primary).forEach(([key, value]) => {
-      const candidate = pickFirstIdentifier(value);
-      if (candidate) merged[key] = value;
-    });
-  }
-  return merged;
-}
-
-export function normalizeWorkDetail(raw: any) {
-  if (!raw || typeof raw !== 'object') return raw;
-  const hasPrimaryField = raw?.primary_publication && typeof raw.primary_publication === 'object';
-  const publications = Array.isArray(raw?.publications) ? raw.publications : [];
-  if (!hasPrimaryField && !publications.length) return raw;
-  const primary = hasPrimaryField ? raw.primary_publication : pickPrimaryPublication(raw);
-  const mergedIds = mergeIdentifierSources(primary?.identifiers, raw?.identifiers);
-  const flat = flattenIdentifierArrays(mergedIds);
-  const primaryDoi = pickFirstIdentifier(primary?.identifiers?.doi)
-    || pickFirstIdentifier(primary?.doi)
-    || flat.doi;
-  const workType = raw?.type || raw?.work_type || null;
-  const rootFiles = Array.isArray(raw?.files) ? raw.files : null;
-  const primaryFiles = Array.isArray(primary?.files) ? primary.files : null;
-  const files = rootFiles && rootFiles.length ? rootFiles : (primaryFiles || rootFiles || []);
-  const openAccess = raw?.open_access === true
-    || primary?.open_access === true
-    || publications.some((pub: any) => pub?.open_access === true);
-  const peerReviewedTrue = raw?.peer_reviewed === true
-    || primary?.peer_reviewed === true
-    || publications.some((pub: any) => pub?.peer_reviewed === true);
-  const peerReviewedKnown = typeof raw?.peer_reviewed === 'boolean'
-    || typeof primary?.peer_reviewed === 'boolean'
-    || publications.some((pub: any) => typeof pub?.peer_reviewed === 'boolean');
-  const peerReviewed = peerReviewedTrue ? true : (peerReviewedKnown ? false : null);
+export function toRelatedWorkRow(raw: any) {
   return {
-    ...raw,
-    work_type: workType,
-    type: raw?.type || workType,
-    publication_year: primary?.publication_year ?? raw?.publication_year ?? null,
-    publication: primary ? {
-      id: primary?.id ?? null,
-      year: primary?.publication_year ?? null,
-      publication_date: primary?.publication_date ?? null,
-      volume: primary?.volume ?? null,
-      issue: primary?.issue ?? null,
-      pages: primary?.pages ?? null,
-      doi: primaryDoi || null,
-      peer_reviewed: typeof primary?.peer_reviewed === 'boolean' ? primary.peer_reviewed : null,
-      open_access: typeof primary?.open_access === 'boolean' ? primary.open_access : null,
-      license_url: primary?.license_url ?? null,
-      license_version: primary?.license_version ?? null
-    } : null,
-    venue: primary?.venue ?? raw?.venue ?? null,
-    publisher: primary?.publisher ?? raw?.publisher ?? null,
-    files,
-    doi: flat.doi || null,
-    pmid: flat.pmid || null,
-    pmcid: flat.pmcid || null,
-    arxiv: flat.arxiv || null,
-    wos_id: flat.wos_id || null,
-    handle: flat.handle || null,
-    wikidata_id: flat.wikidata_id || null,
-    openalex_id: flat.openalex_id || null,
-    isbn: flat.isbn || null,
-    openlibrary_id: flat.openlibrary_id || null,
-    open_access: openAccess,
-    peer_reviewed: peerReviewed,
-    identifiers: mergedIds
+    id: raw?.work_id ?? raw?.citing_work_id ?? raw?.cited_work_id ?? null,
+    title: raw?.title ?? null,
+    publication_year: raw?.publication_year ?? null,
+    type: raw?.type ?? null,
+    doi: raw?.doi ?? null,
+    venue_name: raw?.venue_name ?? raw?.venue_abbreviated_name ?? null,
+    authors: typeof raw?.authors === 'string' ? raw.authors : null,
+    authors_count: typeof raw?.authors_count === 'number' ? raw.authors_count : null,
+    open_access: raw?.open_access === true
   };
 }
 

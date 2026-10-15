@@ -2,9 +2,8 @@ import { AlignmentType, Document, Packer, Paragraph, TextRun } from 'docx';
 import { buildAccessUrl, buildDoiUrl, normalizeIssue, normalizeValue, normWork } from './work-export';
 
 function buildApaParagraph(work: any, fallbackAuthor: string, spacing: boolean): Paragraph | null {
-  const typeRaw = (work?.work_type || work?.type || '').toString().toLowerCase();
-  const isBook = typeRaw === 'book';
-  const isArticle = typeRaw === 'article' || typeRaw === 'journal';
+  const isBook = work.work_type === 'BOOK';
+  const isArticle = work.work_type === 'ARTICLE';
   const apaNames = (list: any) => (Array.isArray(list) ? list : []).map((item: any) => {
     if (!item) return '';
     if (typeof item === 'string') return item;
@@ -31,18 +30,18 @@ function buildApaParagraph(work: any, fallbackAuthor: string, spacing: boolean):
     ? `${joinApaNames(editors)} (${editors.length > 1 ? 'Eds.' : 'Ed.'})`
     : '';
   const translatorNote = translators.length ? `${joinApaNames(translators)}, Trans.` : '';
-  const year = work?.publication?.year || work?.publication_year || work?.year || '';
+  const year = work.publication.year || '';
   const title = normalizeValue(work?.title);
   const subtitle = normalizeValue(work?.subtitle);
   const titleText = title ? `${title}${subtitle ? `: ${subtitle}` : ''}` : '';
-  const venue = work?.venue?.name || work?.venue_name || '';
-  const volume = work?.publication?.volume || '';
-  const issue = normalizeIssue(work?.publication?.issue || '');
-  const pages = work?.publication?.pages || '';
-  const publisher = work?.publisher?.name || work?.publisher_name || '';
-  const isbn = work?.isbn || '';
-  const doiUrl = buildDoiUrl(work?.doi || work?.publication?.doi);
-  const accessUrl = work?.url || buildAccessUrl(work?.id);
+  const venue = work.venue.name || '';
+  const volume = work.publication.volume || '';
+  const issue = normalizeIssue(work.publication.issue || '');
+  const pages = work.publication.pages || '';
+  const publisher = work.publisher.name || '';
+  const isbn = work.isbn || '';
+  const doiUrl = buildDoiUrl(work.doi);
+  const accessUrl = work.url || buildAccessUrl(work.id);
   const children: TextRun[] = [];
   if (authorText) children.push(new TextRun({ text: authorText }));
   if (year) children.push(new TextRun({ text: ` (${year}).` }));

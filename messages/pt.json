@@ -181,7 +181,9 @@
     "grid": "GRID",
     "mag": "MAG",
     "lattes": "Lattes",
-    "url": "Site"
+    "url": "Site",
+    "scielo": "SciELO",
+    "googlebooks": "Google Books"
   },
   "home": {
     "title": "Início",
@@ -290,17 +292,9 @@
         "navLabel": "Seções da obra"
       },
       "impact": {
-        "title": "Impacto",
-        "uniqueCiting": "Obras citantes distintas",
         "citationsPerYear": "Citações por ano",
         "citationSpan": "Intervalo de citações",
-        "velocity": "Velocidade de citação",
-        "highlyCited": "Altamente citado",
-        "citationTypes": "Tipos de citação",
-        "positive": "Positivas",
-        "neutral": "Neutras",
-        "negative": "Negativas",
-        "selfCitations": "Autocitações"
+        "highlyCited": "Altamente citado"
       },
       "labels": {
         "id": "ID",
@@ -317,7 +311,6 @@
         "issue": "Fascículo",
         "pages": "Páginas",
         "publicationDate": "Data de publicação",
-        "peerReviewed": "Peer Reviewed",
         "openAccess": "Open Access",
         "type": "Tipo",
         "reviewOf": "Resenha de",
@@ -325,15 +318,7 @@
         "publisher": "Editora",
         "language": "Idioma",
         "citations": "Citações recebidas",
-        "references": "Referências citadas",
-        "downloads": "Downloads",
-        "views": "Visualizações",
-        "isbn": "ISBN",
-        "scopus": "ID Scopus",
-        "wikidata": "ID Wikidata",
-        "mag": "ID MAG",
-        "ror": "ROR",
-        "url": "URL"
+        "references": "Referências citadas"
       }
     }
   },

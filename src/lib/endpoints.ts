@@ -3,7 +3,7 @@ import { fetchJson, isMissingEntityError, unwrapData } from './api';
 import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
-import { normalizePersonDetail, normalizePersonWorkItem, normalizeWorkDetail } from './works';
+import { normalizePersonDetail, normalizePersonWorkItem } from './works';
 import { mergeWorkLists, type EntityExportWorks, type EntityKind } from './entity-export';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
@@ -418,10 +418,8 @@ export const loadWork = cache(async (id: string) => {
     if (isMissingEntityError(workResult.reason)) return null;
     throw workResult.reason;
   }
-  const raw = unwrapData(workResult.value);
-  if (!raw) return null;
-  const work = normalizeWorkDetail(raw);
+  const work = unwrapData(workResult.value);
+  if (!work) return null;
   const metrics = metricsResult.status === 'fulfilled' ? unwrapData(metricsResult.value) : null;
-  if (metrics && typeof metrics === 'object') work.authoritative_metrics = metrics;
-  return work;
+  return metrics ? { ...work, authoritative_metrics: metrics } : work;
 });

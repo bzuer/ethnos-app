@@ -8,25 +8,20 @@ import {
   pickContributorEntries,
   pickPrimaryContributors,
   sanitizeWorkAbstract,
+  workDoi,
   type ContributorRole
 } from '@/lib/works';
 
-function toStringList(raw: any): string[] {
-  const list = Array.isArray(raw) ? raw : (raw || raw === 0 ? [raw] : []);
-  return list.map((value: any) => {
-    if (value && typeof value === 'object') {
-      const picked = value?.id || value?.identifier || value?.value || value?.code;
-      return picked ? String(picked).trim() : '';
-    }
-    return value === 0 ? '0' : (value ? String(value).trim() : '');
-  }).filter((value: string) => value);
+export type WorkKind = 'book' | 'chapter' | 'article';
+
+export function workKind(type: any): WorkKind {
+  const value = String(type || '').toUpperCase();
+  if (value === 'BOOK') return 'book';
+  if (value === 'CHAPTER') return 'chapter';
+  return 'article';
 }
 
-function uniqueList(items: string[]) {
-  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
-}
-
-function splitPages(pagesRaw: any) {
+export function splitPages(pagesRaw: any) {
   const text = pagesRaw ? String(pagesRaw).trim() : '';
   if (!text) return { first: '', last: '' };
   const parts = text.split(/[-–—]/).map((part) => part.trim()).filter(Boolean);
@@ -34,188 +29,114 @@ function splitPages(pagesRaw: any) {
   return { first: parts[0], last: '' };
 }
 
-function formatPublicationDate(publicationDate: any, year: any) {
+export function formatPublicationDate(publicationDate: any, year: any) {
   if (publicationDate) return String(publicationDate).slice(0, 10);
   if (year) return String(year);
   return '';
 }
 
-function pickIssueValue(...values: any[]) {
-  return values.find((value) => value !== undefined && value !== null && value !== '' && typeof value !== 'boolean') ?? null;
+function uniqueList(items: any[]) {
+  return Array.from(new Set(items.map((item) => (item ? String(item).trim() : '')).filter(Boolean)));
 }
 
-function pickBestOaUrl(work: any) {
-  return buildFileOpenAccessUrl(pickOpenAccessFile(Array.isArray(work?.files) ? work.files : []));
+function pickRoleNames(entries: any[], ...roles: ContributorRole[]) {
+  const groups = groupContributorsByRole(entries);
+  return roles.flatMap((role) => (groups.find((group) => group.role === role)?.contributors || []).map(formatContributorName)).filter(Boolean);
 }
 
-function normalizeAuthorKey(name: string) {
-  const parts = name.split(/\s+/).map((part) => part.trim()).filter(Boolean);
-  if (!parts.length) return '';
-  const last = parts[parts.length - 1].replace(/[^a-zA-Z]/g, '').toLowerCase();
-  const first = parts[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
-  if (!last) return '';
-  const initial = first ? first[0] : '';
-  return `${last}-${initial}`;
-}
-
-function uniqueAuthorNames(names: string[]) {
-  const byKey = new Map<string, string>();
-  const extras: string[] = [];
-  names.forEach((name) => {
-    const key = normalizeAuthorKey(name);
-    if (!key) {
-      extras.push(name);
-      return;
-    }
-    const existing = byKey.get(key);
-    if (!existing || name.length > existing.length) byKey.set(key, name);
-  });
-  return [...byKey.values(), ...extras];
-}
-
-function pickAuthorNames(authors: any[]) {
-  return uniqueAuthorNames(pickPrimaryContributors(authors).map(formatContributorName).filter(Boolean));
-}
-
-function pickRoleNames(authors: any[], ...roles: ContributorRole[]) {
-  const groups = groupContributorsByRole(authors);
-  const names = roles.flatMap((role) => (groups.find((group) => group.role === role)?.contributors || []).map(formatContributorName));
-  return uniqueAuthorNames(names.filter(Boolean));
+function describeWork(work: any, locale: string, id: string) {
+  const publication = work?.primary_publication || {};
+  const venue = work?.venue || {};
+  const title = work?.title || '';
+  const fullTitle = work?.subtitle ? `${title}: ${work.subtitle}` : title;
+  const year = work?.publication_year;
+  const pages = publication.pages;
+  return {
+    kind: workKind(work?.type),
+    fullTitle,
+    authors: pickPrimaryContributors(pickContributorEntries(work)).map(formatContributorName).filter(Boolean),
+    year,
+    date: formatPublicationDate(publication.publication_date, year),
+    volume: publication.volume,
+    issue: publication.issue,
+    pages,
+    pageParts: splitPages(pages),
+    doi: workDoi(work),
+    language: work?.language,
+    venueName: venue.name,
+    publisherName: publication.publisher?.name,
+    isbnValues: uniqueList(Array.isArray(work?.identifiers?.isbn) ? work.identifiers.isbn : []),
+    issnValues: uniqueList([venue.issn, venue.eissn]),
+    publicUrl: localeUrl(locale as Locale, `/works/${id}`)
+  };
 }
 
 export function buildCitationMeta(work: any, locale: string, id: string) {
-  const publication = work?.publication || {};
-  const venue = work?.venue || {};
-  const publisher = work?.publisher || {};
-  const workType = work?.type;
-  const isBookType = String(workType || '').toUpperCase().includes('BOOK');
-  const title = work?.title || '';
-  const subtitle = work?.subtitle ? String(work.subtitle) : '';
-  const fullTitle = subtitle ? `${title}: ${subtitle}` : title;
-  const contributorEntries = pickContributorEntries(work);
-  const authors = pickAuthorNames(contributorEntries);
-  const editors = pickRoleNames(contributorEntries, 'EDITOR');
-  const translators = pickRoleNames(contributorEntries, 'TRANSLATOR');
-  const otherContributors = pickRoleNames(contributorEntries, 'REVIEWER', 'OTHER');
-  const year = publication?.year || work?.publication_year || work?.year;
-  const publicationDate = publication?.publication_date || work?.publication_date;
-  const volume = publication?.volume || work?.volume;
-  const issue = pickIssueValue(publication?.issue, publication?.number, work?.issue, work?.number);
-  const pages = publication?.pages || work?.pages;
-  const pageParts = splitPages(pages);
-  const doi = work?.doi || publication?.doi;
-  const language = work?.language;
-  const venueName = venue?.name || work?.venue_name;
-  const publisherName = publisher?.name || work?.publisher_name;
-  const seriesName = work?.series || work?.series_title || work?.series_name;
-  const issnValues = uniqueList([
-    ...toStringList(venue?.issn || work?.venue_issn),
-    ...toStringList(venue?.eissn || work?.venue_eissn)
-  ]);
-  const identifierIsbn = work?.identifiers?.isbn || work?.identifiers?.ISBN;
-  const isbnValues = uniqueList([
-    ...toStringList(work?.isbn),
-    ...toStringList(identifierIsbn)
-  ]);
-  const publicationDateFormatted = formatPublicationDate(publicationDate, year);
-  const publicUrl = localeUrl(locale as Locale, `/works/${id}`);
-  const bestOaUrl = pickBestOaUrl(work);
-  const other: Record<string, string | string[]> = {};
-  if (fullTitle) other.citation_title = fullTitle;
-  if (authors.length) other.citation_author = authors;
-  if (editors.length) other.citation_editor = editors;
-  if (publicationDateFormatted) other.citation_publication_date = publicationDateFormatted;
-  if (year) other.citation_year = String(year);
-  if (doi) other.citation_doi = String(doi);
-  if (volume) other.citation_volume = String(volume);
-  if (issue) other.citation_issue = String(issue);
-  if (pageParts.first) other.citation_firstpage = pageParts.first;
-  if (pageParts.last) other.citation_lastpage = pageParts.last;
-  if (pages && !pageParts.first) other.citation_pages = String(pages);
-  if (language) other.citation_language = String(language);
-  if (venueName && !isBookType) other.citation_journal_title = String(venueName);
-  if (venueName && isBookType) other.citation_book_title = String(venueName);
-  if (publisherName) other.citation_publisher = String(publisherName);
-  if (seriesName) other.citation_series_title = String(seriesName);
-  if (isbnValues.length) other.citation_isbn = isbnValues;
-  if (issnValues.length) other.citation_issn = issnValues;
+  const d = describeWork(work, locale, id);
+  const entries = pickContributorEntries(work);
+  const editors = pickRoleNames(entries, 'EDITOR');
+  const translators = pickRoleNames(entries, 'TRANSLATOR');
+  const otherContributors = pickRoleNames(entries, 'REVIEWER', 'OTHER');
+  const bestOaUrl = buildFileOpenAccessUrl(pickOpenAccessFile(Array.isArray(work?.files) ? work.files : []));
   const cleanedAbstract = sanitizeWorkAbstract(work?.abstract);
+  const other: Record<string, string | string[]> = {};
+  if (d.fullTitle) other.citation_title = d.fullTitle;
+  if (d.authors.length) other.citation_author = d.authors;
+  if (editors.length) other.citation_editor = editors;
+  if (d.date) other.citation_publication_date = d.date;
+  if (d.year) other.citation_year = String(d.year);
+  if (d.doi) other.citation_doi = String(d.doi);
+  if (d.volume) other.citation_volume = String(d.volume);
+  if (d.issue) other.citation_issue = String(d.issue);
+  if (d.pageParts.first) other.citation_firstpage = d.pageParts.first;
+  if (d.pageParts.last) other.citation_lastpage = d.pageParts.last;
+  if (d.language) other.citation_language = String(d.language);
+  if (d.venueName && d.kind === 'article') other.citation_journal_title = String(d.venueName);
+  if (d.venueName && d.kind === 'chapter') other.citation_inbook_title = String(d.venueName);
+  if (d.publisherName) other.citation_publisher = String(d.publisherName);
+  if (d.isbnValues.length) other.citation_isbn = d.isbnValues;
+  if (d.issnValues.length) other.citation_issn = d.issnValues;
   if (cleanedAbstract) other.citation_abstract = cleanedAbstract;
-  if (publicUrl) {
-    other.citation_public_url = publicUrl;
-    if (cleanedAbstract) other.citation_abstract_html_url = publicUrl;
-  }
+  other.citation_public_url = d.publicUrl;
+  if (cleanedAbstract) other.citation_abstract_html_url = d.publicUrl;
   if (bestOaUrl) {
     other.citation_pdf_url = bestOaUrl;
     other.citation_fulltext_html_url = bestOaUrl;
   }
-  if (fullTitle) other['dc.title'] = fullTitle;
-  if (authors.length) other['dc.creator'] = authors;
-  const dcContributors = [...editors, ...translators, ...otherContributors];
-  if (dcContributors.length) other['dc.contributor'] = uniqueList(dcContributors);
-  if (publicationDateFormatted) other['dc.date'] = publicationDateFormatted;
-  if (doi) other['dc.identifier'] = `https://doi.org/${encodeURIComponent(String(doi))}`;
-  if (publisherName) other['dc.publisher'] = String(publisherName);
-  if (workType) other['dc.type'] = String(workType);
-  if (language) other['dc.language'] = String(language);
-  if (venueName) other['dc.source'] = String(venueName);
+  if (d.fullTitle) other['dc.title'] = d.fullTitle;
+  if (d.authors.length) other['dc.creator'] = d.authors;
+  const dcContributors = uniqueList([...editors, ...translators, ...otherContributors]);
+  if (dcContributors.length) other['dc.contributor'] = dcContributors;
+  if (d.date) other['dc.date'] = d.date;
+  if (d.doi) other['dc.identifier'] = `https://doi.org/${encodeURIComponent(String(d.doi))}`;
+  if (d.publisherName) other['dc.publisher'] = String(d.publisherName);
+  if (work?.type) other['dc.type'] = String(work.type);
+  if (d.language) other['dc.language'] = String(d.language);
+  if (d.venueName) other['dc.source'] = String(d.venueName);
   return other;
 }
 
 export function buildCoins(work: any, locale: string, id: string) {
-  const publication = work?.publication || {};
-  const venue = work?.venue || {};
-  const title = work?.title || '';
-  const subtitle = work?.subtitle ? String(work.subtitle) : '';
-  const fullTitle = subtitle ? `${title}: ${subtitle}` : title;
-  const authors = pickAuthorNames(pickContributorEntries(work));
-  const year = publication?.year || work?.publication_year || work?.year;
-  const publicationDate = publication?.publication_date || work?.publication_date;
-  const volume = publication?.volume || work?.volume;
-  const issue = pickIssueValue(publication?.issue, publication?.number, work?.issue, work?.number);
-  const pages = publication?.pages || work?.pages;
-  const pageParts = splitPages(pages);
-  const doi = work?.doi || publication?.doi;
-  const language = work?.language;
-  const venueName = venue?.name || work?.venue_name;
-  const publisherName = work?.publisher?.name || work?.publisher_name;
-  const identifierIsbn = work?.identifiers?.isbn || work?.identifiers?.ISBN;
-  const isbnValues = uniqueList([
-    ...toStringList(work?.isbn),
-    ...toStringList(identifierIsbn)
-  ]);
-  const issnValues = uniqueList([
-    ...toStringList(venue?.issn || work?.venue_issn),
-    ...toStringList(venue?.eissn || work?.venue_eissn)
-  ]);
-  const publicationDateFormatted = formatPublicationDate(publicationDate, year);
-  const publicUrl = localeUrl(locale as Locale, `/works/${id}`);
-  const typeRaw = String(work?.work_type || work?.type || '').toLowerCase();
-  const isBook = typeRaw.includes('book');
-  const isChapter = typeRaw.includes('chapter');
+  const d = describeWork(work, locale, id);
   const params = new URLSearchParams();
   params.set('ctx_ver', 'Z39.88-2004');
-  params.set('rft_val_fmt', isBook ? 'info:ofi/fmt:kev:mtx:book' : 'info:ofi/fmt:kev:mtx:journal');
-  params.set('rft.genre', isChapter ? 'bookitem' : isBook ? 'book' : 'article');
-  if (fullTitle) {
-    if (isBook && !isChapter) params.set('rft.btitle', fullTitle);
-    else params.set('rft.atitle', fullTitle);
-  }
-  if (venueName && isBook && isChapter) params.set('rft.btitle', String(venueName));
-  if (venueName && !isBook) params.set('rft.jtitle', String(venueName));
-  if (publisherName) params.set('rft.publisher', String(publisherName));
-  if (publicationDateFormatted) params.set('rft.date', publicationDateFormatted);
-  if (year) params.set('rft.year', String(year));
-  if (volume) params.set('rft.volume', String(volume));
-  if (issue) params.set('rft.issue', String(issue));
-  if (pageParts.first) params.set('rft.spage', pageParts.first);
-  if (pageParts.last) params.set('rft.epage', pageParts.last);
-  if (pages && !pageParts.first) params.set('rft.pages', String(pages));
-  if (language) params.set('rft.language', String(language));
-  authors.forEach((author) => params.append('rft.au', author));
-  if (doi) params.append('rft_id', `info:doi/${String(doi)}`);
-  if (publicUrl) params.append('rft_id', publicUrl);
-  isbnValues.forEach((isbn) => params.append('rft.isbn', isbn));
-  issnValues.forEach((issn) => params.append('rft.issn', issn));
+  params.set('rft_val_fmt', d.kind === 'article' ? 'info:ofi/fmt:kev:mtx:journal' : 'info:ofi/fmt:kev:mtx:book');
+  params.set('rft.genre', d.kind === 'chapter' ? 'bookitem' : d.kind === 'book' ? 'book' : 'article');
+  if (d.fullTitle) params.set(d.kind === 'book' ? 'rft.btitle' : 'rft.atitle', d.fullTitle);
+  if (d.venueName && d.kind === 'chapter') params.set('rft.btitle', String(d.venueName));
+  if (d.venueName && d.kind === 'article') params.set('rft.jtitle', String(d.venueName));
+  if (d.publisherName) params.set('rft.publisher', String(d.publisherName));
+  if (d.date) params.set('rft.date', d.date);
+  if (d.year) params.set('rft.year', String(d.year));
+  if (d.volume) params.set('rft.volume', String(d.volume));
+  if (d.issue) params.set('rft.issue', String(d.issue));
+  if (d.pageParts.first) params.set('rft.spage', d.pageParts.first);
+  if (d.pageParts.last) params.set('rft.epage', d.pageParts.last);
+  if (d.language) params.set('rft.language', String(d.language));
+  d.authors.forEach((author) => params.append('rft.au', author));
+  if (d.doi) params.append('rft_id', `info:doi/${String(d.doi)}`);
+  params.append('rft_id', d.publicUrl);
+  d.isbnValues.forEach((isbn) => params.append('rft.isbn', isbn));
+  d.issnValues.forEach((issn) => params.append('rft.issn', issn));
   return params.toString();
 }

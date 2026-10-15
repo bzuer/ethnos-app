@@ -1,4 +1,4 @@
-import { groupContributorsByRole, normalizeDoi, normalizeWorkDetail, pickAuthorNames, pickContributorEntries } from './works';
+import { groupContributorsByRole, normalizeDoi, pickAuthorNames, pickContributorEntries, pickWorkVenue, workDoi } from './works';
 import { buildIdentifierHref } from './identifiers';
 import { SITE_ORIGIN } from './site';
 
@@ -77,20 +77,6 @@ export function normalizeIssue(value: any) {
   return raw;
 }
 
-export function getIsbn(raw: any) {
-  const direct = raw?.isbn;
-  if (Array.isArray(direct)) return direct.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
-  if (direct) return normalizeValue(direct);
-  const identifiers = raw?.identifiers;
-  if (Array.isArray(identifiers?.isbn)) return identifiers.isbn.map((item: any) => normalizeValue(item)).filter(Boolean).join(' ');
-  if (identifiers?.isbn) return normalizeValue(identifiers.isbn);
-  return '';
-}
-
-function getFilesList(raw: any): any[] {
-  return Array.isArray(raw?.files) ? raw.files : [];
-}
-
 export function buildFileOpenAccessUrl(file: any): string {
   if (!file) return '';
   if (file.best_oa_url) return String(file.best_oa_url);
@@ -123,13 +109,11 @@ export type WorkAccessLinks = {
 
 export function buildWorkAccessLinks(work: any): WorkAccessLinks {
   const files = Array.isArray(work?.files) ? work.files : [];
-  const doi = work?.doi || work?.publication?.doi;
-  const scimagFile = pickScimagFile(files);
+  const doi = workDoi(work);
   const libgenFile = pickLibgenFile(files);
-  const sciHubTarget = scimagFile ? (scimagFile.doi || doi) : null;
   return {
     doi: doi ? `https://doi.org/${encodeURIComponent(String(doi))}` : undefined,
-    sciHub: sciHubTarget ? `https://sci-hub.st/${encodeURIComponent(String(sciHubTarget))}` : undefined,
+    sciHub: doi && pickScimagFile(files) ? `https://sci-hub.st/${encodeURIComponent(String(doi))}` : undefined,
     libgen: libgenFile ? `https://libgen.la/ads.php?md5=${encodeURIComponent(String(libgenFile.md5))}` : undefined,
     openAccess: buildFileOpenAccessUrl(pickOpenAccessFile(files)) || undefined
   };
@@ -140,99 +124,70 @@ export function toListItem(work: any) {
     id: work?.id,
     title: work?.title || null,
     authors: pickAuthorNames(work),
-    publication_year: work?.publication?.year || work?.publication_year || work?.year || null,
+    publication_year: work?.publication_year || work?.year || null,
     venue_id: work?.venue?.id || work?.venue_id || null,
-    venue_name: work?.venue?.name || work?.venue_name || null,
-    type: work?.work_type || work?.type || null
+    venue_name: pickWorkVenue(work) || null,
+    type: work?.type || null
   };
 }
 
-export function normWork(source: any) {
-  if (!source) return null;
-  const needsNormalization = (Array.isArray(source?.publications) && source.publications.length)
-    || (source?.primary_publication && typeof source.primary_publication === 'object');
-  const raw = needsNormalization ? normalizeWorkDetail(source) : source;
-  const contributorEntries = pickContributorEntries(raw);
-  const groups = contributorEntries.length ? groupContributorsByRole(contributorEntries) : [];
+function firstValue(value: any) {
+  return normalizeValue(Array.isArray(value) ? value.find(Boolean) : value) || null;
+}
+
+function namesFrom(raw: any) {
+  const authorString = normalizeValue(typeof raw?.authors === 'string' ? raw.authors : raw?.authors?.author_string || raw?.author_string);
+  if (authorString) return authorString.split(';').map((part) => part.trim()).filter(Boolean);
+  if (Array.isArray(raw?.authors_preview) && raw.authors_preview.length) return raw.authors_preview;
+  return raw?.first_author?.name ? [raw.first_author.name] : [];
+}
+
+export function normWork(raw: any) {
+  if (!raw) return null;
+  const groups = groupContributorsByRole(pickContributorEntries(raw));
   const byRole = (role: string) => (groups.find((group) => group.role === role)?.contributors || []).map(normAuthor).filter(Boolean);
-  const editors = byRole('EDITOR');
-  const translators = byRole('TRANSLATOR');
-  const reviewers = [...byRole('REVIEWER'), ...byRole('OTHER')];
-  let authors = byRole('AUTHOR');
-  if (!authors.length && !groups.length) {
-    let names: any[] = Array.isArray(raw.authors_preview) ? raw.authors_preview : [];
-    if (!names.length) {
-      const authorString = (raw.authors && typeof raw.authors === 'object' && !Array.isArray(raw.authors) ? raw.authors.author_string : '')
-        || raw.author_string || '';
-      if (authorString) names = String(authorString).split(/[;|]/).map((part: string) => part.trim()).filter(Boolean);
-    }
-    if (!names.length && raw.first_author) {
-      const first = raw.first_author;
-      const name = typeof first === 'string' ? first : (first?.name || first?.preferred_name || '');
-      if (name) names = [name];
-    }
-    authors = names.map(normAuthor).filter(Boolean);
-  }
-  const publication = raw.publication || {};
+  const authors = groups.length ? byRole('AUTHOR') : namesFrom(raw).map(normAuthor).filter(Boolean);
+  const publication = raw.primary_publication || raw.publication || {};
   const venue = raw.venue || {};
-  const publisher = raw.publisher || {};
-  const files = getFilesList(raw);
-  const md5 = files.map((file: any) => file?.md5).find(Boolean) || null;
-  const isbn = getIsbn(raw);
-  const oaFile = pickOpenAccessFile(files);
-  const oaUrl = oaFile ? buildFileOpenAccessUrl(oaFile) : '';
-  const pickId = (...keys: string[]) => {
-    for (const key of keys) {
-      const scalar = raw[key];
-      if (scalar) return normalizeValue(Array.isArray(scalar) ? scalar.find(Boolean) : scalar);
-      const fromObj = raw.identifiers?.[key];
-      if (fromObj) return normalizeValue(Array.isArray(fromObj) ? fromObj.find(Boolean) : fromObj);
-    }
-    return null;
-  };
-  const identifiers = {
-    pmid: pickId('pmid'),
-    pmcid: pickId('pmcid'),
-    arxiv: pickId('arxiv', 'arxiv_id'),
-    openalex: pickId('openalex_id', 'openalex'),
-    wikidata: pickId('wikidata_id', 'wikidata'),
-    handle: pickId('handle'),
-    openlibrary: pickId('openlibrary_id', 'openlibrary')
-  };
-  const subjects = Array.isArray(raw.subjects)
-    ? Array.from(new Set(raw.subjects
-        .map((s: any) => (typeof s === 'string' ? s : (s?.term || s?.display_name || s?.name || '')))
-        .map((s: string) => String(s).trim())
-        .filter(Boolean)))
-    : (Array.isArray(raw.keywords)
-        ? Array.from(new Set(raw.keywords.map((k: any) => String(k).trim()).filter(Boolean)))
-        : []);
+  const publisher = publication.publisher || raw.publisher || {};
+  const ids = raw.identifiers || {};
+  const files = Array.isArray(raw.files) ? raw.files : [];
+  const subjects: string[] = Array.isArray(raw.subjects)
+    ? Array.from(new Set(raw.subjects.map((s: any) => String(s?.term || '').trim()).filter(Boolean)))
+    : [];
   return {
     id: raw.id,
     url: buildAccessUrl(raw.id),
-    oa_url: oaUrl || null,
-    work_type: raw.work_type || raw.type || null,
+    oa_url: buildFileOpenAccessUrl(pickOpenAccessFile(files)) || null,
+    work_type: raw.type || raw.document_type || null,
     title: raw.title || null,
     subtitle: raw.subtitle || null,
     abstract: raw.abstract || null,
     language: raw.language || null,
-    doi: raw.doi || publication.doi || null,
-    md5,
-    isbn,
-    identifiers,
+    doi: workDoi(raw),
+    md5: files.map((file: any) => file?.md5).find(Boolean) || null,
+    isbn: firstValue(ids.isbn) || '',
+    identifiers: {
+      pmid: firstValue(ids.pmid),
+      pmcid: firstValue(ids.pmcid),
+      arxiv: firstValue(ids.arxiv),
+      openalex: firstValue(ids.openalex_id),
+      wikidata: firstValue(ids.wikidata_id),
+      handle: firstValue(ids.handle),
+      openlibrary: firstValue(ids.openlibrary_id)
+    },
     subjects,
-    series: raw.series || raw.series_name || null,
     publication: {
-      year: publication.year || raw.publication_year || raw.year || null,
+      year: raw.publication_year || publication.publication_year || publication.year || raw.year || null,
       date: publication.publication_date || raw.publication_date || null,
       volume: publication.volume || raw.volume || null,
       issue: publication.issue || raw.issue || null,
       pages: publication.pages || raw.pages || null,
-      license_url: publication.license_url || raw.license_url || null
+      license_url: publication.license_url || null
     },
     venue: {
-      id: venue.id || null,
-      name: venue.name || raw.venue_name || null,
+      id: venue.id || raw.venue_id || null,
+      name: venue.name || publication.journal || raw.venue_name || null,
       issn: venue.issn || null,
       eissn: venue.eissn || null,
       scopus_id: venue.scopus_id || null,
@@ -241,7 +196,7 @@ export function normWork(source: any) {
     },
     publisher: {
       id: publisher.id || null,
-      name: publisher.name || raw.publisher_name || null,
+      name: publisher.name || null,
       type: publisher.type || null,
       country: publisher.country || null,
       ror_id: publisher.ror_id || null,
@@ -250,9 +205,9 @@ export function normWork(source: any) {
       url: publisher.url || null
     },
     authors,
-    editors,
-    translators,
-    reviewers
+    editors: byRole('EDITOR'),
+    translators: byRole('TRANSLATOR'),
+    reviewers: [...byRole('REVIEWER'), ...byRole('OTHER')]
   };
 }
 
@@ -394,7 +349,6 @@ export function toBibTeX(nw: any): string {
   if (issue) fields.push(['number', issue, false]);
   if (nw.publication?.pages) fields.push(['pages', String(nw.publication.pages), false]);
   if (nw.publisher?.name) fields.push(['publisher', nw.publisher.name, false]);
-  if (nw.series) fields.push(['series', String(nw.series), false]);
   if (nw.isbn) fields.push(['isbn', String(nw.isbn), false]);
   if (nw.language) fields.push(['language', String(nw.language), false]);
   const doi = normalizeDoi(nw.doi);

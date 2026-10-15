@@ -1,5 +1,5 @@
-import { normalizeWorkDetail } from './works';
 import { SITE_ORIGIN } from './site';
+import { workDoi } from './works';
 import { buildDoiUrl, buildFileOpenAccessUrl, pickOpenAccessFile } from './work-export';
 
 export type ExportKind = 'work' | 'person' | 'venue' | 'institution' | 'subject';
@@ -94,15 +94,12 @@ function fillMissing(base: any, extra: any) {
   return merged;
 }
 
-export function buildWorkRecord(source: any) {
-  if (!source || typeof source !== 'object') return null;
-  const work = normalizeWorkDetail(source);
-  const id = work?.id ?? null;
-  const openAccessFile = pickOpenAccessFile(Array.isArray(work?.files) ? work.files : []);
+export function buildWorkRecord(work: any) {
+  if (!work || typeof work !== 'object') return null;
   return withLinks(work, {
-    html: buildEntityUrl('work', id),
-    doi: buildDoiUrl(work?.doi ?? work?.publication?.doi),
-    open_access: openAccessFile ? buildFileOpenAccessUrl(openAccessFile) : ''
+    html: buildEntityUrl('work', work.id),
+    doi: buildDoiUrl(workDoi(work)),
+    open_access: buildFileOpenAccessUrl(pickOpenAccessFile(Array.isArray(work.files) ? work.files : []))
   });
 }
 

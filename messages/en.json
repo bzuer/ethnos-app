@@ -181,7 +181,9 @@
     "grid": "GRID",
     "mag": "MAG",
     "lattes": "Lattes",
-    "url": "Website"
+    "url": "Website",
+    "scielo": "SciELO",
+    "googlebooks": "Google Books"
   },
   "home": {
     "title": "Home",
@@ -290,17 +292,9 @@
         "navLabel": "Work sections"
       },
       "impact": {
-        "title": "Impact",
-        "uniqueCiting": "Unique citing works",
         "citationsPerYear": "Citations per year",
         "citationSpan": "Citation span",
-        "velocity": "Citation velocity",
-        "highlyCited": "Highly cited",
-        "citationTypes": "Citation types",
-        "positive": "Positive",
-        "neutral": "Neutral",
-        "negative": "Negative",
-        "selfCitations": "Self-citations"
+        "highlyCited": "Highly cited"
       },
       "labels": {
         "id": "ID",
@@ -317,7 +311,6 @@
         "issue": "Issue",
         "pages": "Pages",
         "publicationDate": "Publication date",
-        "peerReviewed": "Peer Reviewed",
         "openAccess": "Open Access",
         "type": "Type",
         "reviewOf": "Review of",
@@ -325,15 +318,7 @@
         "publisher": "Publisher",
         "language": "Language",
         "citations": "Citations received",
-        "references": "References cited",
-        "downloads": "Downloads",
-        "views": "Views",
-        "isbn": "ISBN",
-        "scopus": "Scopus ID",
-        "wikidata": "Wikidata ID",
-        "mag": "MAG ID",
-        "ror": "ROR",
-        "url": "URL"
+        "references": "References cited"
       }
     }
   },

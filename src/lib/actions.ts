@@ -12,6 +12,7 @@ import {
 } from './endpoints';
 import type { EntityExportWorks, EntityKind } from './entity-export';
 import { toVenueListPage } from './venues';
+import { toRelatedWorkRow } from './works';
 
 export async function actSearchWorks(params: Record<string, string>) {
   return await searchWorks(params);
@@ -70,32 +71,10 @@ export async function actSearchGlobal(query: string): Promise<GlobalSearchResult
 export async function actGetWorkFull(id: string, slim = false) {
   try {
     if (!slim) return await loadWork(id);
-    return unwrapData(await fetchJson<any>(`/works/${encodeURIComponent(id)}`, { retries: 1 }));
+    return unwrapData(await fetchJson<any>(`/works/${encodeURIComponent(id)}?include_citations=false&include_references=false`, { retries: 1 }));
   } catch {
     return null;
   }
-}
-
-type RelatedWorkRow = {
-  id: number | null;
-  title: string | null;
-  publication_year: number | null;
-  type: string | null;
-  doi: string | null;
-  venue_name: string | null;
-  authors_count: number | null;
-};
-
-function mapRelatedRow(raw: any): RelatedWorkRow {
-  return {
-    id: raw?.citing_work_id ?? raw?.cited_work_id ?? null,
-    title: raw?.title ?? null,
-    publication_year: raw?.publication_year ?? null,
-    type: raw?.type ?? null,
-    doi: raw?.doi ?? null,
-    venue_name: raw?.venue_name ?? raw?.venue_abbreviated_name ?? null,
-    authors_count: typeof raw?.authors_count === 'number' ? raw.authors_count : null
-  };
 }
 
 function relatedQuery(page: number) {
@@ -105,13 +84,13 @@ function relatedQuery(page: number) {
 export async function actGetWorkCitations(id: string, page = 1) {
   const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/citations?${relatedQuery(page)}`, { retries: 1, timeoutMs: 10000 });
   const rows = Array.isArray(env?.data?.citing_works) ? env.data.citing_works : [];
-  return { items: rows.map(mapRelatedRow), hasNext: env?.pagination?.hasNext === true };
+  return { items: rows.map(toRelatedWorkRow), hasNext: env?.pagination?.hasNext === true };
 }
 
 export async function actGetWorkReferences(id: string, page = 1) {
   const env: any = await fetchJson<any>(`/works/${encodeURIComponent(id)}/references?${relatedQuery(page)}`, { retries: 1, timeoutMs: 10000 });
   const rows = Array.isArray(env?.data?.referenced_works) ? env.data.referenced_works : [];
-  return { items: rows.map(mapRelatedRow), hasNext: env?.pagination?.hasNext === true };
+  return { items: rows.map(toRelatedWorkRow), hasNext: env?.pagination?.hasNext === true };
 }
 
 const ENTITY_KINDS: EntityKind[] = ['person', 'venue', 'institution', 'subject'];
