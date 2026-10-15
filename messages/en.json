@@ -395,8 +395,7 @@
       "wikidata": "Wikidata",
       "openAlex": "OpenAlex",
       "website": "Website",
-      "alternativeNames": "Also known as",
-      "production": "Production by type"
+      "alternativeNames": "Also known as"
     },
     "sections": {
       "navLabel": "Institution sections",
@@ -420,7 +419,7 @@
   "metadata": {
     "subjectsDetail": {
       "title": "Subject",
-      "description": "Subject record in the Ethnos bibliography with the anthropology and sociology works classified under it: recent, most cited and earliest titles.",
+      "description": "Subject record in the Ethnos bibliography listing the anthropology and sociology works classified under it, the latest additions first.",
       "keywords": "subject, keyword, works, classification, anthropology, sociology, Ethnos"
     },
     "institutionsDetail": {
@@ -565,25 +564,19 @@
     "submit": "Search"
   },
   "subjects": {
-    "title": "Subjects",
     "detail": {
       "data": "Subject data",
       "vocabulary": "Vocabulary",
       "works": "Works",
-      "courses": "Courses",
       "children": "Sub-subjects",
       "parent": "Parent subject"
     },
     "empty": {
-      "recent": "No works listed for this subject.",
-      "prominent": "No prominent works on this page.",
-      "first": "No early works on this page."
+      "recent": "No works listed for this subject."
     },
     "sections": {
       "navLabel": "Subject sections",
       "recent": "Recent",
-      "prominent": "Prominent",
-      "first": "First",
       "tools": "Tools"
     },
     "tools": {

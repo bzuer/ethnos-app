@@ -116,9 +116,13 @@ export default function EntityTools({ kind, entityId, filename: base, worksCount
     <div className="tools-actions">
       <button type="button" className="action-btn btn-positive" onClick={onExportEntity} disabled={busy}>{entityExportLabel}</button>
       <button type="button" className="action-btn btn-positive" onClick={onExportWorksJson} disabled={disabled}>{t('common.tools.exportWorksJson')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksBib} disabled={disabled}>{t('common.tools.exportWorksBib')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksRis} disabled={disabled}>{t('common.tools.exportWorksRis')}</button>
-      <button type="button" className="action-btn btn-positive" onClick={onExportWorksApa} disabled={disabled}>{t('common.tools.exportWorksApa')}</button>
+      {kind === 'subject' ? null : (
+        <>
+          <button type="button" className="action-btn btn-positive" onClick={onExportWorksBib} disabled={disabled}>{t('common.tools.exportWorksBib')}</button>
+          <button type="button" className="action-btn btn-positive" onClick={onExportWorksRis} disabled={disabled}>{t('common.tools.exportWorksRis')}</button>
+          <button type="button" className="action-btn btn-positive" onClick={onExportWorksApa} disabled={disabled}>{t('common.tools.exportWorksApa')}</button>
+        </>
+      )}
     </div>
   );
 }

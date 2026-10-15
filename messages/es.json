@@ -395,8 +395,7 @@
       "wikidata": "Wikidata",
       "openAlex": "OpenAlex",
       "website": "Sitio web",
-      "alternativeNames": "También conocida como",
-      "production": "Producción por tipo"
+      "alternativeNames": "También conocida como"
     },
     "sections": {
       "navLabel": "Secciones de la institución",
@@ -420,7 +419,7 @@
   "metadata": {
     "subjectsDetail": {
       "title": "Materia",
-      "description": "Registro de materia en la bibliografía Ethnos con las obras de antropología y sociología clasificadas en ella: recientes, más citadas y más antiguas.",
+      "description": "Registro de materia en la bibliografía Ethnos con las obras de antropología y sociología clasificadas en ella, de las más recientes a las más antiguas.",
       "keywords": "materia, palabra clave, obras, clasificación, antropología, sociología, Ethnos"
     },
     "institutionsDetail": {
@@ -565,25 +564,19 @@
     "submit": "Buscar"
   },
   "subjects": {
-    "title": "Materias",
     "detail": {
       "data": "Datos de la materia",
       "vocabulary": "Vocabulario",
       "works": "Obras",
-      "courses": "Cursos",
       "children": "Submaterias",
       "parent": "Materia principal"
     },
     "empty": {
-      "recent": "No hay obras listadas para esta materia.",
-      "prominent": "Sin obras prominentes en esta página.",
-      "first": "Sin obras iniciales en esta página."
+      "recent": "No hay obras listadas para esta materia."
     },
     "sections": {
       "navLabel": "Secciones de la materia",
       "recent": "Recientes",
-      "prominent": "Prominentes",
-      "first": "Primeras",
       "tools": "Herramientas"
     },
     "tools": {

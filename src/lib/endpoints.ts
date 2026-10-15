@@ -1,8 +1,8 @@
 import { cache } from 'react';
 import { fetchJson, isMissingEntityError, unwrapData } from './api';
 import { VENUES_MAX_PAGE, VENUES_PAGE_SIZE, normalizeVenue } from './venues';
-import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
-import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
+import { normalizeInstitution } from './institutions';
+import { normalizeSubjectWorkItem } from './subjects';
 import { normalizePersonWorkItem } from './works';
 import { mergeWorkLists, type EntityExportWorks, type EntityKind } from './entity-export';
 
@@ -168,7 +168,7 @@ export async function getPersonsWorksFirst(personId: string, limit = 25) {
 
 export const getInstitution = cache(async (id: string) => {
   try {
-    const raw = unwrapData(await fetchJson<any>(`/institutions/${encodeURIComponent(id)}`));
+    const raw = unwrapData(await fetchJson<any>(`/institutions/${encodeURIComponent(id)}?include_works=false&include_authors=false&include_relationships=false`));
     return raw ? normalizeInstitution(raw) : null;
   } catch (error) {
     if (isMissingEntityError(error)) return null;
@@ -176,19 +176,14 @@ export const getInstitution = cache(async (id: string) => {
   }
 });
 
-export async function getInstitutionWorks(id: string, page = 1, limit = 25, opts?: { funded?: boolean; sortBy?: string; sortOrder?: 'ASC' | 'DESC' }) {
+export async function getInstitutionWorks(id: string, page = 1, limit = 25, opts?: WorksListOptions & { funded?: boolean }) {
   const segment = opts?.funded ? 'funded-works' : 'works';
-  const params = new URLSearchParams({ page: String(page), limit: String(normalizeLimit(limit, 100)) });
-  if (opts?.sortBy) params.set('sort_by', opts.sortBy);
-  if (opts?.sortOrder) params.set('sort_order', opts.sortOrder);
-  const r: any = await fetchJson(`/institutions/${encodeURIComponent(id)}/${segment}?${params.toString()}`);
-  return { ...r, data: listOf(r).map(normalizeInstitutionWorkItem) };
+  return await fetchJson<any>(`/institutions/${encodeURIComponent(id)}/${segment}?page=${page}&limit=${normalizeLimit(limit, 100)}${worksListQuery(opts)}`);
 }
 
 export const getSubject = cache(async (id: string) => {
   try {
-    const raw = unwrapData(await fetchJson<any>(`/subjects/${encodeURIComponent(id)}`));
-    return raw ? normalizeSubject(raw) : null;
+    return unwrapData(await fetchJson<any>(`/subjects/${encodeURIComponent(id)}`));
   } catch (error) {
     if (isMissingEntityError(error)) return null;
     throw error;
@@ -198,22 +193,6 @@ export const getSubject = cache(async (id: string) => {
 export async function getSubjectWorksPage(id: string, page = 1, limit = 25) {
   const r: any = await fetchJson(`/subjects/${encodeURIComponent(id)}/works?page=${page}&limit=${normalizeLimit(limit, 100)}`);
   return { ...r, data: listOf(r).map(normalizeSubjectWorkItem) };
-}
-
-export async function getSubjectWorksByTerm(term: string, limit = 25, opts?: WorksListOptions) {
-  const clean = String(term || '').trim();
-  if (!clean) return [];
-  try {
-    return listOf(await searchWorks({
-      subject: clean,
-      limit: normalizeLimit(limit, 100),
-      sort_by: opts?.sortBy,
-      sort_order: opts?.sortOrder,
-      cited_by_min: opts?.citedByMin
-    }));
-  } catch {
-    return [];
-  }
 }
 
 export async function resolveDoi(doi: string) {
@@ -297,10 +276,8 @@ export async function getEntityExportWorks(kind: EntityKind, id: string): Promis
 }
 
 export async function getEntityRecord(kind: EntityKind, id: string) {
-  if (kind === 'venue') return unwrapData(await fetchJson<any>(`/venues/${encodeURIComponent(id)}`));
-  if (kind === 'institution') return getInstitution(id);
-  if (kind === 'subject') return getSubject(id);
-  return unwrapData(await fetchJson<any>(`/persons/${encodeURIComponent(id)}`));
+  const segment = { person: 'persons', venue: 'venues', institution: 'institutions', subject: 'subjects' }[kind];
+  return unwrapData(await fetchJson<any>(`/${segment}/${encodeURIComponent(id)}`));
 }
 
 export const loadWork = cache(async (id: string) => {

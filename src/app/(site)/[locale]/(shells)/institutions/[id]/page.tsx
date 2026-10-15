@@ -59,15 +59,17 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
   if (!institution) notFound();
   const page = resolvePageParam((await props.searchParams).page);
   const limit = 25;
-  const fundedCount = Number(institution?.funding_role?.funded_works_count) || 0;
+  const fundedCount = Number(institution.funding_role?.funded_works_count) || 0;
+  const affiliated = Number(institution.works_count) > 0;
 
   const [worksPage, prominentPage, firstPage, fundedPage] = await Promise.all([
-    getInstitutionWorks(id, page, limit).catch(() => null),
-    getInstitutionWorks(id, 1, limit, { sortBy: 'cited_by_count', sortOrder: 'DESC' }).catch(() => null),
-    getInstitutionWorks(id, 1, limit, { sortBy: 'publication_year', sortOrder: 'ASC' }).catch(() => null),
-    fundedCount > 0 ? getInstitutionWorks(id, 1, limit, { funded: true }).catch(() => null) : Promise.resolve(null)
+    affiliated ? getInstitutionWorks(id, page, limit).catch(() => null) : null,
+    affiliated ? getInstitutionWorks(id, 1, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 }).catch(() => null) : null,
+    affiliated ? getInstitutionWorks(id, 1, limit, { sortBy: 'publication_year', sortOrder: 'asc' }).catch(() => null) : null,
+    fundedCount > 0 ? getInstitutionWorks(id, 1, limit, { funded: true }).catch(() => null) : null
   ]);
   const works: any[] = worksPage?.data || [];
+  if (page > 1 && (!affiliated || (worksPage && !works.length))) notFound();
   const pagination: any = worksPage?.pagination || {};
   const prominentWorks: any[] = prominentPage?.data || [];
   const firstWorks: any[] = firstPage?.data || [];
@@ -118,13 +120,19 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
     url: canonical,
     mainEntityOfPage: canonical
   });
-  if (website) jsonLd.sameAs = [website, wikidataId ? `https://www.wikidata.org/wiki/${wikidataId}` : '', openalexId ? `https://openalex.org/${openalexId}` : ''].filter(Boolean);
+  const sameAs = [
+    website,
+    buildIdentifierHref('ror', rorId, 'institution'),
+    buildIdentifierHref('wikidata', wikidataId, 'institution'),
+    buildIdentifierHref('openalex', openalexId, 'institution')
+  ].filter(Boolean);
+  if (sameAs.length) jsonLd.sameAs = sameAs;
   if (city || country) jsonLd.location = { '@type': 'Place', address: [city, country].filter(Boolean).join(', ') };
 
   const pageHref = (target: number) => `/institutions/${id}${target > 1 ? `?page=${target}` : ''}`;
   const paginationNav = (
     <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-      {pagination?.hasPrev || page > 1 ? (
+      {page > 1 ? (
         <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
       ) : (
         <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
@@ -138,7 +146,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
   );
 
   const tabs: SectionTabDescriptor[] = [
-    {
+    affiliated ? {
       key: 'recent',
       label: t('institutions.sections.recent'),
       content: (
@@ -147,17 +155,17 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
           {works.length > 0 ? paginationNav : null}
         </>
       )
-    },
-    {
+    } : null,
+    affiliated ? {
       key: 'prominent',
       label: t('institutions.sections.prominent'),
       content: <WorkResultList items={prominentWorks} labels={{ ...relatedLabels, emptyState: t('institutions.empty.prominent') }} />
-    },
-    {
+    } : null,
+    affiliated ? {
       key: 'first',
       label: t('institutions.sections.first'),
       content: <WorkResultList items={firstWorks} labels={{ ...relatedLabels, emptyState: t('institutions.empty.first') }} />
-    },
+    } : null,
     fundedCount > 0 ? {
       key: 'funded',
       label: t('institutions.sections.funded'),
@@ -183,7 +191,7 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
           {trend.length > 0 ? (
             <table className="data-table item-detail-table">
               <tbody>
-                {trend.slice(0, 15).map((row: any, idx: number) => (
+                {trend.map((row: any, idx: number) => (
                   <tr key={`trend-${idx}`}>
                     <th scope="row">{row?.year}</th>
                     <td className="field-value">{formatNumber(Number(row?.works_count) || 0, locale)}</td>
@@ -248,13 +256,13 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
             {typeof hIndex === 'number' && hIndex > 0 ? (
               <tr>
                 <th scope="row">{t('institutions.detail.hIndex')}</th>
-                <td className="field-value">{hIndex}</td>
+                <td className="field-value">{formatNumber(hIndex, locale)}</td>
               </tr>
             ) : null}
             {typeof i10 === 'number' && i10 > 0 ? (
               <tr>
                 <th scope="row">{t('institutions.detail.i10Index')}</th>
-                <td className="field-value">{i10}</td>
+                <td className="field-value">{formatNumber(i10, locale)}</td>
               </tr>
             ) : null}
             {firstYear && latestYear ? (

@@ -5,7 +5,7 @@ import SectionTabs, { type SectionTabDescriptor } from '@/components/common/Sect
 import EntityTools from '@/components/common/EntityTools';
 import { exportFilename } from '@/lib/entity-export';
 import { WorkResultList, type WorkResultLabels } from '@/components/common/WorkResultItem';
-import { getSubject, getSubjectWorksByTerm, getSubjectWorksPage } from '@/lib/endpoints';
+import { getSubject, getSubjectWorksPage } from '@/lib/endpoints';
 import { subjectTerm } from '@/lib/subjects';
 import { formatNumber } from '@/lib/format';
 import JsonLd from '@/components/common/JsonLd';
@@ -60,13 +60,9 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
   const page = resolvePageParam((await props.searchParams).page);
   const limit = 25;
 
-  const canonicalTerm = subject.term || '';
-  const [worksPage, prominentItems, firstItems] = await Promise.all([
-    getSubjectWorksPage(id, page, limit).catch(() => null),
-    getSubjectWorksByTerm(canonicalTerm, limit, { sortBy: 'cited_by_count', sortOrder: 'desc', citedByMin: 1 }),
-    getSubjectWorksByTerm(canonicalTerm, limit, { sortBy: 'publication_year', sortOrder: 'asc' })
-  ]);
+  const worksPage = await getSubjectWorksPage(id, page, limit).catch(() => null);
   const works: any[] = worksPage?.data || [];
+  if (page > 1 && worksPage && !works.length) notFound();
   const pagination: any = worksPage?.pagination || {};
 
   const t = await getTranslations({ locale });
@@ -74,7 +70,6 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
   const vocabulary = subject.vocabulary || '';
   const subjectType = subject.subject_type || '';
   const worksCount = subject.works_count;
-  const coursesCount = subject.courses_count;
   const childrenCount = subject.children_count;
   const parentId = subject.parent_id;
   const parentTerm = subject.parent_term || '';
@@ -102,12 +97,12 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
     url: canonical,
     mainEntityOfPage: canonical
   });
-  if (vocabulary) jsonLd.inDefinedTermSet = vocabulary;
+  if (vocabulary) jsonLd.inDefinedTermSet = { '@type': 'DefinedTermSet', name: vocabulary };
 
   const pageHref = (target: number) => `/subjects/${id}${target > 1 ? `?page=${target}` : ''}`;
   const paginationNav = (
     <nav className="pagination-nav" aria-label={t('common.labels.pagination')}>
-      {pagination?.hasPrev || page > 1 ? (
+      {page > 1 ? (
         <LocaleLink className="pagination-btn btn-negative" href={pageHref(Math.max(1, page - 1))}>{t('common.actions.previous')}</LocaleLink>
       ) : (
         <button type="button" className="pagination-btn btn-negative" disabled>{t('common.actions.previous')}</button>
@@ -130,16 +125,6 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
           {works.length > 0 ? paginationNav : null}
         </>
       )
-    },
-    {
-      key: 'prominent',
-      label: t('subjects.sections.prominent'),
-      content: <WorkResultList items={prominentItems} labels={{ ...listLabels, emptyState: t('subjects.empty.prominent') }} />
-    },
-    {
-      key: 'first',
-      label: t('subjects.sections.first'),
-      content: <WorkResultList items={firstItems} labels={{ ...listLabels, emptyState: t('subjects.empty.first') }} />
     },
     {
       key: 'tools',
@@ -171,12 +156,6 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
               <tr>
                 <th scope="row">{t('subjects.detail.works')}</th>
                 <td className="field-value">{formatNumber(worksCount, locale)}</td>
-              </tr>
-            ) : null}
-            {typeof coursesCount === 'number' && coursesCount > 0 ? (
-              <tr>
-                <th scope="row">{t('subjects.detail.courses')}</th>
-                <td className="field-value">{formatNumber(coursesCount, locale)}</td>
               </tr>
             ) : null}
             {typeof childrenCount === 'number' && childrenCount > 0 ? (

@@ -395,8 +395,7 @@
       "wikidata": "Wikidata",
       "openAlex": "OpenAlex",
       "website": "Site",
-      "alternativeNames": "Também conhecida como",
-      "production": "Produção por tipo"
+      "alternativeNames": "Também conhecida como"
     },
     "sections": {
       "navLabel": "Seções da instituição",
@@ -420,7 +419,7 @@
   "metadata": {
     "subjectsDetail": {
       "title": "Assunto",
-      "description": "Registro de assunto na bibliografia Ethnos com as obras de antropologia e sociologia classificadas nele: recentes, mais citadas e mais antigas.",
+      "description": "Registro de assunto na bibliografia Ethnos com as obras de antropologia e sociologia classificadas nele, das adições mais recentes às mais antigas.",
       "keywords": "assunto, palavra-chave, obras, classificação, antropologia, sociologia, Ethnos"
     },
     "institutionsDetail": {
@@ -565,25 +564,19 @@
     "submit": "Pesquisar"
   },
   "subjects": {
-    "title": "Assuntos",
     "detail": {
       "data": "Dados do assunto",
       "vocabulary": "Vocabulário",
       "works": "Obras",
-      "courses": "Cursos",
       "children": "Subassuntos",
       "parent": "Assunto principal"
     },
     "empty": {
-      "recent": "Nenhuma obra listada para este assunto.",
-      "prominent": "Sem obras proeminentes nesta página.",
-      "first": "Sem obras iniciais nesta página."
+      "recent": "Nenhuma obra listada para este assunto."
     },
     "sections": {
       "navLabel": "Seções do assunto",
       "recent": "Recentes",
-      "prominent": "Proeminentes",
-      "first": "Primeiras",
       "tools": "Ferramentas"
     },
     "tools": {
