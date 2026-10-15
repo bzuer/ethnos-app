@@ -217,9 +217,7 @@ function pickAuthorString(item: any) {
 
 function splitAuthorString(value: string) {
   if (!value) return [];
-  if (value.includes(';')) return value.split(';').map((part) => normalizeText(part)).filter(Boolean);
-  if (value.includes('|')) return value.split('|').map((part) => normalizeText(part)).filter(Boolean);
-  return [value];
+  return value.split(';').map((part) => normalizeText(part)).filter(Boolean);
 }
 
 export function pickAuthorNames(item: any): string[] {
@@ -287,26 +285,6 @@ export function toRelatedWorkRow(raw: any) {
   };
 }
 
-export function normalizePersonDetail(raw: any) {
-  if (!raw || typeof raw !== 'object') return raw;
-  const hasAffiliations = Array.isArray(raw?.affiliations) && raw.affiliations.length > 0;
-  if (hasAffiliations) return raw;
-  const primary = raw?.primary_affiliation;
-  if (!primary) return raw;
-  return { ...raw, affiliations: [primary] };
-}
-
 export function normalizePersonWorkItem(raw: any) {
-  if (!raw || typeof raw !== 'object') return raw;
-  const publication = raw.publication || {};
-  const authorString = raw.authors?.author_string ?? null;
-  return {
-    ...raw,
-    publication_year: raw.publication_year ?? publication.year ?? null,
-    venue: publication.journal ? { name: publication.journal } : (raw.venue ?? null),
-    venue_name: publication.journal ?? raw.venue_name ?? null,
-    author_string: authorString,
-    author_count: raw.authors?.total_count ?? raw.author_count ?? null,
-    authors_preview: authorString ? splitAuthorString(String(authorString)).slice(0, 3) : []
-  };
+  return { ...raw, venue_name: raw?.publication?.journal ?? null };
 }

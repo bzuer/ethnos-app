@@ -3,7 +3,7 @@ import { fetchJson, isMissingEntityError, unwrapData } from './api';
 import { normalizeVenue } from './venues';
 import { normalizeInstitution, normalizeInstitutionWorkItem } from './institutions';
 import { normalizeSubject, normalizeSubjectWorkItem } from './subjects';
-import { normalizePersonDetail, normalizePersonWorkItem } from './works';
+import { normalizePersonWorkItem } from './works';
 import { mergeWorkLists, type EntityExportWorks, type EntityKind } from './entity-export';
 
 function normalizeLimit(limit: number, max: number, min = 1) {
@@ -205,17 +205,6 @@ export const getVenueWorksPage = cache(async (id: string, page = 1, limit = 25, 
   return await fetchJson<any>(`/venues/${encodeURIComponent(id)}/works?page=${page}&limit=${normalizeLimit(limit, 100)}${worksListQuery(opts)}`);
 });
 
-function dedupeByWorkId(items: any[]): any[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = item?.id != null ? String(item.id) : '';
-    if (!key) return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 export const getPersonsWorks = cache(async (personId: string, page = 1, limit = 25) => {
   const id = encodeURIComponent(personId);
   const [personResult, worksResult] = await Promise.allSettled([
@@ -223,12 +212,10 @@ export const getPersonsWorks = cache(async (personId: string, page = 1, limit = 
     fetchJson<any>(`/persons/${id}/works?page=${page}&limit=${normalizeLimit(limit, 100)}`)
   ]);
   if (personResult.status === 'rejected' && !isMissingEntityError(personResult.reason)) throw personResult.reason;
-  const raw = personResult.status === 'fulfilled' ? unwrapData(personResult.value) : null;
-  const person = raw ? normalizePersonDetail(raw) : null;
   const envelope: any = worksResult.status === 'fulfilled' ? worksResult.value : null;
   return {
-    person,
-    works: dedupeByWorkId(listOf(envelope).map(normalizePersonWorkItem)),
+    person: personResult.status === 'fulfilled' ? unwrapData(personResult.value) : null,
+    works: listOf(envelope).map(normalizePersonWorkItem),
     pagination: envelope?.pagination ?? null
   };
 });
@@ -237,7 +224,7 @@ async function getPersonsWorksSorted(personId: string, limit: number, opts: Work
   const id = encodeURIComponent(personId);
   try {
     const envelope = await fetchJson<any>(`/persons/${id}/works?limit=${normalizeLimit(limit, 100)}${worksListQuery(opts)}`);
-    return dedupeByWorkId(listOf(envelope).map(normalizePersonWorkItem));
+    return listOf(envelope).map(normalizePersonWorkItem);
   } catch {
     return [];
   }
@@ -380,8 +367,7 @@ export async function getEntityRecord(kind: EntityKind, id: string) {
   if (kind === 'venue') return getVenue(id);
   if (kind === 'institution') return getInstitution(id);
   if (kind === 'subject') return getSubject(id);
-  const raw = unwrapData(await fetchJson<any>(`/persons/${encodeURIComponent(id)}`));
-  return raw ? normalizePersonDetail(raw) : null;
+  return unwrapData(await fetchJson<any>(`/persons/${encodeURIComponent(id)}`));
 }
 
 export const loadWork = cache(async (id: string) => {
