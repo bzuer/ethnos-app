@@ -113,6 +113,10 @@ institution and subject pages describe entities, not documents, and carry Dublin
 only. Adding `citation_title` to a non-work page tells Google Scholar the page is an article and is
 a conformance bug.
 
+On a work, `citation_author` and `dc.creator` list every author the record credits, deduplicated by
+person and never by spelling; the venue is `citation_journal_title` for an article and
+`citation_inbook_title` for a chapter (a book's venue is the book itself and is not repeated).
+
 ## Structured data
 
 `src/lib/structured-data.ts` builds every JSON-LD node and `src/components/common/JsonLd.tsx` is
@@ -122,9 +126,11 @@ page — never hand-roll `dangerouslySetInnerHTML={{ __html: JSON.stringify(...)
 
 - Every page: an `@graph` with `Organization` (`#organization`) and `WebSite` (`#website`, carrying
   the `SearchAction` pointing at `/search/results?q=`).
-- `/works/{id}`: `ScholarlyArticle` or `Book`, with authors/editors/translators/contributors split by
-  role, `isPartOf` the `WebSite`, DOI as a `PropertyValue` plus `sameAs`, subjects as `keywords`,
-  `isAccessibleForFree` from open access, and `license` when the publication carries one.
+- `/works/{id}`: `Book` for type BOOK, `Chapter` for CHAPTER and `ScholarlyArticle` otherwise, with
+  authors/editors/translators/contributors split by role, `isPartOf` the venue (`Periodical` for an
+  article, `Book` for a chapter) or else the `WebSite`, DOI as a `PropertyValue` plus `sameAs`,
+  subjects as `keywords`, `isAccessibleForFree` from open access, and `license` when the publication
+  carries a license URL.
 - `/venues/{id}`: `Periodical`. `/persons/{id}`: `Person`. `/institutions/{id}`: `Organization`.
   `/subjects/{id}`: `DefinedTerm`.
 - `/docs/{collection}`: `CollectionPage` wrapping an `ItemList` of its chapters.
@@ -165,16 +171,18 @@ file holds up to 50,000 resources.
   the git commit date of its curated list. Dates come from `git log -1 --format=%cI` with an mtime
   fallback and are never "now".
 - **Curated lists rot.** They are ids only, generated outside this repository (the data project's
-  `xml_list` script: works by citations, venues by score, persons by h-index). Merged or deleted
-  records keep their id in the file and answer 404. After regenerating a list, run the audit: its
-  `sitemap targets` group requests a sample of every section.
+  `xml_list` script: works by citations, venues by score, persons by h-index), and must be written
+  best-first — works most-cited first — and capped at 50,000 ids. Merged or deleted records keep
+  their id in the file and answer 404. After regenerating a list, check its order and run the audit:
+  its `sitemap targets` group requests a sample of every section.
 - **Documentation is listed only while it has content.** `listDocPages()` skips chapters whose source
   file is empty (they answer 404), so the sitemap never advertises a blank page, and the section being
   unlinked from the chrome means the sitemap is its only discovery path while it is published.
 - The curated lists use a bespoke `<item>works/123</item>` format. `normalizeTopItem` tolerates a
   leading origin, a plural or singular prefix, and rejects ids that are not URL-safe.
 - Each section is capped at `SITEMAP_URL_LIMIT` (50,000) resources. A curated list longer than the
-  cap is served truncated to its first 50,000 ids, with a line in the build log. `recent` fills its
+  cap is served truncated to its first 50,000 ids, with a line in the build log, so a list written
+  in ascending order publishes its weakest entries. `recent` fills its
   file (~9 MB uncompressed at the cap).
 - **Noindex pages are never listed** (`/lists`, `/search/*`, `/maintenance`, `/doi/*`).
 
