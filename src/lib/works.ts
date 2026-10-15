@@ -194,8 +194,8 @@ export function pickPrimaryContributors(raw: any) {
 function pickAuthorList(item: any) {
   const entries = pickContributorEntries(item);
   if (entries.length) return pickPrimaryContributors(entries);
-  if (Array.isArray(item?.authors_preview) && item.authors_preview.length) return item.authors_preview;
-  return [];
+  const preview = item?.authors_preview ?? item?.authors?.authors_preview;
+  return Array.isArray(preview) ? preview : [];
 }
 
 function pickContributorTotal(item: any) {
@@ -286,5 +286,9 @@ export function toRelatedWorkRow(raw: any) {
 }
 
 export function normalizePersonWorkItem(raw: any) {
-  return { ...raw, venue_name: raw?.publication?.journal ?? null };
+  return {
+    ...raw,
+    venue_name: raw?.publication?.journal ?? null,
+    authors_preview: splitAuthorString(raw?.authors?.author_string || '').slice(0, 3)
+  };
 }

@@ -13,6 +13,8 @@ type Props = {
   total: number;
 };
 
+const EMBEDDED_LIMIT = 100;
+
 const idOf = (item: any) => (item?.id !== null && item?.id !== undefined ? String(item.id) : '');
 
 export default function WorkCitationList({ workId, kind, initialItems, total }: Props) {
@@ -21,7 +23,7 @@ export default function WorkCitationList({ workId, kind, initialItems, total }: 
   const [nextPage, setNextPage] = useState(kind === 'citations' ? 2 : 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [exhausted, setExhausted] = useState(false);
+  const [exhausted, setExhausted] = useState(initialItems.length < EMBEDDED_LIMIT);
   const seenRef = useRef<Set<string>>(new Set(initialItems.map(idOf).filter(Boolean)));
 
   const labels = {
