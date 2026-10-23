@@ -21,6 +21,7 @@
 | Maintenance mode | `scripts/manage.sh maintenance {on\|off\|status}` |
 | SEO audit (acceptance test of `docs/SEO.md`) | `scripts/manage.sh seo audit` (`SEO_BASE=…` to retarget) |
 | IndexNow (new or re-dated URLs only) | `scripts/manage.sh seo indexnow:new [--dry-run\|--limit n]` |
+| Regenerate the curated sitemap lists from the `data` database | `scripts/manage.sh seo lists` |
 | Regenerate `styles.min.css` | `scripts/manage.sh css` |
 | Remove units, vhost, `.next`, `node_modules` | `scripts/manage.sh uninstall` |
 
@@ -123,7 +124,7 @@ The contract is the live OpenAPI spec, `http://127.0.0.1:1211/docs.json` (Swagge
 
 ## SEO
 
-`docs/SEO.md` is the contract and `scripts/manage.sh seo audit` its acceptance test. In short: `SITE_ORIGIN` is the only origin literal; canonical and hreflang come from `buildPageMetadata`; search results, global search, lists, maintenance and `/doi/*` are noindex, and robots.txt disallows the search surfaces; Highwire `citation_*` tags only on works; JSON-LD only through `JsonLd.tsx`; `/sitemap.xml` indexes `pages`, `recent`, `works`, `venues` and `persons`, one canonical URL per resource, `lastmod` only when true; each section publishes at most 50,000 URLs, the first ids of its curated list in `public/xml-list/` (venues and persons best-first; works every id cited at least 10 times, shuffled, so each reshuffle publishes a new sample); legacy redirects in `(redirects)/` are single-hop 308s.
+`docs/SEO.md` is the contract and `scripts/manage.sh seo audit` its acceptance test. In short: `SITE_ORIGIN` is the only origin literal; canonical and hreflang come from `buildPageMetadata`; search results, global search, lists, maintenance and `/doi/*` are noindex, and robots.txt disallows the search surfaces; Highwire `citation_*` tags only on works; JSON-LD only through `JsonLd.tsx`; `/sitemap.xml` indexes `pages`, `recent`, `works`, `venues` and `persons`, one canonical URL per resource, `lastmod` only when true; each section publishes at most 50,000 URLs; `seo lists` writes the curated lists in `public/xml-list/` (venues by `total_score`, persons by h-index then citations, works a random draw among those cited at least 10 times), and they are committed; legacy redirects in `(redirects)/` are single-hop 308s.
 
 ## Production
 

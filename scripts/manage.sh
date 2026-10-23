@@ -217,6 +217,23 @@ cmd_uninstall() {
   log "removed the units, the nginx vhost, .next and node_modules"
 }
 
+write_list() {
+  local ids
+  ids="$(mariadb -N -B data -e "$4")"
+  {
+    printf '<?xml version="1.0" ?>\n<%s>\n' "$2"
+    printf '%s\n' "$ids" | sed "s|.*|  <item>$3/&</item>|"
+    printf '</%s>\n' "$2"
+  } > "$ROOT_DIR/public/xml-list/$1"
+  log "$1: $(printf '%s\n' "$ids" | wc -l) ids"
+}
+
+cmd_lists() {
+  write_list top_works.xml TopWorks works 'select id from works where citation_count >= 10 order by rand() limit 50000'
+  write_list top_venues.xml TopVenues venues 'select id from venues order by total_score desc, id limit 50000'
+  write_list top_persons.xml TopPersons persons 'select id from persons order by h_index desc, total_citations desc, id limit 50000'
+}
+
 cmd_seo() {
   local sub="${1:-audit}"
   shift || true
@@ -226,7 +243,8 @@ cmd_seo() {
     audit) node scripts/seo/audit.mjs --base "${SEO_BASE:-http://127.0.0.1:$PUBLIC_PORT}" "$@" ;;
     indexnow) node scripts/seo/indexnow.mjs "$@" ;;
     indexnow:new) node scripts/seo/indexnow.mjs --source "http://127.0.0.1:$PUBLIC_PORT" --section all --new "$@" ;;
-    *) die "usage: manage.sh seo {audit|indexnow|indexnow:new} [options]" ;;
+    lists) cmd_lists ;;
+    *) die "usage: manage.sh seo {audit|indexnow|indexnow:new|lists} [options]" ;;
   esac
 }
 
@@ -241,7 +259,7 @@ usage: scripts/manage.sh <command>
   systemd:install           install the unit (and the IndexNow timer when INDEXNOW_AUTOSUBMIT=1)
   maintenance on|off|status toggle MAINTENANCE_MODE through a systemd drop-in
   uninstall                 remove units, vhost, .next and node_modules
-  seo audit|indexnow|indexnow:new
+  seo audit|indexnow|indexnow:new|lists
   dev | build | css | deps | clean
 USAGE
 }
