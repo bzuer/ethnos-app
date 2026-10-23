@@ -153,7 +153,7 @@ file holds up to 50,000 resources.
 |---------|----------|--------|-------------|
 | `pages` | `/`, `/search`, `/venues`, the published documentation tree, `/privacy`, `/license` | `STATIC_PAGES` + `listDocPages()` in `src/lib/sitemap.ts` | documentation pages only: git commit date of the source |
 | `recent` | every work added in the last 90 days, newest first, up to 50,000 works | `listRecentlyAddedWorks` → `/works?sort_by=id&sort_order=DESC` | the work's `added_to_database` |
-| `works` | curated most-cited works | `public/xml-list/top_works.xml` | none |
+| `works` | a random sample of the works cited at least 10 times | `public/xml-list/top_works.xml` | none |
 | `venues` | curated best-scored venues | `public/xml-list/top_venues.xml` | none |
 | `persons` | curated highest-h-index persons | `public/xml-list/top_persons.xml` | none |
 
@@ -170,20 +170,19 @@ file holds up to 50,000 resources.
   site-wide. Static pages carry none either. The index `<lastmod>` of a section is its newest entry, or
   the git commit date of its curated list. Dates come from `git log -1 --format=%cI` with an mtime
   fallback and are never "now".
-- **Curated lists rot.** They are ids only, generated outside this repository (the data project's
-  `xml_list` script: works by citations, venues by score, persons by h-index), and must be written
-  best-first — works most-cited first — and capped at 50,000 ids. Merged or deleted records keep
-  their id in the file and answer 404. After regenerating a list, check its order and run the audit:
-  its `sitemap targets` group requests a sample of every section.
+- **Curated lists rot.** They are ids only, generated outside this repository: venues by score and
+  persons by h-index, best-first; works as every id with `citation_count >= 10`, shuffled. Merged or
+  deleted records keep their id in the file and answer 404. After regenerating a list, run the
+  audit: its `sitemap targets` group requests a sample of every section.
 - **Documentation is listed only while it has content.** `listDocPages()` skips chapters whose source
   file is empty (they answer 404), so the sitemap never advertises a blank page, and the section being
   unlinked from the chrome means the sitemap is its only discovery path while it is published.
 - The curated lists use a bespoke `<item>works/123</item>` format. `normalizeTopItem` tolerates a
   leading origin, a plural or singular prefix, and rejects ids that are not URL-safe.
-- Each section is capped at `SITEMAP_URL_LIMIT` (50,000) resources. A curated list longer than the
-  cap is served truncated to its first 50,000 ids, with a line in the build log, so a list written
-  in ascending order publishes its weakest entries. `recent` fills its
-  file (~9 MB uncompressed at the cap).
+- Each section is capped at `SITEMAP_URL_LIMIT` (50,000) resources, and a curated list publishes its
+  first 50,000 ids. `top_works.xml` holds several times that many, so every reshuffle publishes a new
+  sample and `indexnow:new` submits the works that entered it. `recent` fills its file (~9 MB
+  uncompressed at the cap).
 - **Noindex pages are never listed** (`/lists`, `/search/*`, `/maintenance`, `/doi/*`).
 
 ## Web manifest

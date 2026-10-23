@@ -190,10 +190,7 @@ async function buildCuratedSection(section: CuratedSection): Promise<SitemapSect
     if (!normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     entries.push({ path: normalized, ...ENTITY_META[section] });
-  }
-  if (entries.length > SITEMAP_URL_LIMIT) {
-    console.warn(`Sitemap ${section} truncated to the ${SITEMAP_URL_LIMIT} URL limit`);
-    entries.length = SITEMAP_URL_LIMIT;
+    if (entries.length === SITEMAP_URL_LIMIT) break;
   }
   return { entries, lastModified: await resolveSourceDate(source) };
 }

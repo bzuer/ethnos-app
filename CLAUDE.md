@@ -123,7 +123,7 @@ The contract is the live OpenAPI spec, `http://127.0.0.1:1211/docs.json` (Swagge
 
 ## SEO
 
-`docs/SEO.md` is the contract and `scripts/manage.sh seo audit` its acceptance test. In short: `SITE_ORIGIN` is the only origin literal; canonical and hreflang come from `buildPageMetadata`; search results, global search, lists, maintenance and `/doi/*` are noindex, and robots.txt disallows the search surfaces; Highwire `citation_*` tags only on works; JSON-LD only through `JsonLd.tsx`; `/sitemap.xml` indexes `pages`, `recent`, `works`, `venues` and `persons`, one canonical URL per resource, `lastmod` only when true; the curated lists in `public/xml-list/` are ordered best-first (works most-cited first) and hold at most 50,000 ids; legacy redirects in `(redirects)/` are single-hop 308s.
+`docs/SEO.md` is the contract and `scripts/manage.sh seo audit` its acceptance test. In short: `SITE_ORIGIN` is the only origin literal; canonical and hreflang come from `buildPageMetadata`; search results, global search, lists, maintenance and `/doi/*` are noindex, and robots.txt disallows the search surfaces; Highwire `citation_*` tags only on works; JSON-LD only through `JsonLd.tsx`; `/sitemap.xml` indexes `pages`, `recent`, `works`, `venues` and `persons`, one canonical URL per resource, `lastmod` only when true; each section publishes at most 50,000 URLs, the first ids of its curated list in `public/xml-list/` (venues and persons best-first; works every id cited at least 10 times, shuffled, so each reshuffle publishes a new sample); legacy redirects in `(redirects)/` are single-hop 308s.
 
 ## Production
 
