@@ -16,8 +16,13 @@ function listOf(envelope: any): any[] {
   return Array.isArray(envelope?.data) ? envelope.data : [];
 }
 
-export async function getHomeRecentWorks(limit = 20) {
-  return listOf(await fetchJson(`/works/showcase?limit=${normalizeLimit(limit, 20)}`));
+export async function getHomeRecentWorks(count: number, pool: number) {
+  const rows = listOf(await fetchJson(`/works/showcase?limit=${pool}`));
+  for (let i = 0; i < Math.min(count, rows.length); i += 1) {
+    const j = i + Math.floor(Math.random() * (rows.length - i));
+    [rows[i], rows[j]] = [rows[j], rows[i]];
+  }
+  return rows.slice(0, count);
 }
 
 export async function getHomeTopVenues(limit = 15) {

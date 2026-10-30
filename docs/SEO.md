@@ -159,8 +159,9 @@ file holds up to 50,000 resources.
 | `persons` | the 50,000 best persons by h-index, then citations | `public/xml-list/top_persons.xml` | none |
 
 - **Why `recent` exists.** The curated lists are regenerated on demand and do not change between
-  regenerations, while the corpus grows by thousands of works a day in bursts; the home page links
-  to the newest works, so the sitemaps must list them too. `recent` follows the corpus by itself.
+  regenerations, while the corpus grows by thousands of works a day in bursts; the home page draws
+  its links from the newest works, so the sitemaps must list them too. `recent` follows the corpus
+  by itself.
 - **Refresh.** Both routes are `force-static` with `revalidate = 3600`: generated at build, then
   regenerated in the background at most hourly, so `recent` needs no deploy. A failed refresh reuses
   the last good in-memory copy or throws, and ISR keeps serving the previous file; only a build

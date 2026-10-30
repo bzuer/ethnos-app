@@ -18,7 +18,7 @@ export default async function HomePage(props: { params: Promise<{ locale: string
   const { locale } = await props.params;
   const searchAction = localizedPath(locale as Locale, '/search/results');
   const [recent, venues] = await Promise.all([
-    getHomeRecentWorks(20).catch(() => []),
+    getHomeRecentWorks(20, 100).catch(() => []),
     getHomeTopVenues(15).catch(() => [])
   ]);
   const t = await getTranslations({ locale });
