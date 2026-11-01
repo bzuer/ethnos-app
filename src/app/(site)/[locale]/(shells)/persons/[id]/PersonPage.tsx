@@ -204,8 +204,8 @@ export default async function PersonPage(props: { params: Promise<{ locale: stri
       content: <SubjectLinks subjects={expertiseItems} filters={{ author: personName }} />
     } : null,
     {
-      key: 'tools',
-      label: t('persons.sections.tools'),
+      key: 'files',
+      label: t('persons.sections.files'),
       content: <EntityTools kind="person" entityId={id} filename={exportFilename('person', person)} worksCount={personWorksCount} entityExportLabel={t('persons.tools.exportPerson')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];

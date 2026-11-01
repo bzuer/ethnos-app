@@ -224,8 +224,8 @@ export default async function VenueDetailPage(props: { params: Promise<{ locale:
       content: <WorkResultList items={firstItems} labels={{ ...listLabels, emptyState: t('venues.empty.first') }} showVenue={false} titleMaxLength={200} />
     },
     {
-      key: 'tools',
-      label: t('venues.sections.tools'),
+      key: 'files',
+      label: t('venues.sections.files'),
       content: <EntityTools kind="venue" entityId={id} filename={exportFilename('venue', venue)} worksCount={Number(venue.works_count) || 0} entityExportLabel={t('venues.tools.exportVenue')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];

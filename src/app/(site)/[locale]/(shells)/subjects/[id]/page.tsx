@@ -127,8 +127,8 @@ export default async function SubjectDetailPage(props: { params: Promise<{ local
       )
     },
     {
-      key: 'tools',
-      label: t('subjects.sections.tools'),
+      key: 'files',
+      label: t('subjects.sections.files'),
       content: <EntityTools kind="subject" entityId={id} filename={exportFilename('subject', subject)} worksCount={Number(worksCount) || 0} entityExportLabel={t('subjects.tools.exportSubject')} />
     }
   ];

@@ -204,8 +204,8 @@ export default async function InstitutionDetailPage(props: { params: Promise<{ l
       )
     } : null,
     {
-      key: 'tools',
-      label: t('institutions.sections.tools'),
+      key: 'files',
+      label: t('institutions.sections.files'),
       content: <EntityTools kind="institution" entityId={id} filename={exportFilename('institution', institution)} worksCount={Number(worksCount) || 0} entityExportLabel={t('institutions.tools.exportInstitution')} />
     }
   ].filter(Boolean) as SectionTabDescriptor[];

@@ -255,7 +255,7 @@
       "recent": "Recent",
       "prominent": "Prominent",
       "first": "First",
-      "tools": "Tools"
+      "files": "Files"
     },
     "empty": {
       "recent": "No publications on this page.",
@@ -282,7 +282,7 @@
         "references": "References",
         "impact": "Impact",
         "citedBy": "Citations",
-        "tools": "Tools",
+        "files": "Files",
         "navLabel": "Work sections"
       },
       "impact": {
@@ -343,7 +343,7 @@
       "prominent": "Prominent",
       "first": "First",
       "expertise": "Expertise",
-      "tools": "Tools"
+      "files": "Files"
     },
     "empty": {
       "recent": "No works to list on this page.",
@@ -404,7 +404,7 @@
       "first": "First",
       "funded": "Funded",
       "production": "Production",
-      "tools": "Tools"
+      "files": "Files"
     },
     "empty": {
       "recent": "No affiliated works found for this institution.",
@@ -577,7 +577,7 @@
     "sections": {
       "navLabel": "Subject sections",
       "recent": "Recent",
-      "tools": "Tools"
+      "files": "Files"
     },
     "tools": {
       "exportSubject": "Export subject data (JSON)"

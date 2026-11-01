@@ -255,7 +255,7 @@
       "recent": "Recentes",
       "prominent": "Proeminentes",
       "first": "Primeiros",
-      "tools": "Ferramentas"
+      "files": "Arquivos"
     },
     "empty": {
       "recent": "Sem publicações nesta página.",
@@ -282,7 +282,7 @@
         "references": "Referências",
         "impact": "Impacto",
         "citedBy": "Citações",
-        "tools": "Ferramentas",
+        "files": "Arquivos",
         "navLabel": "Seções da obra"
       },
       "impact": {
@@ -343,7 +343,7 @@
       "prominent": "Proeminentes",
       "first": "Primeiros",
       "expertise": "Especialidades",
-      "tools": "Ferramentas"
+      "files": "Arquivos"
     },
     "empty": {
       "recent": "Sem obras para listar nesta página.",
@@ -404,7 +404,7 @@
       "first": "Primeiros",
       "funded": "Financiados",
       "production": "Produção",
-      "tools": "Ferramentas"
+      "files": "Arquivos"
     },
     "empty": {
       "recent": "Nenhum trabalho afiliado encontrado para esta instituição.",
@@ -577,7 +577,7 @@
     "sections": {
       "navLabel": "Seções do assunto",
       "recent": "Recentes",
-      "tools": "Ferramentas"
+      "files": "Arquivos"
     },
     "tools": {
       "exportSubject": "Exportar dados do assunto (JSON)"
